@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Shield } from "lucide-react";
 
@@ -11,17 +10,16 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
-        if (u.role === "superadmin") router.replace("/admin");
+        if (u.role === "superadmin") window.location.href = "/admin";
       }
     } catch {}
-  }, [router]);
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +38,7 @@ export default function AdminLoginPage() {
         return;
       }
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/admin");
+      window.location.href = "/admin";
     } catch {
       setError("Terjadi kesalahan. Coba lagi.");
       setLoading(false);
