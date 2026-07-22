@@ -1,0 +1,174 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Pb {
+  id         String    @id @default(uuid())
+  name       String
+  slug       String    @unique
+  logoUrl    String?   @map("logo_url")
+  address    String?
+  phone      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  users      User[]
+  members    Member[]
+  schedules  Schedule[]
+  matches    Match[]
+  matchHistories MatchHistory[]
+
+  @@map("pb")
+}
+
+model UserLevel {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String   @default("#0d9488")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  users       User[]
+
+  @@map("user_levels")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String   @map("full_name")
+  phone     String?
+  password  String
+  role      String   @default("admin_pb")
+  levelId   String?  @map("level_id")
+  pbId      String?  @map("pb_id")
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  pb        Pb?      @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  level     UserLevel? @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  schedules Schedule[]
+
+  @@map("users")
+}
+
+model Member {
+  id        String   @id @default(uuid())
+  pbId      String   @map("pb_id")
+  name      String
+  phone     String?
+  photo     String?
+  address   String?
+  class     String
+  type      String   @default("internal")
+  isActive  Boolean  @default(true) @map("is_active")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  pb        Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+  team1P1Matches  Match[] @relation("match_team1_player1")
+  team1P2Matches  Match[] @relation("match_team1_player2")
+  team2P1Matches  Match[] @relation("match_team2_player1")
+  team2P2Matches  Match[] @relation("match_team2_player2")
+
+  @@index([pbId])
+  @@index([class])
+  @@map("members")
+}
+
+model Schedule {
+  id              String       @id @default(uuid())
+  pbId            String       @map("pb_id")
+  title           String
+  date            DateTime
+  startTime       String?      @map("start_time")
+  endTime         String?      @map("end_time")
+  location        String?
+  maxParticipants Int          @default(20) @map("max_participants")
+  courts         String?
+  sparingOpponent String?  @map("sparing_opponent")
+  notes           String?
+  status          String       @default("planned")
+  createdBy       String?      @map("created_by")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  pb              Pb           @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  createdByUser   User?        @relation(fields: [createdBy], references: [id])
+  attendances     Attendance[]
+  matches         Match[]
+
+  @@index([pbId])
+  @@index([date])
+  @@map("schedules")
+}
+
+model Attendance {
+  id          String    @id @default(uuid())
+  scheduleId  String    @map("schedule_id")
+  memberId    String    @map("member_id")
+  status      String
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, memberId])
+  @@index([scheduleId])
+  @@map("attendances")
+}
+
+model Match {
+  id             String        @id @default(uuid())
+  scheduleId     String        @map("schedule_id")
+  pbId           String        @map("pb_id")
+  courtNumber    Int?          @map("court_number")
+  round          Int           @default(1)
+  team1Player1Id String        @map("team1_player1_id")
+  team1Player2Id String        @map("team1_player2_id")
+  team2Player1Id String        @map("team2_player1_id")
+  team2Player2Id String        @map("team2_player2_id")
+  scoreTeam1     Int?          @map("score_team1")
+  scoreTeam2     Int?          @map("score_team2")
+  scoreTeam1Game2 Int?         @map("score_team1_game2")
+  scoreTeam2Game2 Int?         @map("score_team2_game2")
+  totalGames     Int           @default(1) @map("total_games")
+  winnerTeam     Int?          @map("winner_team")
+  status         String        @default("scheduled")
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  schedule       Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  pb             Pb            @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  team1Player1   Member        @relation("match_team1_player1", fields: [team1Player1Id], references: [id])
+  team1Player2   Member        @relation("match_team1_player2", fields: [team1Player2Id], references: [id])
+  team2Player1   Member        @relation("match_team2_player1", fields: [team2Player1Id], references: [id])
+  team2Player2   Member        @relation("match_team2_player2", fields: [team2Player2Id], references: [id])
+  histories      MatchHistory[]
+
+  @@index([scheduleId])
+  @@index([pbId])
+  @@map("matches")
+}
+
+model MatchHistory {
+  id          String   @id @default(uuid())
+  matchId     String   @map("match_id")
+  memberId    String   @map("member_id")
+  partnerId   String?  @map("partner_id")
+  opponent1Id String   @map("opponent1_id")
+  opponent2Id String   @map("opponent2_id")
+  result      String
+  pbId        String   @map("pb_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  pb          Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([pbId])
+  @@map("match_history")
+}
