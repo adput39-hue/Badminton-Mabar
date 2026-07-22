@@ -48,6 +48,7 @@ export interface ApiUser {
 export interface ApiUserLevel {
   id: string; name: string; slug: string;
   description: string | null; color: string;
+  menus: string[];
   createdAt: string; updatedAt: string;
   _count?: { users: number };
 }

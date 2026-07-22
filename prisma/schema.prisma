@@ -30,6 +30,7 @@ model UserLevel {
   slug        String   @unique
   description String?
   color       String   @default("#0d9488")
+  menus       String[] @default([])
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   users       User[]

@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, slug, description, color } = body;
+    const { name, slug, description, color, menus } = body;
 
     if (!name || !slug) {
       return NextResponse.json({ error: "Nama dan slug harus diisi" }, { status: 400 });
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const level = await prisma.userLevel.create({
-      data: { name, slug, description: description || null, color: color || "#0d9488" },
+      data: { name, slug, description: description || null, color: color || "#0d9488", menus: menus || [] },
       include: { _count: { select: { users: true } } },
     });
     return NextResponse.json(level, { status: 201 });

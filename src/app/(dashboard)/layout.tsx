@@ -8,28 +8,28 @@ import {
   Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
-  { href: "/members", label: "Anggota", icon: Users },
-  { href: "/schedules", label: "Jadwal", icon: Calendar },
-  { href: "/mabar", label: "Mabar", icon: Heart },
-  { href: "/riwayat", label: "Riwayat", icon: Trophy },
-  { href: "/sparing", label: "Sparing", icon: Swords },
-  { href: "/sparing/match", label: "Match", icon: Swords },
-  { href: "/scoreboard", label: "Scoreboard", icon: Monitor },
-  { href: "/scoreboard-live", label: "Live Score", icon: Trophy },
-  { href: "/users", label: "Master User", icon: Shield },
-  { href: "/user-levels", label: "Level Manager", icon: UserCog },
-  { href: "/settings", label: "Kas PB", icon: Wallet },
-  { href: "/settings", label: "Statistik", icon: BarChart3 },
-  { href: "/settings", label: "Laporan", icon: FileText },
-  { href: "/settings", label: "Pengaturan", icon: Settings },
+const allNavItems = [
+  { href: "/dashboard", label: "Dashboard", icon: Home, menuKey: "dashboard" },
+  { href: "/members", label: "Anggota", icon: Users, menuKey: "members" },
+  { href: "/schedules", label: "Jadwal", icon: Calendar, menuKey: "schedules" },
+  { href: "/mabar", label: "Mabar", icon: Heart, menuKey: "mabar" },
+  { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },
+  { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
+  { href: "/sparing/match", label: "Match", icon: Swords, menuKey: "sparing" },
+  { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
+  { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "scoreboard" },
+  { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
+  { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
+  { href: "/settings", label: "Kas PB", icon: Wallet, menuKey: "finances" },
+  { href: "/settings", label: "Statistik", icon: BarChart3, menuKey: "stats" },
+  { href: "/settings", label: "Laporan", icon: FileText, menuKey: "reports" },
+  { href: "/settings", label: "Pengaturan", icon: Settings, menuKey: "settings" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ fullName: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; role: string; level?: { menus: string[] } } | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -40,6 +40,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch {}
   }, []);
 
+  const grantedMenus = user?.level?.menus;
+  const navItems = user?.role === "superadmin"
+    ? allNavItems
+    : grantedMenus
+      ? allNavItems.filter((item) => grantedMenus.includes(item.menuKey))
+      : [];
+
   function logout() {
     localStorage.removeItem("user");
     router.replace("/auth/login");
@@ -47,12 +54,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-[#f0fdfa]">
-      {/* Mobile overlay */}
       {mobileOpen && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />}
 
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "w-16" : "w-60"}`}>
-        {/* Logo */}
         <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 min-h-[68px]">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d9488] text-xl shrink-0">🏸</div>
           {!collapsed && (
@@ -65,8 +69,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 lg:hidden"><X className="h-5 w-5" /></button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+          {navItems.length === 0 && !user && (
+            <p className="px-4 text-xs text-gray-400 italic">Memuat menu...</p>
+          )}
+          {navItems.length === 0 && user && (
+            <p className="px-4 text-xs text-gray-400 italic">Tidak ada akses menu</p>
+          )}
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -83,9 +92,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
       </aside>
 
-      {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
           <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"><Menu className="h-5 w-5" /></button>
           <div className="flex-1">

@@ -5,7 +5,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, slug, description, color } = body;
+    const { name, slug, description, color, menus } = body;
 
     const existing = await prisma.userLevel.findUnique({ where: { id } });
     if (!existing) {
@@ -26,6 +26,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (slug !== undefined) data.slug = slug;
     if (description !== undefined) data.description = description || null;
     if (color !== undefined) data.color = color || "#0d9488";
+    if (menus !== undefined) data.menus = menus;
 
     const level = await prisma.userLevel.update({
       where: { id },

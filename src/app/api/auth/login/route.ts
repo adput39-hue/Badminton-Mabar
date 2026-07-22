@@ -9,7 +9,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email dan password harus diisi" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { level: { select: { id: true, name: true, slug: true, menus: true } } },
+  });
 
   if (!user) {
     return NextResponse.json({ error: "Email tidak ditemukan" }, { status: 401 });
@@ -27,6 +30,8 @@ export async function POST(request: Request) {
       fullName: user.fullName,
       role: user.role,
       pbId: user.pbId,
+      levelId: user.levelId,
+      level: user.level,
     },
   });
 }
