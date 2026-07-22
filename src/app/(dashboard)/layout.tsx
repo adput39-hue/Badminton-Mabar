@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ? allNavItems
     : grantedMenus
       ? allNavItems.filter((item) => grantedMenus.includes(item.menuKey))
-      : [];
+      : allNavItems;
 
   function logout() {
     localStorage.removeItem("user");

@@ -35,6 +35,11 @@ export async function POST(request: Request) {
     }
 
     const pbId = body.pbId || request.headers.get("x-pb-id") || "default";
+    let resolvedLevelId = levelId;
+    if (!resolvedLevelId && (role || "admin_pb") === "admin_pb") {
+      const adminLevel = await prisma.userLevel.findUnique({ where: { slug: "admin" } });
+      if (adminLevel) resolvedLevelId = adminLevel.id;
+    }
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         password: hashed,
         role: role || "admin_pb",
-        levelId: levelId || null,
+        levelId: resolvedLevelId || null,
         avatarUrl: avatarUrl || null,
         pbId,
       },

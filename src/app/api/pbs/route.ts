@@ -35,6 +35,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email admin sudah digunakan" }, { status: 409 });
     }
 
+    const adminLevel = await prisma.userLevel.findUnique({ where: { slug: "admin" } });
+
     const pb = await prisma.pb.create({
       data: {
         name,
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
             fullName: adminFullName || "Admin " + name,
             password: await bcrypt.hash(adminPassword, 10),
             role: "admin_pb",
+            levelId: adminLevel?.id || null,
           },
         },
       },
