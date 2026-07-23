@@ -31,6 +31,7 @@ export default function AdminDashboard() {
       const res = await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "login_background", value: dataUrl }) });
       if (!res.ok) { const d = await res.json(); setBgError(d.error || "Gagal simpan"); return; }
       setBg(dataUrl);
+      localStorage.setItem("login_background", dataUrl);
       setBgSaved(true);
       setTimeout(() => setBgSaved(false), 2000);
     };

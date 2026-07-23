@@ -12,7 +12,9 @@ export default function LoginPage() {
   const [bg, setBg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/config?key=login_background").then((r) => r.json()).then((d) => { if (d.value) setBg(d.value); }).catch(() => {});
+    const cached = localStorage.getItem("login_background");
+    if (cached) setBg(cached);
+    fetch("/api/config?key=login_background").then((r) => r.json()).then((d) => { if (d.value) { setBg(d.value); localStorage.setItem("login_background", d.value); } }).catch(() => {});
   }, []);
 
   async function handleLogin(e: React.FormEvent) {
