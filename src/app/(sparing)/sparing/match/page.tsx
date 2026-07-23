@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
+import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -48,17 +49,13 @@ export default function SparingMatchPage() {
 
   useEffect(() => {
     if (!selSparingId) return;
-    const es = new EventSource("/api/matches/stream");
-    es.onmessage = (e) => {
-      try {
-        if (e.data === "connected") return;
-        const d = JSON.parse(e.data);
-        if (d.type?.startsWith("match-")) refreshMatches();
-      } catch {}
-    };
-    es.onerror = () => {};
-    const poll = setInterval(refreshMatches, 2000);
-    return () => { es.close(); clearInterval(poll); };
+    const channel = supabase
+      .channel("match-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        refreshMatches();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [selSparingId, refreshMatches]);
 
   // Track current view for browser back button
@@ -122,6 +119,17 @@ export default function SparingMatchPage() {
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
+  async function updateMatchViaSupabase(id: string, data: Record<string, unknown>) {
+    const { data: updated, error } = await supabase
+      .from("matches")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as ApiMatch;
+  }
+
   async function assignMatch(matchId: string, courtNum: number) {
     await updateMatch(matchId, { courtNumber: courtNum });
   }
@@ -142,19 +150,16 @@ export default function SparingMatchPage() {
         const ns1 = team === 1 ? s1 + 1 : s1;
         const ns2 = team === 2 ? s2 + 1 : s2;
         const next = { ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 };
-        await updateMatch(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
         setActiveMatch(next);
-        if (ns1 >= 21 || ns2 >= 21) {
-          setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
-        }
       } else {
         const ns1 = team === 1 ? g2s1 + 1 : g2s1;
         const ns2 = team === 2 ? g2s2 + 1 : g2s2;
         const next = { ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 };
-        await updateMatch(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setActiveMatch(next);
         if (ns1 >= 21 || ns2 >= 21) {
-          await updateMatch(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+          await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
         }
       }
@@ -162,10 +167,10 @@ export default function SparingMatchPage() {
       const maxScore = modeLabel === "1-42" ? 42 : 30;
       const ns1 = team === 1 ? s1 + 1 : s1;
       const ns2 = team === 2 ? s2 + 1 : s2;
-      await updateMatch(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+      await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
       if (ns1 >= maxScore || ns2 >= maxScore) {
-        await updateMatch(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+        await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         setActiveMatch(null);
       }
     }
@@ -185,18 +190,18 @@ export default function SparingMatchPage() {
       if (!g1Done) {
         const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
         const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-        await updateMatch(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
       } else {
         const ns1 = team === 1 ? Math.max(0, g2s1 - 1) : g2s1;
         const ns2 = team === 2 ? Math.max(0, g2s2 - 1) : g2s2;
-        await updateMatch(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
       }
     } else {
       const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
       const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-      await updateMatch(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+      await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
     }
   }
@@ -204,7 +209,7 @@ export default function SparingMatchPage() {
   async function swapTeams() {
     if (!activeMatch) return;
     const s = activeMatch;
-    await updateMatch(s.id, {
+    await updateMatchViaSupabase(s.id, {
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
@@ -237,7 +242,7 @@ export default function SparingMatchPage() {
     } else {
       winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
     }
-    await updateMatch(activeMatch.id, { status: "completed", winnerTeam: winner });
+    await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: winner });
     setShowConfirmFinish(false);
     setActiveMatch(null);
   }

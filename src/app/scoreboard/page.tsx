@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
+import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -77,16 +78,13 @@ export default function ScoreboardPage() {
 
   useEffect(() => {
     if (!selSparingId) return;
-    const es = new EventSource("/api/matches/stream");
-    es.onmessage = (e) => {
-      try {
-        if (e.data === "connected") return;
-        const d = JSON.parse(e.data);
-        if (d.type?.startsWith("match-")) refreshMatches();
-      } catch {}
-    };
-    es.onerror = () => {};
-    return () => es.close();
+    const channel = supabase
+      .channel("scoreboard-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        refreshMatches();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [selSparingId, refreshMatches]);
 
   const viewRef = useRef({ selSparingId, selCourt, courtEntryTimestamps });

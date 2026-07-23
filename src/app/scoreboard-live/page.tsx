@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
+import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import {
   Swords, ChevronLeft, Clock, Radio, Trophy, Minus, Plus,
@@ -78,24 +79,13 @@ export default function ScoreboardLivePage() {
 
   useEffect(() => {
     if (!selSparingId) return;
-    // SSE for instant push
-    const es = new EventSource("/api/matches/stream");
-    es.onmessage = (e) => {
-      try {
-        if (e.data === "connected") return;
-        const d = JSON.parse(e.data);
-        if (d.type?.startsWith("match-")) refreshMatches();
-      } catch {}
-    };
-    es.onerror = () => {
-      // EventSource auto-reconnects; nothing extra needed
-    };
-    // Polling fallback every 5s so page never freezes
-    const poll = setInterval(refreshMatches, 2000);
-    return () => {
-      es.close();
-      clearInterval(poll);
-    };
+    const channel = supabase
+      .channel("scoreboard-live-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        refreshMatches();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [selSparingId, refreshMatches]);
 
   const viewRef = useRef({ selSparingId });
