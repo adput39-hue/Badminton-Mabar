@@ -8,7 +8,7 @@ export interface ApiMember {
 export interface ApiSchedule {
   id: string; pbId: string; title: string; date: string;
   startTime: string | null; endTime: string | null; location: string | null;
-  maxParticipants: number; courts: string | null; sparingOpponent: string | null; notes: string | null; status: string;
+  maxParticipants: number; htm: number | null; courts: string | null; sparingOpponent: string | null; notes: string | null; status: string;
   createdBy: string | null; createdAt: string; updatedAt: string;
 }
 

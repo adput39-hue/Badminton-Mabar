@@ -11,7 +11,10 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    include: { level: { select: { id: true, name: true, slug: true, menus: true } } },
+    include: {
+      level: { select: { id: true, name: true, slug: true, menus: true } },
+      pb: { select: { id: true, name: true, logoUrl: true } },
+    },
   });
 
   if (!user) {
@@ -32,6 +35,7 @@ export async function POST(request: Request) {
       pbId: user.pbId,
       levelId: user.levelId,
       level: user.level,
+      pb: user.pb,
     },
   });
 }

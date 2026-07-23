@@ -3,22 +3,23 @@
 import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiUserLevel } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Shield, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Shield } from "lucide-react";
 
 const allMenus = [
-  { key: "dashboard", label: "Dashboard", desc: "Halaman utama dashboard" },
-  { key: "members", label: "Anggota", desc: "Manajemen anggota" },
-  { key: "schedules", label: "Jadwal", desc: "Jadwal latihan/tanding" },
-  { key: "mabar", label: "Mabar", desc: "Main bareng" },
-  { key: "riwayat", label: "Riwayat", desc: "Riwayat pertandingan" },
-  { key: "sparing", label: "Sparing", desc: "Sparing & match" },
-  { key: "scoreboard", label: "Scoreboard", desc: "Scoreboard & live score" },
-  { key: "users", label: "Master User", desc: "Kelola user (admin)" },
-  { key: "user-levels", label: "Level Manager", desc: "Atur hak akses level (super admin)" },
-  { key: "finances", label: "Kas PB", desc: "Keuangan PB" },
-  { key: "stats", label: "Statistik", desc: "Statistik & laporan" },
-  { key: "reports", label: "Laporan", desc: "Cetak laporan" },
-  { key: "settings", label: "Pengaturan", desc: "Pengaturan akun" },
+  { key: "dashboard", label: "Dashboard" },
+  { key: "members", label: "Anggota" },
+  { key: "schedules", label: "Jadwal" },
+  { key: "mabar", label: "Mabar" },
+  { key: "riwayat", label: "Riwayat" },
+  { key: "sparing", label: "Sparing" },
+  { key: "scoreboard", label: "Scoreboard" },
+  { key: "live-score", label: "Live Score" },
+  { key: "users", label: "Master User" },
+  { key: "user-levels", label: "Level Manager" },
+  { key: "finances", label: "Kas PB" },
+  { key: "stats", label: "Statistik" },
+  { key: "reports", label: "Laporan" },
+  { key: "settings", label: "Pengaturan" },
 ];
 
 export default function UserLevelsPage() {
@@ -85,7 +86,7 @@ export default function UserLevelsPage() {
   const presetColors = ["#0d9488", "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#3b82f6"];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Level Manager</h1>
@@ -103,54 +104,49 @@ export default function UserLevelsPage() {
           <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Buat level pertama</button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {levels.map((l) => (
-            <div key={l.id} className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white text-lg font-bold shadow-sm" style={{ backgroundColor: l.color }}>
-                    {l.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{l.name}</h3>
-                    <span className="text-xs text-gray-400 font-mono">{l.slug}</span>
-                  </div>
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(l)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  {l._count && l._count.users === 0 && (
-                    <button onClick={() => { if (confirm(`Hapus level "${l.name}"?`)) removeLevel(l.id); }} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              {l.description && <p className="mt-3 text-sm text-gray-500">{l.description}</p>}
-              <div className="mt-4 border-t border-gray-100 pt-3">
-                <p className="mb-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Akses Menu ({l.menus?.length || 0})</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(l.menus || []).length === 0 ? (
-                    <span className="text-xs text-gray-400 italic">Tidak ada akses</span>
-                  ) : (
-                    (l.menus || []).map((key) => {
-                      const menu = allMenus.find((m) => m.key === key);
-                      return menu ? (
-                        <span key={key} className="inline-flex items-center gap-1 rounded-full bg-[#ccfbf1] px-2.5 py-0.5 text-xs font-medium text-[#0d9488]">
-                          {menu.label}
-                        </span>
-                      ) : null;
-                    })
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs">
-                <span className="text-gray-400">Slug: <span className="font-mono text-gray-600">{l.slug}</span></span>
-                {l._count && <span className="font-medium text-gray-600">{l._count.users} user</span>}
-              </div>
-            </div>
-          ))}
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/80 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-5 py-3">Level</th>
+                <th className="px-5 py-3 hidden sm:table-cell">Slug</th>
+                <th className="px-5 py-3 hidden md:table-cell">Deskripsi</th>
+                <th className="px-5 py-3 text-center">User</th>
+                <th className="px-5 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {levels.map((l) => (
+                <tr key={l.id} className="transition-colors hover:bg-gray-50/50">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
+                      <span className="font-medium text-gray-900">{l.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-gray-500 font-mono text-xs hidden sm:table-cell">{l.slug}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{l.description || "—"}</td>
+                  <td className="px-5 py-3 text-center">
+                    <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      {l._count?.users ?? 0}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(l)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      {l._count && l._count.users === 0 && (
+                        <button onClick={() => { if (confirm(`Hapus level "${l.name}"?`)) removeLevel(l.id); }} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -166,16 +162,16 @@ export default function UserLevelsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nama Level</label>
-                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Admin Utama" />
+                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Admin Utama" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Slug</label>
-                  <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 font-mono shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="admin_utama" />
+                  <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-mono shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="admin_utama" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi level" />
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi level" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Warna</label>
@@ -200,7 +196,6 @@ export default function UserLevelsPage() {
                     <button type="button" onClick={deselectAll} className="text-xs font-medium text-gray-400 hover:underline">Hapus Semua</button>
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">Centang menu yang bisa diakses oleh level ini</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {allMenus.map((menu) => {
                     const selected = form.menus.includes(menu.key);
@@ -210,20 +205,15 @@ export default function UserLevelsPage() {
                         type="button"
                         onClick={() => toggleMenu(menu.key)}
                         className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-all ${
-                          selected
-                            ? "border-[#0d9488] bg-[#f0fdfa] text-gray-900"
-                            : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                          selected ? "border-[#0d9488] bg-[#f0fdfa] text-gray-900" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
                         }`}
                       >
                         <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-all ${
                           selected ? "border-[#0d9488] bg-[#0d9488] text-white" : "border-gray-300"
                         }`}>
-                          {selected && <Check className="h-3 w-3" />}
+                          {selected && <span className="text-[10px]">✓</span>}
                         </div>
-                        <div className="leading-tight">
-                          <span className="font-medium">{menu.label}</span>
-                          {selected && <span className="ml-1.5 text-[10px] text-[#0d9488] font-medium">✓</span>}
-                        </div>
+                        <span className="font-medium">{menu.label}</span>
                       </button>
                     );
                   })}

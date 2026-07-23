@@ -22,6 +22,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (slug !== undefined) data.slug = slug;
     if (address !== undefined) data.address = address || null;
     if (phone !== undefined) data.phone = phone || null;
+    if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl || null;
 
     const pb = await prisma.pb.update({
       where: { id },

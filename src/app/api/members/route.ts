@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         photo: body.photo || null,
         address: body.address || null,
         class: body.class,
-        type: body.type || "internal",
+        type: body.type || "1",
         isActive: body.isActive ?? true,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : new Date(),
       },

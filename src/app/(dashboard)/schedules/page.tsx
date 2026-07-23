@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member } from "@/lib/api-types";
-import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3 } from "lucide-react";
+import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
 
 const statusStyle: Record<string, string> = {
@@ -37,18 +37,18 @@ export default function SchedulesPage() {
   const [showTambahLap, setShowTambahLap] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editCourtIdx, setEditCourtIdx] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: 20, notes: "" });
+  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: 20, htm: 0, notes: "" });
   const [courtsList, setCourtsList] = useState<{name: string; startTime: string; endTime: string}[]>([]);
   const [courtInput, setCourtInput] = useState({ name: "", startTime: "", endTime: "" });
 
   const existingLocations = [...new Set(schedules.map((s) => s.location).filter(Boolean))] as string[];
   const usedSchedules = new Set(attendances.filter((a) => a.status !== "undangan").map((a) => a.scheduleId));
 
-  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: 20, notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
+  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: 20, htm: 0, notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
 
   function openEdit(s: Schedule) {
     setEditId(s.id);
-    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: s.maxParticipants, notes: s.notes || "" });
+    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: s.maxParticipants, htm: s.htm ?? 0, notes: s.notes || "" });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
     setShowForm(true);
@@ -66,7 +66,7 @@ export default function SchedulesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim() || !form.date) return;
-    const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: form.max_participants, courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
+    const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: form.max_participants, htm: form.htm || null, courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
     if (editId) await updateSchedule(editId, payload);
     else await addSchedule(payload);
     setShowForm(false);
@@ -161,13 +161,16 @@ export default function SchedulesPage() {
                   </datalist>
                 </div>
               </div>
-              <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="number" value={form.htm} onChange={(e) => setForm({ ...form, htm: Number(e.target.value) })} min={0} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
+              </div>
 
               {/* Lapangan */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Lapangan</label>
                 {courtsList.length > 0 && (
-                  <div className="mb-3 space-y-2">
+                  <div className="mb-3 max-h-[180px] space-y-2 overflow-y-auto">
                     {courtsList.map((c, i) => (
                       <div key={i} className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -292,6 +295,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-500">
               {schedule.startTime && <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{schedule.startTime.slice(0, 5)} - {schedule.endTime?.slice(0,5) || ""}</span>}
               {schedule.location && <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{schedule.location}</span>}
+              {schedule.htm ? <span className="inline-flex items-center gap-1.5 font-medium text-[#0d9488]"><DollarSign className="h-3.5 w-3.5" />Rp {schedule.htm.toLocaleString("id-ID")}</span> : null}
               {schedule.courts && (() => { try {
                 const courts = JSON.parse(schedule.courts) as {name:string;startTime:string;endTime:string}[];
                 return courts.length > 0 && <span className="inline-flex items-center gap-1.5"><Grid3X3 className="h-3.5 w-3.5" />{courts.map(c => `${c.name} (${c.startTime.slice(0,5)}-${c.endTime.slice(0,5)})`).join(", ")}</span>;
@@ -328,11 +332,23 @@ function SelectParticipantsModal({ members, selectedIds, onSave, onClose }: {
 }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string[]>(selectedIds);
+  const [focused, setFocused] = useState(false);
 
-  const available = members.filter((m) => !selected.includes(m.id) && m.name.toLowerCase().includes(search.toLowerCase()));
+  const internal = members.filter((m) => m.type === "1" || !m.type);
 
-  function addMember(id: string) { if (!selected.includes(id)) setSelected([...selected, id]); setSearch(""); }
-  function removeMember(id: string) { setSelected(selected.filter((s) => s !== id)); }
+  const filtered = internal.filter((m) => {
+    const q = search.toLowerCase();
+    return m.name.toLowerCase().includes(q) || m.class.toLowerCase().includes(q);
+  });
+
+  function toggleMember(id: string) {
+    setSelected((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
+    setSearch("");
+  }
+
+  function removeMember(id: string) {
+    setSelected(selected.filter((s) => s !== id));
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
@@ -341,43 +357,51 @@ function SelectParticipantsModal({ members, selectedIds, onSave, onClose }: {
           <h2 className="text-lg font-bold text-gray-900">Pilih Peserta</h2>
           <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
         </div>
-        <div className="border-b border-gray-100 px-6 py-4">
+        <div className="px-6 py-4">
           <div className="relative">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
-            {search && available.length > 0 && (
+            <input value={search} onChange={(e) => setSearch(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
+              placeholder="Cari nama anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+            {search && focused && (
               <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-                {available.slice(0, 10).map((m) => (
-                  <button key={m.id} type="button" onClick={() => addMember(m.id)}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-[#ccfbf1]">
-                    <span>{m.name}</span>
-                    <span className="ml-auto text-xs text-gray-400">Kelas {m.class}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {search && available.length === 0 && (
-              <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 shadow-lg">
-                Tidak ditemukan
+                {filtered.map((m) => {
+                  const isSel = selected.includes(m.id);
+                  return (
+                    <button key={m.id} type="button" onMouseDown={(e) => { e.preventDefault(); toggleMember(m.id); }}
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[#ccfbf1] ${isSel ? "bg-[#ccfbf1]/50 text-[#0d9488]" : "text-gray-700"}`}>
+                      <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${isSel ? "border-[#0d9488] bg-[#0d9488]" : "border-gray-300"}`}>
+                        {isSel && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <span>{m.name}</span>
+                      <span className="ml-auto text-xs text-gray-400">Kelas {m.class}</span>
+                    </button>
+                  );
+                })}
+                {filtered.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Tidak ditemukan</p>}
               </div>
             )}
           </div>
         </div>
-        <div className="flex-1 space-y-1 overflow-y-auto p-4">
+        <div className="px-6 pb-2">
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Terpilih ({selected.length})</h4>
           {selected.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-400">Belum ada peserta dipilih</p>
-          ) : selected.map((id) => {
-            const m = members.find((x) => x.id === id);
-            if (!m) return null;
-            return (
-              <div key={id} className="flex items-center justify-between rounded-xl px-4 py-2.5 transition-colors hover:bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ccfbf1] text-xs font-bold text-[#0d9488]">{m.name.charAt(0)}</div>
-                  <span className="text-sm font-medium text-gray-900">{m.name}</span>
-                </div>
-                <button type="button" onClick={() => removeMember(id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
-              </div>
-            );
-          })}
+            <p className="py-4 text-center text-sm text-gray-400">Belum ada peserta dipilih</p>
+          ) : (
+            <div className="max-h-[260px] space-y-1 overflow-y-auto">
+              {selected.map((id) => {
+                const m = members.find((x) => x.id === id);
+                if (!m) return null;
+                return (
+                  <div key={id} className="flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ccfbf1] text-xs font-bold text-[#0d9488]">{m.name.charAt(0)}</div>
+                      <span className="text-sm font-medium text-gray-900">{m.name}</span>
+                    </div>
+                    <button type="button" onClick={() => removeMember(id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
           <p className="text-sm text-gray-500">{selected.length} peserta</p>

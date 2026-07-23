@@ -20,6 +20,7 @@ function getDateBadge(dateStr: string) {
 }
 
 export default function DashboardPage() {
+  const [user, setUser] = useState<{ fullName: string; role: string; level?: { menus: string[] } } | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
@@ -27,13 +28,23 @@ export default function DashboardPage() {
   const [attendances, setAttendances] = useState<any[]>([]);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) setUser(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const hasDashboardAccess = user?.role === "superadmin" || user?.level?.menus?.includes("dashboard");
+
+  useEffect(() => {
+    if (!hasDashboardAccess) return;
     const headers = { "Content-Type": "application/json", "x-pb-id": getClientPbId() || "" };
     fetch("/api/dashboard", { headers }).then((r) => r.json()).then(setData).catch(console.error);
     fetch("/api/members", { headers }).then((r) => r.json()).then(setMembers).catch(console.error);
     fetch("/api/matches", { headers }).then((r) => r.json()).then(setMatches).catch(console.error);
     fetch("/api/schedules", { headers }).then((r) => r.json()).then(setSchedules).catch(console.error);
     fetch("/api/attendances", { headers }).then((r) => r.json()).then(setAttendances).catch(console.error);
-  }, []);
+  }, [hasDashboardAccess]);
 
   const hadir = attendances.filter((a) => a.status === "hadir").length;
   const izin = attendances.filter((a) => a.status === "izin").length;
@@ -41,11 +52,67 @@ export default function DashboardPage() {
   const totalAtt = hadir + izin + alpha;
   const attendanceRate = totalAtt > 0 ? Math.round((hadir / totalAtt) * 100) : 0;
 
-  const recentMatches = matches.filter((m) => m.status === "completed").slice(0, 3);
-  const recentMembers = members.filter((m) => m.isActive).slice(0, 4);
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const internalMembers = members.filter((m: any) => m.type === "1" || !m.type);
 
-  const nextSchedule = data?.upcomingSchedules[0];
+  const thisMonthActivities = (() => {
+    const seen = new Set<string>();
+    schedules.forEach((s: any) => {
+      const d = new Date(s.date);
+      if (d.getMonth() === thisMonth && d.getFullYear() === thisYear && s.status !== "cancelled" && !seen.has(s.id)) {
+        seen.add(s.id);
+      }
+    });
+    return seen.size;
+  })();
+
+  const upcomingSchedules = (() => {
+    const seen = new Set<string>();
+    const result: any[] = [];
+    [...schedules]
+      .filter((s: any) => s.status !== "cancelled")
+      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .forEach((s: any) => {
+        if (seen.has(s.id)) return;
+        const key = `${new Date(s.date).toISOString().slice(0, 10)}|${(s.title || "").toLowerCase().trim()}|${(s.sparingOpponent || "").toLowerCase().trim()}`;
+        if (seen.has(key)) return;
+        seen.add(s.id);
+        seen.add(key);
+        let courtTime = s.startTime;
+        try {
+          if (s.notes) {
+            const notes = JSON.parse(s.notes);
+            if (notes.courts?.length > 0) courtTime = notes.courts[0].startTime;
+          }
+          if (!courtTime && s.courts) {
+            const courts = JSON.parse(s.courts);
+            if (Array.isArray(courts) && courts.length > 0) courtTime = courts[0].startTime;
+          }
+        } catch {}
+        result.push({ ...s, courtTime });
+      });
+    return result.slice(0, 3);
+  })();
+
+  const recentMatches = matches.filter((m) => m.status === "completed").slice(0, 3);
+  const recentMembers = [...internalMembers].sort((a: any, b: any) => new Date(b.createdAt || b.joinedAt || 0).getTime() - new Date(a.createdAt || a.joinedAt || 0).getTime()).slice(0, 4);
+
+  const nextSchedule = upcomingSchedules[0];
   const nextDate = nextSchedule ? getDateBadge(nextSchedule.date) : null;
+
+  if (user && !hasDashboardAccess) {
+    return (
+      <div className="mx-auto flex max-w-2xl items-center justify-center py-20">
+        <div className="text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#ccfbf1] text-4xl">🏸</div>
+          <h1 className="mt-6 text-2xl font-bold text-gray-900">Selamat Datang, {user.fullName}!</h1>
+          <p className="mt-2 text-sm text-gray-500">Silakan gunakan menu di sidebar untuk memulai.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -55,9 +122,9 @@ export default function DashboardPage() {
         <>
           {/* Stat Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard icon={<Users className="h-8 w-8 text-[#0d9488]/20" />} value={data.totalMembers} label="Total Anggota" sub={`${data.activeMembers} aktif`} />
-            <StatCard icon={<Calendar className="h-8 w-8 text-[#0d9488]/20" />} value={data.thisMonthSchedules} label="Main Bareng Bulan Ini" sub="Kegiatan" />
-            <StatCard icon={<Clock className="h-8 w-8 text-[#0d9488]/20" />} value={nextDate ? `${nextDate.date} ${nextDate.month}` : "—"} label="Jadwal Berikutnya" sub={nextSchedule ? `${nextSchedule.startTime?.slice(0,5) || ""}` : ""} />
+            <StatCard icon={<Users className="h-8 w-8 text-[#0d9488]/20" />} value={internalMembers.length} label="Total Anggota" sub="Terdaftar" />
+            <StatCard icon={<Calendar className="h-8 w-8 text-[#0d9488]/20" />} value={thisMonthActivities} label="Main Bareng Bulan Ini" sub="Kegiatan" />
+            <StatCard icon={<Clock className="h-8 w-8 text-[#0d9488]/20" />} value={nextDate ? `${nextDate.date} ${nextDate.month}` : "—"} label="Jadwal Berikutnya" sub={nextSchedule ? `${nextSchedule.courtTime?.slice(0,5) || ""}` : ""} />
             <StatCard icon={<Wallet className="h-8 w-8 text-[#0d9488]/20" />} value="Rp0" label="Kas PB" sub="Saldo saat ini" />
             <StatCard icon={<Swords className="h-8 w-8 text-[#0d9488]/20" />} value={data.completedMatches} label="Match Bulan Ini" sub="Pertandingan" />
           </div>
@@ -71,7 +138,7 @@ export default function DashboardPage() {
                 <Link href="/schedules" className="text-xs text-gray-500 hover:text-[#0d9488]">Lihat Semua</Link>
               </div>
               <div className="space-y-3">
-                {(data.upcomingSchedules.length === 0 ? schedules.filter((s: any) => s.status !== "cancelled").slice(0, 3) : data.upcomingSchedules.slice(0, 3)).map((s: any) => {
+                {upcomingSchedules.map((s: any) => {
                   const badge = getDateBadge(s.date);
                   const attCount = attendances.filter((a: any) => a.scheduleId === s.id && a.status === "hadir").length;
                   const maxP = s.maxParticipants || 20;
@@ -85,7 +152,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{s.title}</p>
-                        <p className="text-xs text-gray-500">🕐 {s.startTime?.slice(0,5) || "—"} - {s.endTime?.slice(0,5) || "—"}</p>
+                        <p className="text-xs text-gray-500">🕐 {s.courtTime?.slice(0,5) || s.startTime?.slice(0,5) || "—"}{s.endTime ? ` - ${s.endTime.slice(0,5)}` : ""}</p>
                         {s.location && <p className="text-xs text-gray-500 truncate">📍 {s.location}</p>}
                       </div>
                       <div className="flex flex-col items-end justify-center gap-1">
@@ -95,7 +162,7 @@ export default function DashboardPage() {
                     </div>
                   );
                 })}
-                {schedules.filter((s: any) => s.status !== "cancelled").length === 0 && <p className="py-4 text-center text-xs text-gray-400">Belum ada jadwal</p>}
+                {upcomingSchedules.length === 0 && <p className="py-4 text-center text-xs text-gray-400">Belum ada jadwal</p>}
               </div>
             </div>
 
@@ -170,7 +237,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#0d9488]" /> Hadir <span className="ml-auto font-semibold">{hadir}</span></div>
                     <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Tidak Hadir <span className="ml-auto font-semibold">{alpha}</span></div>
                     <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-400" /> Izin <span className="ml-auto font-semibold">{izin}</span></div>
-                    <div className="border-t pt-1 text-gray-500">Total Kegiatan <span className="ml-auto font-semibold text-gray-900">{data.thisMonthSchedules}</span></div>
+                    <div className="border-t pt-1 text-gray-500">Total Kegiatan <span className="ml-auto font-semibold text-gray-900">{thisMonthActivities}</span></div>
                   </div>
                 </div>
               </div>

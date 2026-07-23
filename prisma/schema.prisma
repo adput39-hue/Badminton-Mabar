@@ -92,6 +92,7 @@ model Schedule {
   location        String?
   maxParticipants Int          @default(20) @map("max_participants")
   courts         String?
+  htm            Int?
   sparingOpponent String?  @map("sparing_opponent")
   notes           String?
   status          String       @default("planned")
@@ -172,4 +173,11 @@ model MatchHistory {
   @@index([memberId])
   @@index([pbId])
   @@map("match_history")
+}
+
+model SiteConfig {
+  key   String @id
+  value String
+
+  @@map("site_config")
 }

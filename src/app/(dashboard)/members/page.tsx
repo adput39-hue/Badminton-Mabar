@@ -62,7 +62,7 @@ export default function MembersPage() {
   const perPage = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const internalMembers = useMemo(() => members.filter((m) => m.type === "internal" || !m.type), [members]);
+  const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
   const filtered = internalMembers
     .filter((m) => filterClass === "all" || m.class === filterClass)
@@ -95,7 +95,7 @@ export default function MembersPage() {
     if (!form.name.trim()) return;
     const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class };
     if (editId) await update(editId, payload);
-    else await add({ ...payload, joinedAt: new Date().toISOString().split("T")[0] });
+    else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
     setShowForm(false);
   }
 

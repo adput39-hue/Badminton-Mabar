@@ -24,6 +24,17 @@ export default function ScoreboardPage() {
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
   const [courtEntryTimestamps, setCourtEntryTimestamps] = useState<Record<number, number>>({});
+  const [pbName, setPbName] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u.pb?.name) setPbName(u.pb.name);
+      }
+    } catch {}
+  }, []);
 
   const sparings = useMemo(() =>
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -78,6 +89,19 @@ export default function ScoreboardPage() {
     return () => es.close();
   }, [selSparingId, refreshMatches]);
 
+  const viewRef = useRef({ selSparingId, selCourt, courtEntryTimestamps });
+  useEffect(() => { viewRef.current = { selSparingId, selCourt, courtEntryTimestamps }; });
+
+  useEffect(() => {
+    const handlePop = () => {
+      const v = viewRef.current;
+      if (v.selCourt !== null) { setCourtEntryTimestamps((p) => { const n = { ...p }; delete n[v.selCourt!]; return n; }); setSelCourt(null); return; }
+      if (v.selSparingId) { setSelSparingId(null); return; }
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
   const [elapsed, setElapsed] = useState(0);
 
@@ -110,52 +134,44 @@ export default function ScoreboardPage() {
 
   if (!selSparingId) {
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa] p-4 sm:p-8 md:p-12">
-        {/* Minimal header */}
-        <div className="relative mb-6 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-1.5 text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
-            <ChevronLeft className="h-4 w-4" /> Dashboard
-          </Link>
-          <h1 className="text-base font-bold text-gray-900">Scoreboard</h1>
-          <div className="w-20" />
-        </div>
-
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
-          <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[#0d9488]/3 blur-2xl" />
-        </div>
-        <div className="relative mx-auto max-w-4xl">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#0d9488]/20 bg-white shadow-sm">
-              <Swords className="h-6 w-6 text-[#0d9488]" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Pilih Sparing</h1>
-            <p className="mt-1 text-sm text-gray-500">Pilih sparing untuk melihat pertandingan</p>
+      <div className="relative min-h-screen bg-[#f0fdfa]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+            <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
+              <ChevronLeft className="h-4 w-4" /> Kembali
+            </Link>
+            <h1 className="text-xl font-bold text-white sm:text-2xl">Scoreboard</h1>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing untuk menampilkan scoreboard</p>
+          </div>
+        </div>
+        <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {sparings.map((s, i) => {
               const sColor = courtColors[i % courtColors.length];
               const totalMatches = matches.filter((m) => m.scheduleId === s.id).length;
               const hasLiveMatches = matches.some((m) => m.scheduleId === s.id && (m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
               return (
-                <button key={s.id} onClick={() => { setSelSparingId(s.id); setCourtEntryTimestamps({}); }}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:shadow-md sm:p-6">
+                <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); setCourtEntryTimestamps({}); }}
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[#0d9488] sm:p-5">
                   {hasLiveMatches && (
                     <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${sColor.bg}`}>
                       <Star className="h-4 w-4 text-white" fill="white" />
                     </div>
                   )}
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${sColor.bg}`}>
-                      <span className="text-lg font-bold text-white sm:text-xl">{s.sparingOpponent?.replace(/^PB\s*/i, "").slice(0, 2).toUpperCase() || "PB"}</span>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
+                      <span className="text-base font-bold text-white sm:text-lg">{s.sparingOpponent?.replace(/^PB\s*/i, "").slice(0, 2).toUpperCase() || "PB"}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-gray-900 sm:text-lg">vs {s.sparingOpponent || "—"}</h3>
-                      <p className="mt-1 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{pbName || "PB"} vs {s.sparingOpponent || "—"}</h3>
+                      <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
                     <span className="text-xs text-gray-400">{totalMatches} pertandingan</span>
                     <ChevronRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-0.5" />
                   </div>
@@ -178,24 +194,22 @@ export default function ScoreboardPage() {
     const savedSettingsLocal = savedSettings;
     const courtList = savedSettingsLocal?.courts as { name: string; startTime: string; endTime: string }[] || [];
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa] p-4 sm:p-8 md:p-12">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
-          <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
-          <div className="absolute top-1/4 right-10 h-32 w-32 rounded-full bg-[#0d9488]/3 blur-2xl" />
-        </div>
-        <div className="relative mx-auto max-w-4xl">
-          <button onClick={() => setSelSparingId(null)} className="mb-6 flex items-center gap-1.5 text-sm font-medium text-[#0d9488] hover:text-[#0f766e]">
-            <ChevronLeft className="h-4 w-4" /> Kembali
-          </button>
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#0d9488]/20 bg-white shadow-sm">
-              <CourtIcon size={32} color="#0d9488" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Pilih Lapangan</h1>
-            <p className="mt-1 text-sm text-gray-500">Pilih lapangan untuk melihat pertandingan</p>
+      <div className="relative min-h-screen bg-[#f0fdfa]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+            <button onClick={() => window.history.back()} className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
+              <ChevronLeft className="h-4 w-4" /> Kembali
+            </button>
+            <h1 className="text-xl font-bold text-white sm:text-2xl">Pilih Lapangan</h1>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih lapangan untuk melihat pertandingan</p>
+          </div>
+        </div>
+        <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             {courtList.map((court, i) => {
               const hasLive = sparingMatches.some((m) => m.courtNumber === i + 1 && m.status !== "completed" && (m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
               const enteredAt = courtEntryTimestamps[i + 1] || 0;
@@ -203,39 +217,39 @@ export default function ScoreboardPage() {
               const color = courtColors[i % courtColors.length];
               const statusText = hasLive ? "Pertandingan Berlangsung" : hasDone ? "Pertandingan Selesai" : "Belum Dimulai";
               return (
-                <button key={i} onClick={() => { setCourtEntryTimestamps((p) => ({ ...p, [i + 1]: Date.now() })); setSelCourt(i + 1); }}
-                  className={`group relative overflow-hidden rounded-2xl border bg-white p-5 text-left shadow-sm transition-all hover:shadow-md sm:p-6 ${hasLive ? `${color.border} border-2` : "border-gray-200"}`}>
+                <button key={i} onClick={() => { history.pushState(null, ""); setCourtEntryTimestamps((p) => ({ ...p, [i + 1]: Date.now() })); setSelCourt(i + 1); }}
+                  className={`group relative overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md sm:p-5 ${hasLive ? `${color.border} border-2` : "border-gray-500"}`}>
                   {hasLive && (
                     <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
                       <Star className="h-4 w-4 text-white" fill="white" />
                     </div>
                   )}
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${color.bg}`}>
-                      <CourtIcon size={40} color="white" />
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
+                      <CourtIcon size={28} color="white" className="sm:size-8" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900">{court.name}</h3>
-                      <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-                        <Clock className="h-3.5 w-3.5" />
+                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{court.name}</h3>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                        <Clock className="h-3 w-3" />
                         <span>{court.startTime.slice(0,5)} - {court.endTime.slice(0,5)}</span>
                       </div>
                       {hasLive ? (
-                        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${color.liveBadge}`}>
-                          <Radio className="h-3 w-3" /> LIVE
+                        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
+                          <Radio className="h-2.5 w-2.5" /> LIVE
                         </span>
                       ) : hasDone ? (
-                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">SELESAI</span>
+                        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600">SELESAI</span>
                       ) : (
-                        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${color.badge}`}>
-                          <Timer className={`h-3 w-3 ${color.badgeIcon}`} /> Belum Dimulai
+                        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${color.badge}`}>
+                          <Timer className={`h-2.5 w-2.5 ${color.badgeIcon}`} /> Belum Dimulai
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-                    <div className={`flex items-center gap-2 text-sm font-medium ${hasLive ? color.text : "text-gray-500"}`}>
-                      <Users className={`h-4 w-4 ${hasLive ? "" : "text-gray-400"}`} />
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
+                    <div className={`flex items-center gap-2 text-xs font-medium ${hasLive ? color.text : "text-gray-500"}`}>
+                      <Users className={`h-3.5 w-3.5 ${hasLive ? "" : "text-gray-400"}`} />
                       {statusText}
                     </div>
                     <ChevronRight className={`h-4 w-4 transition-transform group-hover:translate-x-0.5 ${hasLive ? color.text : "text-gray-400"}`} />
@@ -245,7 +259,7 @@ export default function ScoreboardPage() {
             })}
           </div>
           {courtList.length === 0 && (
-            <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm">
               <CourtIcon size={48} color="#d1d5db" />
               <p className="mt-3 text-sm text-gray-500">Belum ada lapangan</p>
             </div>
@@ -257,127 +271,114 @@ export default function ScoreboardPage() {
 
   return (
     <div className="relative min-h-screen bg-[#f0fdfa] overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <svg className="absolute inset-0 h-full w-full opacity-[0.04]" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <defs>
-            <pattern id="diagonal" patternUnits="userSpaceOnUse" width="40" height="40" patternTransform="rotate(45)">
-              <line x1="0" y1="0" x2="0" y2="40" stroke="#0d9488" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100" height="100" fill="url(#diagonal)" />
-        </svg>
-        <svg className="absolute -top-2 right-4 h-40 w-32 text-[#0d9488]/5 sm:h-48 sm:w-40" viewBox="0 0 120 200" fill="currentColor">
-          <path d="M60 20c6 0 12 5 12 12v12c0 3-1 6-3 8l20 34c3 6 2 13-3 17l-8 6c-2 1-4 2-6 2h-24c-2 0-4-1-6-2l-8-6c-5-4-6-11-3-17l20-34c-2-2-3-5-3-8V32c0-7 6-12 12-12z" />
-          <path d="M44 56l16 8 16-8v8l-16 8-16-8v-8z" />
-          <path d="M36 84h48l-8 48H44l-8-48z" opacity="0.3" />
-          <path d="M50 132h20v30c0 8-4 14-10 14s-10-6-10-14v-30z" />
-        </svg>
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-3 pt-3 sm:pb-4 sm:pt-4">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
+        </div>
+        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4">
+          <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
+            <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+          </button>
+          <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
+            {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
+          </span>
+          <div className="flex items-center gap-2">
+            {isCompleted ? (
+              <span className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs">SELESAI</span>
+            ) : isLive ? (
+              <span className="flex items-center gap-1 rounded-full bg-green-400/30 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-300 sm:h-2 sm:w-2" />
+                LIVE
+              </span>
+            ) : <span className="text-[10px] text-white/50 sm:text-xs">—</span>}
+            <span className="font-mono text-[10px] tabular-nums text-white/60 sm:text-xs">{currentTime}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="relative mx-auto flex h-dvh w-full max-w-6xl flex-col overflow-hidden p-3 sm:p-6 md:p-8 lg:p-10">
-        <div className="flex flex-1 flex-col justify-center overflow-hidden">
-          <div className="mx-auto w-full rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-6 md:p-8 lg:p-10">
-            <div className="flex items-center justify-between">
-              <button onClick={() => { setCourtEntryTimestamps((p) => { const n = { ...p }; delete n[selCourt!]; return n; }); setSelCourt(null); }} className="flex items-center gap-1 text-xs font-medium text-[#0d9488] hover:text-[#0f766e] sm:text-sm md:text-base lg:text-lg">
-                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" /> Kembali
-              </button>
-              <span className="rounded-lg bg-[#0d9488] px-3 py-1 text-xs font-bold tracking-wide text-white uppercase shadow-sm sm:rounded-xl sm:px-4 sm:py-1.5 sm:text-sm md:px-5 md:py-2 md:text-base lg:px-6 lg:text-lg">
-                {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
-              </span>
-              <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-                {isCompleted ? (
-                  <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 sm:px-3 sm:py-1 sm:text-xs md:px-4 md:py-1.5 md:text-sm">SELESAI</span>
-                ) : isLive ? (
-                  <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 sm:px-3 sm:py-1 sm:text-xs md:px-4 md:py-1.5 md:text-sm">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 sm:h-2 sm:w-2 md:h-2.5 md:w-2.5" />
-                    LIVE
-                  </span>
-                ) : <span className="text-[10px] text-gray-400 sm:text-xs md:text-sm">—</span>}
-                <span className="font-mono text-[10px] tabular-nums text-gray-500 sm:text-xs md:text-sm lg:text-base">{currentTime}</span>
-              </div>
-            </div>
-
+      <div className="relative mx-auto flex h-[calc(100vh-52px)] w-full max-w-5xl flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4 lg:p-6">
+        <div className="flex flex-1 flex-col justify-start overflow-hidden">
+          <div className="mx-auto w-full rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-5 lg:p-6">
             {currentMatch ? (
               <>
-                <p className="mb-2 mt-1 text-center text-[10px] tracking-wide text-gray-400 sm:mb-3 sm:mt-1.5 sm:text-xs md:mb-6 md:mt-2 md:text-sm lg:mb-8 lg:mt-3 lg:text-base">
+                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-3 md:mt-1.5 md:text-sm">
                   Round {currentMatch.round} · {modeLabel(currentMatch.notes || "1-30")}
                 </p>
 
                 {isCompleted && (
-                  <div className="mb-2 rounded-xl bg-gray-50 px-4 py-2 text-center text-xs font-semibold text-gray-500 ring-1 ring-gray-200 sm:mb-3 sm:text-sm md:mb-4 md:text-base">
+                  <div className="mb-1 rounded-xl bg-gray-50 px-4 py-1.5 text-center text-xs font-semibold text-gray-500 ring-1 ring-gray-200 sm:mb-2 sm:text-sm md:mb-3 md:text-base">
                     ✓ Pertandingan Selesai
                   </div>
                 )}
 
-                <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500 shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl md:h-16 md:w-16 lg:h-20 lg:w-20">
                     <ShuttlecockIcon size={24} className="text-white sm:size-7 md:size-9 lg:size-11" />
                   </div>
-                  <div className="min-w-0 text-right">
-                    <p className="text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-lg lg:text-2xl xl:text-3xl">{getName(currentMatch.team1Player1Id)}</p>
-                    <p className="text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-lg lg:text-2xl xl:text-3xl">{getName(currentMatch.team1Player2Id)}</p>
+                  <div className="basis-1/4 shrink-0 min-w-0 text-left">
+                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team1Player1Id)}</p>
+                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team1Player2Id)}</p>
                   </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-5 sm:py-3 md:px-7 md:py-4 lg:px-10 lg:py-5">
+                  <div className="flex flex-1 items-center justify-end">
+                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
                       {(currentMatch.notes || "1-30").startsWith("2-21") ? (
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-6 lg:gap-8">
+                        <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
-                            <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam1 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
                           </div>
-                          <div className="h-6 w-px bg-gray-200 sm:h-8 md:h-10" />
+                          <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
                           <div className="text-center">
-                            <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam1Game2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1Game2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam1 || 0}</div>
+                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
                       )}
                     </div>
-                    <div className="h-10 w-1.5 rounded-r-lg bg-green-500 sm:h-12 sm:w-2 md:h-16 md:w-2.5 lg:h-20 lg:w-3" />
+                    <div className="h-12 w-2 rounded-r-lg bg-green-500 sm:h-14 sm:w-2.5 md:h-16 md:w-3 lg:h-20 lg:w-3.5" />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 py-2 sm:gap-2 sm:py-3 md:gap-3 md:py-5 lg:py-8">
+                <div className="flex items-center gap-1.5 py-1 sm:gap-2 sm:py-1.5 md:gap-3 md:py-2 lg:py-3">
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold tracking-wider text-gray-500 sm:h-6 sm:w-6 sm:text-[10px] md:h-8 md:w-8 md:text-xs lg:h-10 lg:w-10 lg:text-sm">VS</div>
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
 
-                <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl md:h-16 md:w-16 lg:h-20 lg:w-20">
                     <ShuttlecockIcon size={24} className="text-white sm:size-7 md:size-9 lg:size-11" />
                   </div>
-                  <div className="min-w-0 text-right">
-                    <p className="text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-lg lg:text-2xl xl:text-3xl">{getName(currentMatch.team2Player1Id)}</p>
-                    <p className="text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-lg lg:text-2xl xl:text-3xl">{getName(currentMatch.team2Player2Id)}</p>
+                  <div className="basis-1/4 shrink-0 min-w-0 text-left">
+                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team2Player1Id)}</p>
+                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team2Player2Id)}</p>
                   </div>
-                  <div className="flex items-center">
-                    <div className="flex items-center rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-5 sm:py-3 md:px-7 md:py-4 lg:px-10 lg:py-5">
+                  <div className="flex flex-1 items-center justify-end">
+                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
                       {(currentMatch.notes || "1-30").startsWith("2-21") ? (
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-6 lg:gap-8">
+                        <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
-                            <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
                           </div>
-                          <div className="h-6 w-px bg-gray-200 sm:h-8 md:h-10" />
+                          <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
                           <div className="text-center">
-                            <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam2Game2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2Game2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-3xl font-black text-gray-900 tabular-nums sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">{currentMatch.scoreTeam2 || 0}</div>
+                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
                       )}
                     </div>
-                    <div className="h-10 w-1.5 rounded-r-lg bg-blue-500 sm:h-12 sm:w-2 md:h-16 md:w-2.5 lg:h-20 lg:w-3" />
+                    <div className="h-12 w-2 rounded-r-lg bg-blue-500 sm:h-14 sm:w-2.5 md:h-16 md:w-3 lg:h-20 lg:w-3.5" />
                   </div>
                 </div>
 
-                <div className="mx-auto mt-2 flex items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-gray-100 sm:mt-3 sm:gap-3 sm:px-5 sm:py-3 md:mt-6 md:gap-6 md:rounded-2xl md:px-8 md:py-4 lg:mt-8 lg:gap-8 lg:px-10 lg:py-5">
+                <div className="mx-auto mt-1 flex items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-100 sm:mt-2 sm:gap-3 sm:px-5 sm:py-2 md:mt-3 md:gap-6 md:rounded-2xl md:px-6 md:py-2.5 lg:mt-4 lg:gap-8 lg:px-8 lg:py-3">
                   <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-2 md:text-sm lg:gap-2.5 lg:text-base">
                     <Clock className="h-3 w-3 text-[#0d9488] sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
                     <span>Durasi <strong className="font-bold text-gray-700">{fmtDuration(elapsed)}</strong></span>

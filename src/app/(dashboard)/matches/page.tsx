@@ -3,7 +3,16 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch as MatchItem, ApiSchedule as ScheduleItem, ApiMember as MemberItem, ApiAttendance as AttendanceItem, ApiMatchHistory as HistoryItem } from "@/lib/api-types";
-import { Plus, X, Swords, Trophy, User, Medal } from "lucide-react";
+import { Plus, X, Swords, Trophy, Medal, Clock, Radio, Timer, Star } from "lucide-react";
+import CourtIcon from "@/components/court-icon";
+
+const courtColors = [
+  { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", liveBadge: "bg-green-500 text-white" },
+  { bg: "bg-blue-500", border: "border-blue-500", text: "text-blue-600", badge: "bg-blue-100 text-blue-700", liveBadge: "bg-blue-500 text-white" },
+  { bg: "bg-purple-500", border: "border-purple-500", text: "text-purple-600", badge: "bg-purple-100 text-purple-700", liveBadge: "bg-purple-500 text-white" },
+  { bg: "bg-amber-500", border: "border-amber-500", text: "text-amber-600", badge: "bg-amber-100 text-amber-700", liveBadge: "bg-amber-500 text-white" },
+  { bg: "bg-rose-500", border: "border-rose-500", text: "text-rose-600", badge: "bg-rose-100 text-rose-700", liveBadge: "bg-rose-500 text-white" },
+];
 
 export default function MatchesPage() {
   const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch } = useApi<MatchItem>("matches");
@@ -55,7 +64,7 @@ export default function MatchesPage() {
       const partnerId = isTeam1 ? team1.find((id) => id !== memberId)! : team2.find((id) => id !== memberId)!;
       const opp = isTeam1 ? team2 : team1;
       let result: string; if (winner === null) result = "draw"; else if ((isTeam1 && winner === 1) || (!isTeam1 && winner === 2)) result = "win"; else result = "lose";
-      await addHistory({ matchId, memberId, partnerId, opponent1Id: opp[0], opponent2Id: opp[1], result, pbId: "default" });
+      await addHistory({ matchId, memberId, partnerId, opponent1Id: opp[0], opponent2Id: opp[1], result });
     }
   }
 
@@ -63,7 +72,13 @@ export default function MatchesPage() {
   const scheduled = matches.filter((m) => m.status !== "completed");
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="relative min-h-screen bg-[#f0fdfa]">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
+        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
+        <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[#0d9488]/3 blur-2xl" />
+      </div>
+      <div className="relative mx-auto max-w-6xl">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pertandingan</h1>
@@ -81,7 +96,7 @@ export default function MatchesPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
-            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} onScore={(s1, s2) => handleScore(m.id, s1, s2)} onDelete={() => removeMatch(m.id)} />)}
+            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} onScore={(s1, s2, s1g2, s2g2) => handleScore(m.id, s1, s2, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)}
             {completed.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} onScore={() => {}} onDelete={() => removeMatch(m.id)} />)}
           </div>
           <div className="space-y-4">
@@ -112,6 +127,7 @@ export default function MatchesPage() {
 
       {showForm && <MatchForm schedules={schedules} getAttendees={getAttendees} onSubmit={handleCreateMatch} onClose={() => setShowForm(false)} />}
     </div>
+    </div>
   );
 }
 
@@ -123,20 +139,49 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
   const [s1g2, setS1g2] = useState(match.scoreTeam1Game2 !== null ? String(match.scoreTeam1Game2) : "");
   const [s2g2, setS2g2] = useState(match.scoreTeam2Game2 !== null ? String(match.scoreTeam2Game2) : "");
   const [showScore, setShowScore] = useState(false);
-  const team1Won = match.winnerTeam === 1, team2Won = match.winnerTeam === 2;
+  const team1Won = match.winnerTeam === 1; const team2Won = match.winnerTeam === 2;
   const isTwoGames = match.totalGames === 2;
   const n = (v: string) => Number(v) || 0;
   const g1Filled = s1 !== "" && s2 !== "";
   const g2Filled = s1g2 !== "" && s2g2 !== "";
   const canSave = isTwoGames ? g1Filled && g2Filled : g1Filled;
+  const ci = (match.courtNumber || 1) - 1;
+  const color = courtColors[ci % courtColors.length];
+  const hasScore = (match.scoreTeam1 || 0) + (match.scoreTeam2 || 0) > 0;
   return (
-    <div className={`rounded-2xl border p-5 shadow-sm transition-all sm:p-6 ${match.status === "completed" ? "bg-white/60 border-gray-200" : "bg-white border-gray-200 hover:shadow-md"}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-gray-500"><Swords className="h-4 w-4 text-[#0d9488]" /> {schedule?.title || "Tanpa jadwal"} {match.courtNumber ? `· L.${match.courtNumber}` : ""} · R.{match.round}</div>
-        <div className="flex items-center gap-2">
-          {match.status === "scheduled" && <button onClick={() => setShowScore(!showScore)} className="rounded-xl border border-gray-200 px-4 py-1.5 text-xs font-medium transition-all hover:bg-gray-50 hover:shadow-sm">Input Skor</button>}
-          {match.status === "completed" && <span className="rounded-xl bg-[#ccfbf1] px-3 py-1.5 text-sm font-bold text-[#0d9488] shadow-sm">{match.scoreTeam1} - {match.scoreTeam2}{isTwoGames ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}</span>}
-          <button onClick={onDelete} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
+    <div className={`group relative overflow-hidden rounded-2xl border bg-white p-5 shadow-sm transition-all sm:p-6 ${match.status === "completed" ? "border-gray-200" : "border-gray-200 hover:shadow-md"}`}>
+      <div className="flex items-start gap-4">
+        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${match.status === "completed" ? "bg-gray-300" : color.bg}`}>
+          <CourtIcon size={32} color="white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-gray-900">{schedule?.title || "Pertandingan"}</p>
+              <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+                <Clock className="h-3 w-3" />
+                <span>L.{match.courtNumber || "—"} · R.{match.round}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {match.status === "scheduled" && (
+                <button onClick={() => setShowScore(!showScore)} className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-medium transition-all hover:bg-gray-50">Input Skor</button>
+              )}
+              {match.status === "completed" && (
+                <span className={`rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm ${team1Won || team2Won ? "bg-[#ccfbf1] text-[#0d9488]" : "bg-gray-100 text-gray-500"}`}>
+                  {match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}
+                </span>
+              )}
+              <button onClick={onDelete} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
+            </div>
+          </div>
+          {match.status === "scheduled" && hasScore ? (
+            <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}><Radio className="h-2.5 w-2.5" /> LIVE</span>
+          ) : match.status === "scheduled" ? (
+            <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${color.badge}`}><Timer className="h-2.5 w-2.5" /> Scheduled</span>
+          ) : (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600">SELESAI</span>
+          )}
         </div>
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
@@ -211,7 +256,18 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
           </div>
           {scheduleId && attendees.length < 4 && <p className="rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-700">Minimal 4 pemain hadir</p>}
           <div className="grid grid-cols-3 gap-3">
-            <div><label className="block text-sm font-medium text-gray-700">Lapangan</label><input type="number" value={court} onChange={(e) => setCourt(Number(e.target.value))} min={1} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lapangan</label>
+              <div className="mt-1.5 flex gap-2">
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const c = courtColors[(n - 1) % courtColors.length];
+                  return (
+                    <button key={n} type="button" onClick={() => setCourt(n)}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold transition-all ${court === n ? `${c.bg} text-white shadow-sm` : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>{n}</button>
+                  );
+                })}
+              </div>
+            </div>
             <div><label className="block text-sm font-medium text-gray-700">Ronde</label><input type="number" value={round} onChange={(e) => setRound(Number(e.target.value))} min={1} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
             <div><label className="block text-sm font-medium text-gray-700">Game</label>
               <select value={totalGames} onChange={(e) => setTotalGames(Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">

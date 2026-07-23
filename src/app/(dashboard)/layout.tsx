@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import {
-  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog,
+  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign,
 } from "lucide-react";
 
 const allNavItems = [
@@ -17,7 +17,8 @@ const allNavItems = [
   { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
   { href: "/sparing/match", label: "Match", icon: Swords, menuKey: "sparing" },
   { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
-  { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "scoreboard" },
+  { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "live-score" },
+  { href: "/bayar-htm", label: "Bayar HTM", icon: DollarSign, menuKey: "htm" },
   { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
   { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
   { href: "/settings", label: "Kas PB", icon: Wallet, menuKey: "finances" },
@@ -29,7 +30,7 @@ const allNavItems = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ fullName: string; role: string; level?: { menus: string[] } } | null>(null);
+  const [user, setUser] = useState<{ fullName: string; role: string; level?: { menus: string[] }; pb?: { id: string; name: string; logoUrl?: string } } | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -58,10 +59,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 min-h-[68px]">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d9488] text-xl shrink-0">🏸</div>
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-[#0d9488] text-xl shrink-0">{user?.pb?.logoUrl ? <img src={user.pb.logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <span>🏸</span>}</div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-gray-900 truncate">PB GARUDA</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.pb?.name || "PB"}</p>
               <p className="text-xs text-[#0d9488] font-medium">Main Bareng</p>
             </div>
           )}

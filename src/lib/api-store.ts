@@ -6,10 +6,12 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (pbId) headers["x-pb-id"] = pbId;
 
-  const res = await fetch(url, {
-    headers,
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, { headers, ...options });
+  } catch (e) {
+    throw new Error("Network error");
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`API error: ${res.status}${text ? ` - ${text}` : ""}`);
@@ -30,9 +32,13 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
   }, [url]);
 
   const refresh = useCallback(async () => {
-    const data = await apiFetch<T[]>(url);
-    setItems(data);
-    return data;
+    try {
+      const data = await apiFetch<T[]>(url);
+      setItems(data);
+      return data;
+    } catch {
+      return null as unknown as T[];
+    }
   }, [url]);
 
   const add = useCallback(

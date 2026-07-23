@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         location: body.location || null,
         maxParticipants: body.maxParticipants ?? 20,
         courts: body.courts || null,
+        htm: body.htm ?? null,
         notes: body.notes || null,
         sparingOpponent: body.sparingOpponent || null,
         status: body.status || "planned",

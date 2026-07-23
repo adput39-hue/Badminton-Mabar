@@ -24,6 +24,18 @@ export default function SparingPage() {
   const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch } = useApi<ApiMatch>("matches");
   const { items: attendances, add: addAtt, remove: removeAtt } = useApi<ApiAttendance>("attendances");
 
+  const [pbName, setPbName] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u.pb?.name) setPbName(u.pb.name);
+      }
+    } catch {}
+  }, []);
+
   const [showCreate, setShowCreate] = useState(false);
   const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
   const [formOpponent, setFormOpponent] = useState("");
@@ -62,6 +74,7 @@ export default function SparingPage() {
   const [lapEnd, setLapEnd] = useState("");
   const [editLapIdx, setEditLapIdx] = useState<number | null>(null);
   const [lokasi, setLokasi] = useState("");
+  const [htm, setHtm] = useState(0);
 
   const modeLabel: Record<string, string> = { "1-30": "1 Game 30 Poin", "1-42": "1 Game 42 Poin", "2-21": "2 Game 21 Poin" };
 
@@ -69,8 +82,8 @@ export default function SparingPage() {
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
-  const internalMembers = useMemo(() => members.filter((m) => m.type === "internal" || !m.type), [members]);
-  const externalMembers = useMemo(() => members.filter((m) => m.type === "external"), [members]);
+  const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
+  const externalMembers = useMemo(() => members.filter((m) => m.type === "2"), [members]);
 
   const selectedSparing = sparings.find((s) => s.id === selSparingId);
   const sparingMatches = useMemo(() =>
@@ -111,10 +124,9 @@ export default function SparingPage() {
       date: new Date(formDate).toISOString(),
       sparingOpponent: formOpponent.trim(),
       status: "planned",
-      pbId: "default",
     });
     for (const p of opponentPlayers) {
-      await addMember({ name: p.name, class: p.class, type: "external", pbId: "default" });
+      await addMember({ name: p.name, class: p.class, type: "2" });
     }
     setShowCreate(false);
     setFormOpponent("");
@@ -139,7 +151,10 @@ export default function SparingPage() {
         if (saved.totalRounds) setTotalRoundsSetting(saved.totalRounds);
         if (saved.courts) setLapanganList(saved.courts);
         if (saved.lokasi) setLokasi(saved.lokasi);
+        if (saved.htm !== undefined) setHtm(saved.htm);
       } catch {}
+    } else {
+      setHtm(selectedSparing?.htm ?? 0);
     }
   }, [initialSelectedIds, selectedSparing]);
 
@@ -150,8 +165,8 @@ export default function SparingPage() {
   async function saveOurSelection() {
     if (!selSparingId) return;
     for (const att of sparingAtts) await removeAtt(att.id);
-    for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir", pbId: "default" });
-    await updateSchedule(selSparingId, { notes: JSON.stringify({ draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi }) });
+    for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
+    await updateSchedule(selSparingId, { notes: JSON.stringify({ draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
     setSaved(true);
     setShowAddOur(false);
     setTimeout(() => setSaved(false), 2000);
@@ -208,7 +223,7 @@ export default function SparingPage() {
     if (!p1 || !p2 || !p3 || !p4) return;
     const totalGames = draftGames.startsWith("2") ? 2 : 1;
     await addMatch({
-      scheduleId: selSparingId, pbId: "default", totalGames, round: selectedRound,
+      scheduleId: selSparingId, totalGames, round: selectedRound,
       team1Player1Id: p1.id, team1Player2Id: p2.id, team2Player1Id: p3.id, team2Player2Id: p4.id,
       courtNumber: null, scoreTeam1: null, scoreTeam2: null,
       scoreTeam1Game2: null, scoreTeam2Game2: null, winnerTeam: null, status: "planned", notes: draftGames,
@@ -242,7 +257,7 @@ export default function SparingPage() {
 
   async function addNewOpponent() {
     if (!newOppName.trim() || !newOppClass || !selSparingId) return;
-    await addMember({ name: newOppName.trim(), class: newOppClass, type: "external", pbId: "default" });
+    await addMember({ name: newOppName.trim(), class: newOppClass, type: "2" });
     setNewOppName(""); setNewOppClass(""); setShowAddOpp(false);
   }
 
@@ -257,7 +272,7 @@ export default function SparingPage() {
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sparing</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{pbName || "Sparing"}</h1>
           <p className="mt-0.5 text-sm text-gray-500">{sparings.length} sparing tersimpan</p>
         </div>
         <div className="flex items-center gap-2">
@@ -286,7 +301,7 @@ export default function SparingPage() {
               <div key={s.id} onClick={() => setSelSparingId(s.id)}
                 className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[#0d9488]" : ""}`}>
                 <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                  <Swords className="h-4 w-4 text-[#0d9488]" /> vs {s.sparingOpponent}
+                  <Swords className="h-4 w-4 text-[#0d9488]" /> {pbName || "Sparing"} vs {s.sparingOpponent}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
                 <p className="mt-2 text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</p>
@@ -302,7 +317,7 @@ export default function SparingPage() {
           {/* Header with title and action buttons */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Sparing vs {selectedSparing.sparingOpponent}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{pbName || "Sparing"} vs {selectedSparing.sparingOpponent}</h2>
               <p className="text-sm text-gray-500">{new Date(selectedSparing.date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
           </div>
@@ -345,6 +360,11 @@ export default function SparingPage() {
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 block mb-1">Lokasi</label>
               <input value={lokasi} onChange={(e) => setLokasi(e.target.value)} placeholder="Nama tempat / alamat"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+            </div>
+            <div className="mb-4">
+              <label className="text-xs font-medium text-gray-500 block mb-1">HTM (Rp)</label>
+              <input type="number" value={htm} onChange={(e) => setHtm(Math.max(0, Number(e.target.value)))} min={0} placeholder="0"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
             </div>
             <div className="flex items-center justify-between mb-3">
