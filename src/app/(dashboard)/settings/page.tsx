@@ -21,7 +21,23 @@ export default function SettingsPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
-      if (raw) setUser(JSON.parse(raw));
+      if (raw) {
+        const u = JSON.parse(raw);
+        setUser(u);
+        // instant load from cache
+        if (u.pb) {
+          setName(u.pb.name || "");
+          setLogoUrl(u.pb.logoUrl || "");
+          const cached = localStorage.getItem("pb_" + u.pb.id);
+          if (cached) {
+            const p = JSON.parse(cached);
+            setName(p.name || u.pb.name || "");
+            setAddress(p.address || "");
+            setPhone(p.phone || "");
+            setLogoUrl(p.logoUrl || u.pb.logoUrl || "");
+          }
+        }
+      }
     } catch {}
   }, []);
 
@@ -31,6 +47,8 @@ export default function SettingsPage() {
       setAddress(myPb.address || "");
       setPhone(myPb.phone || "");
       setLogoUrl(myPb.logoUrl || "");
+      // cache for next load
+      try { localStorage.setItem("pb_" + myPb.id, JSON.stringify(myPb)); } catch {}
     }
   }, [myPb]);
 
