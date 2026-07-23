@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiMember as Member, ApiAttendance, ApiMatch, ApiMatchHistory } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin } from "lucide-react";
@@ -61,6 +62,8 @@ export default function MembersPage() {
   const [page, setPage] = useState(1);
   const perPage = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -92,11 +95,20 @@ export default function MembersPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     if (!form.name.trim()) return;
-    const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class };
-    if (editId) await update(editId, payload);
-    else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class };
+      if (editId) await update(editId, payload);
+      else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
+      toast("success", editId ? "Anggota berhasil diperbarui" : "Anggota berhasil ditambahkan");
+      setShowForm(false);
+    } catch (err) {
+      toast("error", "Gagal: " + (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleActive(m: Member) { await update(m.id, { isActive: !m.isActive }); }
@@ -257,7 +269,7 @@ export default function MembersPage() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="submit" disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>

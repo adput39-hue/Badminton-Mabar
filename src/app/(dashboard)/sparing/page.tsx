@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-types";
 import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle } from "lucide-react";
+import { useToast } from "@/components/toast";
 
 const classBadge: Record<string, string> = {
   A: "bg-red-100 text-red-700", B: "bg-orange-100 text-orange-700",
@@ -51,7 +52,6 @@ export default function SparingPage() {
   const [newOppClass, setNewOppClass] = useState("");
   const [showAddOur, setShowAddOur] = useState(false);
   const [showAddOpp, setShowAddOpp] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<"pengaturan" | "draft">("pengaturan");
   const [draftOur1, setDraftOur1] = useState("");
   const [draftOur2, setDraftOur2] = useState("");
@@ -75,6 +75,8 @@ export default function SparingPage() {
   const [editLapIdx, setEditLapIdx] = useState<number | null>(null);
   const [lokasi, setLokasi] = useState("");
   const [htm, setHtm] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const modeLabel: Record<string, string> = { "1-30": "1 Game 30 Poin", "1-42": "1 Game 42 Poin", "2-21": "2 Game 21 Poin" };
 
@@ -164,12 +166,19 @@ export default function SparingPage() {
 
   async function saveOurSelection() {
     if (!selSparingId) return;
-    for (const att of sparingAtts) await removeAtt(att.id);
-    for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
-    await updateSchedule(selSparingId, { notes: JSON.stringify({ draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
-    setSaved(true);
-    setShowAddOur(false);
-    setTimeout(() => setSaved(false), 2000);
+    if (saving) return;
+    setSaving(true);
+    try {
+      for (const att of sparingAtts) await removeAtt(att.id);
+      for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
+      await updateSchedule(selSparingId, { notes: JSON.stringify({ draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
+      toast("success", "Pengaturan sparing berhasil disimpan");
+      setShowAddOur(false);
+    } catch (err) {
+      toast("error", "Gagal: " + (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const classOrder = ["A","B","C","D","E","F"];
@@ -491,8 +500,7 @@ export default function SparingPage() {
           </div>
           <div className="mt-4 flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
             <div className="flex items-center gap-3">
-              {saved && <span className="text-sm font-semibold text-[#0d9488]">✓ Tersimpan</span>}
-              <button onClick={saveOurSelection} className="rounded-xl bg-[#0d9488] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e]">Simpan Pengaturan</button>
+              <button onClick={saveOurSelection} disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : "Simpan Pengaturan"}</button>
             </div>
           </div>
           </div>

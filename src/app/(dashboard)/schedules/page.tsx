@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member } from "@/lib/api-types";
 import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign } from "lucide-react";
@@ -40,6 +41,8 @@ export default function SchedulesPage() {
   const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: 20, htm: 0, notes: "" });
   const [courtsList, setCourtsList] = useState<{name: string; startTime: string; endTime: string}[]>([]);
   const [courtInput, setCourtInput] = useState({ name: "", startTime: "", endTime: "" });
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const existingLocations = [...new Set(schedules.map((s) => s.location).filter(Boolean))] as string[];
   const usedSchedules = new Set(attendances.filter((a) => a.status !== "undangan").map((a) => a.scheduleId));
@@ -65,11 +68,20 @@ export default function SchedulesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     if (!form.title.trim() || !form.date) return;
-    const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: form.max_participants, htm: form.htm || null, courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
-    if (editId) await updateSchedule(editId, payload);
-    else await addSchedule(payload);
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: form.max_participants, htm: form.htm || null, courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
+      if (editId) await updateSchedule(editId, payload);
+      else await addSchedule(payload);
+      toast("success", editId ? "Jadwal berhasil diperbarui" : "Jadwal berhasil dibuat");
+      setShowForm(false);
+    } catch (err) {
+      toast("error", "Gagal: " + (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function setStatus(id: string, s: Schedule["status"]) { await updateSchedule(id, { status: s }); }
@@ -197,7 +209,7 @@ export default function SchedulesPage() {
               <div><label className="block text-sm font-medium text-gray-700">Catatan</label><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: toTitleCase(e.target.value) })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" rows={2} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Buat"}</button>
+                <button type="submit" disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Buat")}</button>
               </div>
             </form>
           </div>
