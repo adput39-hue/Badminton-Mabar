@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiPb } from "@/lib/api-types";
 import { Save, Upload, ImageIcon } from "lucide-react";
+import { useToast } from "@/components/toast";
 
 export default function SettingsPage() {
   const { items: pbs, update: updatePb } = useApi<ApiPb>("pbs");
@@ -15,6 +16,8 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const myPb = pbs.find((p) => p.id === user?.pb?.id);
 
@@ -65,7 +68,8 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
-    if (!user?.pb?.id || !name.trim()) return;
+    if (!user?.pb?.id || !name.trim() || saving) return;
+    setSaving(true);
     await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null });
     const raw = localStorage.getItem("user");
     if (raw) {
@@ -74,8 +78,8 @@ export default function SettingsPage() {
       u.pb.logoUrl = logoUrl || null;
       localStorage.setItem("user", JSON.stringify(u));
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    toast("success", "Pengaturan berhasil disimpan");
+    setSaving(false);
   }
 
   return (
@@ -125,10 +129,9 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex items-center justify-end gap-3">
-          {saved && <span className="text-sm font-semibold text-[#0d9488]">✓ Tersimpan</span>}
-          <button onClick={handleSave} disabled={!name.trim()}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">
-            <Save className="h-4 w-4" /> Simpan
+          <button onClick={handleSave} disabled={!name.trim() || saving}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed">
+            <Save className="h-4 w-4" /> {saving ? "Menyimpan..." : "Simpan"}
           </button>
         </div>
       </div>

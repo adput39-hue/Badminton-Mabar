@@ -5,6 +5,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiPb } from "@/lib/api-types";
 import { Plus, Trash2, X, Search, Building2, Users, Shield, Globe, Phone as PhoneIcon, Calendar, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/components/toast";
 
 export default function AdminDashboard() {
   const { items: pbs, add: addPb, remove: removePb } = useApi<ApiPb>("pbs");
@@ -16,6 +17,8 @@ export default function AdminDashboard() {
   const [bg, setBg] = useState<string | null>(null);
   const [bgSaved, setBgSaved] = useState(false);
   const [bgError, setBgError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetch("/api/config?key=login_background").then((r) => r.json()).then((d) => { if (d.value) setBg(d.value); }).catch(() => {});
@@ -52,10 +55,12 @@ export default function AdminDashboard() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     setError("");
     if (!form.name.trim() || !form.slug.trim() || !form.adminEmail.trim() || !form.adminPassword) {
       setError("Nama, slug, email admin, dan password harus diisi"); return;
     }
+    setSaving(true);
     try {
       await addPb({
         name: form.name.trim(),
@@ -67,8 +72,11 @@ export default function AdminDashboard() {
         adminPassword: form.adminPassword,
       });
       setShowForm(false);
+      toast("success", "PB berhasil ditambahkan");
+      setSaving(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan PB");
+      setSaving(false);
     }
   }
 
@@ -183,7 +191,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md">Tambah PB</button>
+                <button type="submit" disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : "Tambah PB"}</button>
               </div>
             </form>
           </div>
