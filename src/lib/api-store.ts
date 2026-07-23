@@ -19,27 +19,56 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+function getCacheKey(url: string) {
+  try {
+    const pbId = getClientPbId();
+    return "api_cache_" + (pbId || "") + "_" + url.replace(/[^a-zA-Z0-9]/g, "_");
+  } catch { return "api_cache_" + url.replace(/[^a-zA-Z0-9]/g, "_"); }
+}
+
+function loadCache<T>(key: string): T[] | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveCache<T>(key: string, data: T[]) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
+function clearCache() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("api_cache_"));
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch {}
+}
+
 export function useApi<T extends { id: string }>(resource: string, query = "") {
   const [items, setItems] = useState<T[]>([]);
   const [loaded, setLoaded] = useState(false);
   const url = `/api/${resource}${query}`;
+  const cacheKey = getCacheKey(url);
 
   useEffect(() => {
+    const cached = loadCache<T>(cacheKey);
+    if (cached) { setItems(cached); setLoaded(true); return; }
     apiFetch<T[]>(url)
-      .then((data) => setItems(data))
+      .then((data) => { setItems(data); saveCache(cacheKey, data); })
       .catch(console.error)
       .finally(() => setLoaded(true));
-  }, [url]);
+  }, [url, cacheKey]);
 
   const refresh = useCallback(async () => {
     try {
       const data = await apiFetch<T[]>(url);
       setItems(data);
+      saveCache(cacheKey, data);
       return data;
     } catch {
       return null as unknown as T[];
     }
-  }, [url]);
+  }, [url, cacheKey]);
 
   const add = useCallback(
     async (data: Record<string, unknown>) => {
@@ -48,6 +77,7 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
         body: JSON.stringify(data),
       });
       setItems((prev) => [item, ...prev]);
+      clearCache();
       return item;
     },
     [url]
@@ -62,6 +92,7 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
         body: JSON.stringify(data),
       });
       setItems((prev) => prev.map((i) => (i.id === id ? item : i)));
+      clearCache();
       return item;
     },
     [baseUrl]
@@ -71,6 +102,7 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
     async (id: string) => {
       await apiFetch(`${baseUrl}/${id}`, { method: "DELETE" });
       setItems((prev) => prev.filter((i) => i.id !== id));
+      clearCache();
     },
     [baseUrl]
   );
