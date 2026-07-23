@@ -125,7 +125,9 @@ export default function AdminDashboard() {
             <div key={pb.id} className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0d9488] text-xl shadow-sm">🏸</div>
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xl shadow-sm ${pb.logoUrl ? "" : "bg-[#0d9488]"}`}>
+                    {pb.logoUrl ? <img src={pb.logoUrl} alt={pb.name} className="h-full w-full object-cover" /> : "🏸"}
+                  </div>
                   <div>
                     <Link href={`/admin/pbs/${pb.id}`} className="font-semibold text-gray-900 hover:text-[#0d9488] transition-colors">{pb.name}</Link>
                     <p className="text-xs text-gray-400 font-mono">{pb.slug}</p>

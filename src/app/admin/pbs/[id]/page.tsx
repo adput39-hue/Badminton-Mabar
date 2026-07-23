@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/lib/api-store";
 import type { ApiPb, ApiUser } from "@/lib/api-types";
-import { ArrowLeft, Shield, Users, Calendar, Globe, Phone as PhoneIcon, Mail, Pencil, X, Check, Save, Plus } from "lucide-react";
+import { ArrowLeft, Shield, Users, Calendar, Globe, Phone as PhoneIcon, Mail, Pencil, X, Check, Save, Plus, Upload, ImageIcon } from "lucide-react";
 import Link from "next/link";
 
 export default function PbDetailPage() {
@@ -18,16 +18,30 @@ export default function PbDetailPage() {
   const pbUsers = users.filter((u) => u.pbId === pbId);
 
   const [editingPb, setEditingPb] = useState(false);
-  const [pbForm, setPbForm] = useState({ name: "", address: "", phone: "" });
+  const [pbForm, setPbForm] = useState({ name: "", address: "", phone: "", logoUrl: "" });
+  const [logoUploading, setLogoUploading] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", role: "" });
   const [showAddUser, setShowAddUser] = useState(false);
   const [addUserForm, setAddUserForm] = useState({ fullName: "", email: "", password: "" });
   const [error, setError] = useState("");
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !pb) return;
+    setLogoUploading(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setPbForm({ ...pbForm, logoUrl: dataUrl });
+      setLogoUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
   function startEditPb() {
     if (!pb) return;
-    setPbForm({ name: pb.name, address: pb.address || "", phone: pb.phone || "" });
+    setPbForm({ name: pb.name, address: pb.address || "", phone: pb.phone || "", logoUrl: pb.logoUrl || "" });
     setEditingPb(true);
     setError("");
   }
@@ -36,7 +50,7 @@ export default function PbDetailPage() {
     e.preventDefault();
     if (!pb) return;
     try {
-      await updatePb(pb.id, { name: pbForm.name.trim(), address: pbForm.address || null, phone: pbForm.phone || null });
+      await updatePb(pb.id, { name: pbForm.name.trim(), address: pbForm.address || null, phone: pbForm.phone || null, logoUrl: pbForm.logoUrl || null });
       setEditingPb(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan");
@@ -101,7 +115,9 @@ export default function PbDetailPage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d9488] text-2xl shadow-sm">🏸</div>
+            <div className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-2xl shadow-sm ${pb.logoUrl ? "" : "bg-[#0d9488]"}`}>
+              {pb.logoUrl ? <img src={pb.logoUrl} alt={pb.name} className="h-full w-full object-cover" /> : "🏸"}
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{pb.name}</h1>
               <p className="text-sm text-gray-400 font-mono mt-0.5">{pb.slug}</p>
@@ -121,6 +137,22 @@ export default function PbDetailPage() {
               <div><label className="block text-xs font-medium text-gray-700">Nama PB</label><input value={pbForm.name} onChange={(e) => setPbForm({ ...pbForm, name: e.target.value })} required className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
               <div><label className="block text-xs font-medium text-gray-700">Alamat</label><input value={pbForm.address} onChange={(e) => setPbForm({ ...pbForm, address: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
               <div><label className="block text-xs font-medium text-gray-700">Telepon</label><input value={pbForm.phone} onChange={(e) => setPbForm({ ...pbForm, phone: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">Logo</label>
+                <div className="mt-1 flex items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                    {pbForm.logoUrl ? <img src={pbForm.logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5 text-gray-300" />}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <input value={pbForm.logoUrl} onChange={(e) => setPbForm({ ...pbForm, logoUrl: e.target.value })} placeholder="URL logo atau upload" className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    <label className="inline-flex cursor-pointer items-center gap-1 self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                      <Upload className="h-3 w-3" /> {logoUploading ? "Mengupload..." : "Upload"}
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Upload gambar atau masukkan URL logo PB</p>
+              </div>
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setEditingPb(false)} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>

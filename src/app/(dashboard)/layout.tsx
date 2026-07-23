@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 min-h-[68px]">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-[#0d9488] text-xl shrink-0">{user?.pb?.logoUrl ? <img src={user.pb.logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <span>🏸</span>}</div>
+          <div className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl text-xl shrink-0 ${user?.pb?.logoUrl ? "" : "bg-[#0d9488]"}`}>{user?.pb?.logoUrl ? <img src={user.pb.logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <span></span>}</div>
           {!collapsed && (
             <div className="overflow-hidden">
               <p className="text-sm font-bold text-gray-900 truncate">{user?.pb?.name || "PB"}</p>

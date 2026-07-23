@@ -14,6 +14,7 @@ const allMenus = [
   { key: "sparing", label: "Sparing" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "live-score", label: "Live Score" },
+  { key: "htm", label: "Bayar HTM" },
   { key: "users", label: "Master User" },
   { key: "user-levels", label: "Level Manager" },
   { key: "finances", label: "Kas PB" },
@@ -151,77 +152,79 @@ export default function UserLevelsPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 px-4 py-10 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <h2 className="text-lg font-bold text-gray-900">{editId ? "Edit Level" : "Tambah Level Baru"}</h2>
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
-            {error && <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Nama Level</label>
-                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Admin Utama" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Slug</label>
-                  <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-mono shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="admin_utama" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi level" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Warna</label>
-                <div className="mt-1.5 flex items-center gap-3">
-                  <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="h-10 w-10 cursor-pointer rounded-xl border border-gray-200" />
-                  <div className="flex flex-wrap gap-1.5">
-                    {presetColors.map((c) => (
-                      <button key={c} type="button" onClick={() => setForm({ ...form, color: c })}
-                        className={`h-7 w-7 rounded-full border-2 transition-all ${form.color === c ? "border-gray-800 scale-110" : "border-transparent"}`}
-                        style={{ backgroundColor: c }} />
-                    ))}
+            {error && <div className="border-b border-gray-100 px-6 py-3 text-sm text-red-600 bg-red-50">{error}</div>}
+            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nama Level</label>
+                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Admin Utama" />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Slug</label>
+                    <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-mono shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="admin_utama" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
+                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi level" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Warna</label>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="h-10 w-10 cursor-pointer rounded-xl border border-gray-200" />
+                    <div className="flex flex-wrap gap-1.5">
+                      {presetColors.map((c) => (
+                        <button key={c} type="button" onClick={() => setForm({ ...form, color: c })}
+                          className={`h-7 w-7 rounded-full border-2 transition-all ${form.color === c ? "border-gray-800 scale-110" : "border-transparent"}`}
+                          style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700">Akses Menu</label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={selectAll} className="text-xs font-medium text-[#0d9488] hover:underline">Pilih Semua</button>
+                      <span className="text-xs text-gray-300">|</span>
+                      <button type="button" onClick={deselectAll} className="text-xs font-medium text-gray-400 hover:underline">Hapus Semua</button>
+                    </div>
+                  </div>
+                  <div className="mt-3 max-h-48 overflow-y-auto rounded-xl border border-gray-200 p-2 space-y-1.5">
+                    {allMenus.map((menu) => {
+                      const selected = form.menus.includes(menu.key);
+                      return (
+                        <button
+                          key={menu.key}
+                          type="button"
+                          onClick={() => toggleMenu(menu.key)}
+                          className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-all ${
+                            selected ? "border-[#0d9488] bg-[#f0fdfa] text-gray-900" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-all ${
+                            selected ? "border-[#0d9488] bg-[#0d9488] text-white" : "border-gray-300"
+                          }`}>
+                            {selected && <span className="text-[10px]">✓</span>}
+                          </div>
+                          <span className="font-medium">{menu.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-400">{form.menus.length} dari {allMenus.length} menu dipilih</p>
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700">Akses Menu</label>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={selectAll} className="text-xs font-medium text-[#0d9488] hover:underline">Pilih Semua</button>
-                    <span className="text-xs text-gray-300">|</span>
-                    <button type="button" onClick={deselectAll} className="text-xs font-medium text-gray-400 hover:underline">Hapus Semua</button>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {allMenus.map((menu) => {
-                    const selected = form.menus.includes(menu.key);
-                    return (
-                      <button
-                        key={menu.key}
-                        type="button"
-                        onClick={() => toggleMenu(menu.key)}
-                        className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-all ${
-                          selected ? "border-[#0d9488] bg-[#f0fdfa] text-gray-900" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-all ${
-                          selected ? "border-[#0d9488] bg-[#0d9488] text-white" : "border-gray-300"
-                        }`}>
-                          {selected && <span className="text-[10px]">✓</span>}
-                        </div>
-                        <span className="font-medium">{menu.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs text-gray-400">{form.menus.length} dari {allMenus.length} menu dipilih</p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 bg-gray-50">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
                 <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
               </div>

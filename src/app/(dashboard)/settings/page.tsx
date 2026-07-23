@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiPb } from "@/lib/api-types";
-import { Save } from "lucide-react";
+import { Save, Upload, ImageIcon } from "lucide-react";
 
 export default function SettingsPage() {
   const { items: pbs, update: updatePb } = useApi<ApiPb>("pbs");
@@ -12,6 +12,8 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const myPb = pbs.find((p) => p.id === user?.pb?.id);
@@ -28,16 +30,30 @@ export default function SettingsPage() {
       setName(myPb.name);
       setAddress(myPb.address || "");
       setPhone(myPb.phone || "");
+      setLogoUrl(myPb.logoUrl || "");
     }
   }, [myPb]);
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !myPb) return;
+    setLogoUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogoUrl(reader.result as string);
+      setLogoUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSave() {
     if (!user?.pb?.id || !name.trim()) return;
-    await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null });
+    await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null });
     const raw = localStorage.getItem("user");
     if (raw) {
       const u = JSON.parse(raw);
       u.pb.name = name.trim();
+      u.pb.logoUrl = logoUrl || null;
       localStorage.setItem("user", JSON.stringify(u));
     }
     setSaved(true);
@@ -69,6 +85,23 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700">No. Telepon</label>
               <input value={phone} onChange={(e) => setPhone(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Logo</label>
+              <div className="mt-1.5 flex items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                  {logoUrl ? <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5 text-gray-300" />}
+                </div>
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="URL logo atau upload"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                  <label className="inline-flex cursor-pointer items-center gap-1 self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                    <Upload className="h-3 w-3" /> {logoUploading ? "Mengupload..." : "Upload"}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  </label>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Upload gambar atau masukkan URL logo PB</p>
             </div>
           </div>
         </div>
