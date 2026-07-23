@@ -70,16 +70,21 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!user?.pb?.id || !name.trim() || saving) return;
     setSaving(true);
-    await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null });
-    const raw = localStorage.getItem("user");
-    if (raw) {
-      const u = JSON.parse(raw);
-      u.pb.name = name.trim();
-      u.pb.logoUrl = logoUrl || null;
-      localStorage.setItem("user", JSON.stringify(u));
+    try {
+      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null });
+      const raw = localStorage.getItem("user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        u.pb.name = name.trim();
+        u.pb.logoUrl = result?.logoUrl || logoUrl || null;
+        localStorage.setItem("user", JSON.stringify(u));
+      }
+      toast("success", "Pengaturan berhasil disimpan");
+    } catch (err) {
+      toast("error", "Gagal menyimpan: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setSaving(false);
     }
-    toast("success", "Pengaturan berhasil disimpan");
-    setSaving(false);
   }
 
   return (
