@@ -40,15 +40,18 @@ function getCacheKey(url: string) {
   } catch { return "api_cache_" + url.replace(/[^a-zA-Z0-9]/g, "_"); }
 }
 
-function loadCache<T>(key: string): T[] | null {
+function loadCache<T>(key: string): { data: T[]; ts: number } | null {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // support both old format (array) and new format ({ data, ts })
+    return Array.isArray(parsed) ? { data: parsed, ts: 0 } : parsed;
   } catch { return null; }
 }
 
 function saveCache<T>(key: string, data: T[]) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
 }
 
 function clearCache() {
@@ -58,6 +61,8 @@ function clearCache() {
   } catch {}
 }
 
+const CACHE_TTL = 30_000; // 30 seconds
+
 export function useApi<T extends { id: string }>(resource: string, query = "") {
   const [items, setItems] = useState<T[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -65,20 +70,29 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
   const cacheKey = getCacheKey(url);
 
   useEffect(() => {
+    let cancelled = false;
     const cached = loadCache<T>(cacheKey);
-    if (cached) {
-      setItems(cached);
+    const freshEnough = cached && (Date.now() - cached.ts) < CACHE_TTL;
+    if (cached && freshEnough) {
+      setItems(cached.data);
       setLoaded(true);
-      // refresh from API in background (stale-while-revalidate)
-      apiFetch<T[]>(url)
-        .then((data) => { setItems(data); saveCache(cacheKey, data); })
-        .catch(() => {});
-      return;
     }
     apiFetch<T[]>(url)
-      .then((data) => { setItems(data); saveCache(cacheKey, data); })
-      .catch(console.error)
-      .finally(() => setLoaded(true));
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data);
+        saveCache(cacheKey, data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (!cached) console.error(err);
+        // if cache exists but stale, keep showing cached data as fallback
+        if (cached && !freshEnough) {
+          setItems(cached.data);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
   }, [url, cacheKey]);
 
   const refresh = useCallback(async () => {
