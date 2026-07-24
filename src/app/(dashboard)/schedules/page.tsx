@@ -38,7 +38,7 @@ export default function SchedulesPage() {
   const [showTambahLap, setShowTambahLap] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editCourtIdx, setEditCourtIdx] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: 20, htm: 0, notes: "" });
+  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: "", htm: "", notes: "" });
   const [courtsList, setCourtsList] = useState<{name: string; startTime: string; endTime: string}[]>([]);
   const [courtInput, setCourtInput] = useState({ name: "", startTime: "", endTime: "" });
   const [saving, setSaving] = useState(false);
@@ -47,11 +47,11 @@ export default function SchedulesPage() {
   const existingLocations = [...new Set(schedules.map((s) => s.location).filter(Boolean))] as string[];
   const usedSchedules = new Set(attendances.filter((a) => a.status !== "undangan").map((a) => a.scheduleId));
 
-  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: 20, htm: 0, notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
+  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: "", htm: "", notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
 
   function openEdit(s: Schedule) {
     setEditId(s.id);
-    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: s.maxParticipants, htm: s.htm ?? 0, notes: s.notes || "" });
+    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: String(s.htm ?? ""), notes: s.notes || "" });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
     setShowForm(true);
@@ -72,7 +72,7 @@ export default function SchedulesPage() {
     if (!form.title.trim() || !form.date) return;
     setSaving(true);
     try {
-      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: form.max_participants, htm: form.htm || null, courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
+      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: Number(form.max_participants) || 20, htm: form.htm === "" ? null : Number(form.htm), courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
       if (editId) await updateSchedule(editId, payload);
       else await addSchedule(payload);
       toast("success", editId ? "Jadwal berhasil diperbarui" : "Jadwal berhasil dibuat");
@@ -174,8 +174,8 @@ export default function SchedulesPage() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="number" value={form.htm} onChange={(e) => setForm({ ...form, htm: Number(e.target.value) })} min={0} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="number" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value })} min={0} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
               </div>
 
               {/* Lapangan */}
@@ -323,7 +323,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-          <button onClick={onEdit} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Edit</button>
+          {schedule.status !== "cancelled" && <button onClick={onEdit} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Edit</button>}
           <button onClick={onPilihPeserta} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"><UserPlus className="h-3.5 w-3.5" />Pilih Peserta</button>
           <button onClick={onAttend} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Absen</button>
           {isUpcoming && schedule.status === "planned" && <>
@@ -331,7 +331,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
             <button onClick={() => onStatus(schedule.id, "cancelled")} className="rounded-xl bg-red-50 px-4 py-2 text-xs font-medium text-red-600 transition-all hover:bg-red-100">Batal</button>
           </>}
           {schedule.status === "ongoing" && <button onClick={() => onStatus(schedule.id, "completed")} className="rounded-xl bg-gray-800 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-gray-700 hover:shadow-sm">Selesai</button>}
-          {isUsed ? <span className="rounded-xl p-2 text-gray-300 cursor-not-allowed" title="Jadwal sudah digunakan"><X className="h-4 w-4" /></span> : <button onClick={() => onDelete(schedule.id)} className="rounded-xl p-2 text-gray-400 transition-all hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>}
+          {schedule.status !== "cancelled" && (isUsed ? <span className="rounded-xl p-2 text-gray-300 cursor-not-allowed" title="Jadwal sudah digunakan"><X className="h-4 w-4" /></span> : <button onClick={() => onDelete(schedule.id)} className="rounded-xl p-2 text-gray-400 transition-all hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>)}
         </div>
       </div>
     </div>
