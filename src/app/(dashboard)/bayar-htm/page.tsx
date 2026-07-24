@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
-import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi } from "@/lib/api-types";
+import type { ApiSchedule, ApiAttendance, ApiMember } from "@/lib/api-types";
 import { Wallet, Pencil, X, Check, Save, Search, DollarSign } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
 

@@ -8,8 +8,8 @@ const prisma = new PrismaClient({ adapter });
 
 const allMenuKeys = [
   "dashboard", "members", "schedules", "mabar", "riwayat",
-  "sparing", "scoreboard", "live-score", "users", "user-levels",
-  "finances", "stats", "reports", "settings",
+  "sparing", "scoreboard", "live-score", "htm", "users", "user-levels",
+  "finances", "kas-mutasi", "master-biaya", "stats", "reports", "settings",
 ];
 
 async function main() {

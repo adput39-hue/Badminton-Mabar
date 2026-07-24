@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import {
-  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign,
+  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag,
 } from "lucide-react";
 
 const allNavItems = [
@@ -19,9 +19,11 @@ const allNavItems = [
   { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
   { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "live-score" },
   { href: "/bayar-htm", label: "Bayar HTM", icon: DollarSign, menuKey: "htm" },
+  { href: "/kas", label: "Kas PB", icon: Wallet, menuKey: "finances" },
+  { href: "/kas-mutasi", label: "Mutasi Kas", icon: ArrowUpRight, menuKey: "kas-mutasi" },
+  { href: "/master-biaya", label: "Master Biaya", icon: Tag, menuKey: "master-biaya" },
   { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
   { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
-  { href: "/settings", label: "Kas PB", icon: Wallet, menuKey: "finances" },
   { href: "/settings", label: "Statistik", icon: BarChart3, menuKey: "stats" },
   { href: "/settings", label: "Laporan", icon: FileText, menuKey: "reports" },
   { href: "/settings", label: "Pengaturan", icon: Settings, menuKey: "settings" },

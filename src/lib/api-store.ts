@@ -52,7 +52,15 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
 
   useEffect(() => {
     const cached = loadCache<T>(cacheKey);
-    if (cached) { setItems(cached); setLoaded(true); return; }
+    if (cached) {
+      setItems(cached);
+      setLoaded(true);
+      // refresh from API in background (stale-while-revalidate)
+      apiFetch<T[]>(url)
+        .then((data) => { setItems(data); saveCache(cacheKey, data); })
+        .catch(() => {});
+      return;
+    }
     apiFetch<T[]>(url)
       .then((data) => { setItems(data); saveCache(cacheKey, data); })
       .catch(console.error)
