@@ -36,7 +36,7 @@ export default function KasMutasiPage() {
 
   function openEdit(m: ApiKasMutasi) {
     setEditId(m.id);
-    setForm({ type: m.type, biayaId: m.biayaId || "", description: m.description, amount: String(m.amount), tanggal: m.tanggal.split("T")[0] });
+    setForm({ type: m.type, biayaId: m.biayaId || "", description: m.description, amount: String(m.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.'), tanggal: m.tanggal.split("T")[0] });
     setShowForm(true);
   }
 
@@ -44,7 +44,7 @@ export default function KasMutasiPage() {
     e.preventDefault();
     if (!form.description.trim() || !form.amount) return;
     const payload: Record<string, unknown> = {
-      type: form.type, description: form.description.trim(), amount: parseInt(form.amount), tanggal: form.tanggal,
+      type: form.type, description: form.description.trim(), amount: parseInt(form.amount.replace(/\D/g, '')), tanggal: form.tanggal,
       biayaId: form.biayaId || null,
     };
     if (editId) await update(editId, payload);
@@ -181,11 +181,12 @@ export default function KasMutasiPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
-                <input type="number" value={form.amount} onChange={(e) => {
-                  setForm({ ...form, amount: e.target.value });
+                <input type="text" value={form.amount} onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setForm({ ...form, amount: raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.') });
                   if (!form.biayaId) return;
                   const b = biayas.find((x) => x.id === form.biayaId);
-                  if (b && b.amount && !editId) setForm((prev) => ({ ...prev, amount: e.target.value }));
+                  if (b && b.amount && !editId) setForm((prev) => ({ ...prev, amount: String(b.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.') }));
                 }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="50000" />
               </div>
               <div className="flex justify-end gap-3 pt-2">

@@ -52,7 +52,8 @@ export default function SchedulesPage() {
 
   function openEdit(s: Schedule) {
     setEditId(s.id);
-    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: String(s.htm ?? ""), notes: s.notes || "" });
+    const htmVal = s.htm ? String(s.htm).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : "";
+    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, notes: s.notes || "" });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
     setShowForm(true);
@@ -73,7 +74,7 @@ export default function SchedulesPage() {
     if (!form.title.trim() || !form.date) return;
     setSaving(true);
     try {
-      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: Number(form.max_participants) || 20, htm: form.htm === "" ? null : Number(form.htm), courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
+      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: Number(form.max_participants) || 20, htm: form.htm === "" ? null : Number(form.htm.replace(/\D/g, '')), courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
       if (editId) await updateSchedule(editId, payload);
       else await addSchedule(payload);
       toast("success", editId ? "Jadwal berhasil diperbarui" : "Jadwal berhasil dibuat");
@@ -176,7 +177,7 @@ export default function SchedulesPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="number" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value })} min={0} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="text" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
               </div>
 
               {/* Lapangan */}

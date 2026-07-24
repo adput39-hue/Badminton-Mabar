@@ -15,6 +15,7 @@ const allMenus = [
   { key: "scoreboard", label: "Scoreboard" },
   { key: "live-score", label: "Live Score" },
   { key: "htm", label: "Bayar HTM" },
+  { key: "hutang", label: "Kartu Hutang" },
   { key: "kas-mutasi", label: "Mutasi Kas" },
   { key: "master-biaya", label: "Master Biaya" },
   { key: "users", label: "Master User" },

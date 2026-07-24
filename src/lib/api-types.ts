@@ -2,7 +2,7 @@ export interface ApiMember {
   id: string; pbId: string; name: string; phone: string | null;
   photo: string | null; address: string | null;
   class: string; type: string; isActive: boolean; joinedAt: string;
-  gender: string | null;
+  gender: string | null; saldoAwalHutang: number | null;
   createdAt: string; updatedAt: string;
 }
 

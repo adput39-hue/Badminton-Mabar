@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import {
-  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag,
+  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag, BookOpen,
 } from "lucide-react";
 
 const allNavItems = [
@@ -19,6 +19,7 @@ const allNavItems = [
   { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
   { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "live-score" },
   { href: "/bayar-htm", label: "Bayar HTM", icon: DollarSign, menuKey: "htm" },
+  { href: "/hutang", label: "Kartu Hutang", icon: BookOpen, menuKey: "hutang" },
   { href: "/kas", label: "Kas PB", icon: Wallet, menuKey: "finances" },
   { href: "/kas-mutasi", label: "Mutasi Kas", icon: ArrowUpRight, menuKey: "kas-mutasi" },
   { href: "/master-biaya", label: "Master Biaya", icon: Tag, menuKey: "master-biaya" },

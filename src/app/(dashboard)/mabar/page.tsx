@@ -51,11 +51,11 @@ export default function MabarPage() {
   const [assignCourtFor, setAssignCourtFor] = useState<string | null>(null);
 
   function getGameMode(): string {
-    if (!schedule?.notes) return "1-30";
+    if (!schedule?.notes) return "";
     try { const n = JSON.parse(schedule.notes); if (n.gameMode) return n.gameMode; } catch {}
-    return "1-30";
+    return "";
   }
-  const [gameMode, setGameMode] = useState("1-30");
+  const [gameMode, setGameMode] = useState("");
   useEffect(() => { setGameMode(getGameMode()); }, [schedule?.notes]);
 
   async function saveGameMode(mode: string) {
@@ -221,6 +221,7 @@ export default function MabarPage() {
                 <label className="text-xs font-medium text-gray-500">Mode</label>
                 <select value={gameMode} onChange={(e) => saveGameMode(e.target.value)}
                   className="rounded-xl border border-gray-200 px-3 py-2 text-xs shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                  <option value="" disabled>Pilih dulu</option>
                   <option value="1-30">1G 30</option>
                   <option value="1-42">1G 42</option>
                   <option value="2-21">2G 21</option>
@@ -258,7 +259,7 @@ export default function MabarPage() {
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="flex items-center gap-2 text-base font-bold text-gray-900"><ListChecks className="h-4 w-4 text-[#0d9488]" /> Antrian</h3>
-                  <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e]"><Plus className="h-3.5 w-3.5" /> Draft</button>
+                  <button onClick={() => setShowCreate(true)} disabled={!gameMode} className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="h-3.5 w-3.5" /> Draft</button>
                 </div>
                 {draftMatches.length === 0 ? (
                   <p className="text-sm text-gray-400 py-3 text-center">Belum ada draft pertandingan. Buat draft, lalu assign ke lapangan.</p>
@@ -666,7 +667,7 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500">Mode: <span className="font-semibold text-gray-700">{gameMode.startsWith("2") ? "2 Game 21 Poin" : gameMode === "1-42" ? "1 Game 42 Poin" : "1 Game 30 Poin"}</span></span>
-            <button type="button" onClick={pairByClass} disabled={filteredHadir.length < 4} className="rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488] disabled:opacity-50 whitespace-nowrap">Pair by Class</button>
+            <button type="button" onClick={pairByClass} disabled={filteredHadir.length < 4 || !gameMode} className="rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488] disabled:opacity-50 whitespace-nowrap">Pair by Class</button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

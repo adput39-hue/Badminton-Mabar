@@ -4,7 +4,7 @@ import { useState, useRef, useMemo } from "react";
 import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiMember as Member, ApiAttendance, ApiMatch, ApiMatchHistory } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin, Venus, Mars } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
 
 type MemberClass = "A" | "B" | "C" | "D" | "E" | "F";
@@ -190,9 +190,8 @@ export default function MembersPage() {
                       <div>
                             <div className="flex items-center gap-1.5">
                               <p className="font-medium text-gray-900">{m.name}</p>
-                              {m.gender && (
-                                <span className={`inline-block h-2.5 w-2.5 rounded-full ${m.gender === "L" ? "bg-blue-500" : "bg-pink-500"}`} />
-                              )}
+                              {m.gender === "L" && <Mars className="h-4 w-4 text-blue-500 shrink-0" />}
+                              {m.gender === "P" && <Venus className="h-4 w-4 text-pink-500 shrink-0" />}
                             </div>
                         <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadge[m.class as MemberClass] || "bg-gray-100 text-gray-600"}`}>
                           {levelLabel(m.class)}

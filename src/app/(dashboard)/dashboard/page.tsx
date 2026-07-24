@@ -9,6 +9,8 @@ interface DashboardData {
   totalMembers: number; activeMembers: number; thisMonthSchedules: number;
   completedMatches: number; upcomingSchedules: { id: string; title: string; date: string; startTime: string; endTime?: string; location?: string; maxParticipants?: number }[];
   topPlayers: { id: string; name: string; count: number }[];
+  recentPayments: { id: string; memberId: string | null; memberName: string; description: string; amount: number; tanggal: string }[];
+  kasSaldo: number;
 }
 
 const dayNames = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
@@ -125,7 +127,7 @@ export default function DashboardPage() {
             <StatCard icon={<Users className="h-8 w-8 text-[#0d9488]/20" />} value={internalMembers.length} label="Total Anggota" sub="Terdaftar" />
             <StatCard icon={<Calendar className="h-8 w-8 text-[#0d9488]/20" />} value={thisMonthActivities} label="Main Bareng Bulan Ini" sub="Kegiatan" />
             <StatCard icon={<Clock className="h-8 w-8 text-[#0d9488]/20" />} value={nextDate ? `${nextDate.date} ${nextDate.month}` : "—"} label="Jadwal Berikutnya" sub={nextSchedule ? `${nextSchedule.courtTime?.slice(0,5) || ""}` : ""} />
-            <StatCard icon={<Wallet className="h-8 w-8 text-[#0d9488]/20" />} value="Rp0" label="Kas PB" sub="Saldo saat ini" />
+            <StatCard icon={<Wallet className="h-8 w-8 text-[#0d9488]/20" />} value={data.kasSaldo > 0 ? `Rp${data.kasSaldo.toLocaleString("id-ID")}` : "Rp0"} label="Kas PB" sub="Saldo saat ini" />
             <StatCard icon={<Swords className="h-8 w-8 text-[#0d9488]/20" />} value={data.completedMatches} label="Match Bulan Ini" sub="Pertandingan" />
           </div>
 
@@ -246,25 +248,24 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900"><CreditCard className="h-4 w-4 text-[#0d9488]" /> Pembayaran Terbaru</h2>
-                  <Link href="/settings" className="text-xs text-gray-500 hover:text-[#0d9488]">Lihat Semua</Link>
+                  <Link href="/bayar-htm" className="text-xs text-gray-500 hover:text-[#0d9488]">Lihat Semua</Link>
                 </div>
                 <div className="space-y-3">
-                  {recentMembers.map((m: any) => (
-                    <div key={m.id} className="flex items-center justify-between">
+                  {data.recentPayments?.length > 0 ? data.recentPayments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-[#ccfbf1] flex items-center justify-center text-[#0d9488] text-xs font-bold">{m.name.charAt(0)}</div>
+                        <div className="h-9 w-9 rounded-full bg-[#ccfbf1] flex items-center justify-center text-[#0d9488] text-xs font-bold">{p.memberName.charAt(0)}</div>
                         <div>
-                          <p className="text-xs font-semibold text-gray-900">{m.name}</p>
-                          <p className="text-[10px] text-gray-500">Main Bareng</p>
+                          <p className="text-xs font-semibold text-gray-900">{p.memberName}</p>
+                          <p className="text-[10px] text-gray-500">{new Date(p.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs font-semibold text-gray-900">Rp40.000</p>
+                        <p className="text-xs font-semibold text-green-600">+Rp{p.amount.toLocaleString("id-ID")}</p>
                         <span className="rounded-full bg-[#ccfbf1] px-2 py-0.5 text-[10px] font-medium text-[#0d9488]">Lunas</span>
                       </div>
                     </div>
-                  ))}
-                  {recentMembers.length === 0 && <p className="py-2 text-center text-xs text-gray-400">Belum ada data</p>}
+                  )) : <p className="py-2 text-center text-xs text-gray-400">Belum ada pembayaran</p>}
                 </div>
               </div>
             </div>

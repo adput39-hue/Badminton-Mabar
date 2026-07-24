@@ -8,7 +8,7 @@ const prisma = new PrismaClient({ adapter });
 
 const allMenuKeys = [
   "dashboard", "members", "schedules", "mabar", "riwayat",
-  "sparing", "scoreboard", "live-score", "htm", "users", "user-levels",
+  "sparing", "scoreboard", "live-score", "htm", "hutang", "users", "user-levels",
   "finances", "kas-mutasi", "master-biaya", "stats", "reports", "settings",
 ];
 

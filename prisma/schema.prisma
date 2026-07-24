@@ -62,6 +62,7 @@ model User {
 model Member {
   id        String   @id @default(uuid())
   gender      String?   @map("gender")
+  saldoAwalHutang Int?   @default(0) @map("saldo_awal_hutang")
   pbId      String   @map("pb_id")
   name      String
   phone     String?
