@@ -74,7 +74,7 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
 
   const realtimeTable = TABLE_MAP[resource];
   useEffect(() => {
-    if (!realtimeTable) return;
+    if (!realtimeTable || !supabase) return;
     const channel = supabase
       .channel(`${resource}-realtime`)
       .on("postgres_changes", { event: "*", schema: "public", table: realtimeTable }, () => {
