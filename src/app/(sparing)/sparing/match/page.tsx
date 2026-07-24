@@ -47,17 +47,6 @@ export default function SparingMatchPage() {
     return () => clearInterval(id);
   }, [startedAt]);
 
-  useEffect(() => {
-    if (!selSparingId) return;
-    const channel = supabase
-      .channel("match-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
-        refreshMatches();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [selSparingId, refreshMatches]);
-
   // Track current view for browser back button
   const viewRef = useRef({ selSparingId, selCourt, activeMatch });
   useEffect(() => { viewRef.current = { selSparingId, selCourt, activeMatch }; });

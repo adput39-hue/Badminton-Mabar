@@ -1,5 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { getClientPbId } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";
+
+const TABLE_MAP: Record<string, string> = {
+  schedules: "schedules",
+  matches: "matches",
+  members: "members",
+  attendances: "attendances",
+  "match-history": "match_history",
+  pbs: "pb",
+  users: "users",
+  "user-levels": "user_levels",
+  "kas-mutasi": "kas_mutasi",
+  "kas-biaya": "kas_biaya",
+};
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const pbId = getClientPbId();
@@ -77,6 +91,18 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
       return null as unknown as T[];
     }
   }, [url, cacheKey]);
+
+  const realtimeTable = TABLE_MAP[resource];
+  useEffect(() => {
+    if (!realtimeTable) return;
+    const channel = supabase
+      .channel(`${resource}-realtime`)
+      .on("postgres_changes", { event: "*", schema: "public", table: realtimeTable }, () => {
+        refresh();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [resource, realtimeTable, refresh]);
 
   const add = useCallback(
     async (data: Record<string, unknown>) => {

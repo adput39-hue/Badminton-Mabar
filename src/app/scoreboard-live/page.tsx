@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
-import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import {
   Swords, ChevronLeft, Clock, Radio, Trophy, Minus, Plus,
@@ -76,17 +75,6 @@ export default function ScoreboardLivePage() {
     const lawanPoints = roundMatches.reduce((sum, m) => sum + (m.scoreTeam2 || 0) + (m.scoreTeam2Game2 || 0), 0);
     return { total, selesai, kitaWins, lawanWins, kitaPoints, lawanPoints, sisa: total - selesai };
   }, [roundMatches]);
-
-  useEffect(() => {
-    if (!selSparingId) return;
-    const channel = supabase
-      .channel("scoreboard-live-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
-        refreshMatches();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [selSparingId, refreshMatches]);
 
   const viewRef = useRef({ selSparingId });
   useEffect(() => { viewRef.current = { selSparingId }; });

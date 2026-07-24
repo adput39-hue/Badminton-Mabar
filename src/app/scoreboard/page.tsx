@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
-import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -75,17 +74,6 @@ export default function ScoreboardPage() {
     if (notes.startsWith("1-42")) return "1 Game 42";
     return "1 Game 30";
   }
-
-  useEffect(() => {
-    if (!selSparingId) return;
-    const channel = supabase
-      .channel("scoreboard-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
-        refreshMatches();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [selSparingId, refreshMatches]);
 
   const viewRef = useRef({ selSparingId, selCourt, courtEntryTimestamps });
   useEffect(() => { viewRef.current = { selSparingId, selCourt, courtEntryTimestamps }; });
