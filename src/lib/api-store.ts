@@ -53,6 +53,18 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
 
   useEffect(() => {
     fetchData();
+    const poll = setInterval(fetchData, 15_000);
+    let lastFetch = Date.now();
+    let rafId: number;
+    function rafLoop() {
+      const now = Date.now();
+      if (now - lastFetch >= 15_000) { lastFetch = now; fetchData(); }
+      rafId = requestAnimationFrame(rafLoop);
+    }
+    rafId = requestAnimationFrame(rafLoop);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchData(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(poll); cancelAnimationFrame(rafId); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchData]);
 
   const refresh = useCallback(async () => {
