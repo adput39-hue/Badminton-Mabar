@@ -198,24 +198,6 @@ export default function MabarPage() {
                     <p className="text-xl font-bold text-gray-700">{doneMatches.length}</p>
                   </div>
                 </div>
-                {/* Mini Leaderboard */}
-                <div className="mt-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Leaderboard</p>
-                  <div className="space-y-1">
-                    {members.map((m) => ({ ...m, ...(stats.get(m.id) || { wins: 0, losses: 0, total: 0 }) }))
-                      .filter((m) => m.total > 0).sort((a, b) => b.wins - a.wins).slice(0, 5)
-                      .map((m, i) => (
-                        <div key={m.id} className="flex items-center justify-between rounded-lg px-3 py-1.5">
-                          <div className="flex items-center gap-2">
-                            {i === 0 ? <Medal className="h-3.5 w-3.5 text-[#0d9488]" /> : i === 1 ? <Medal className="h-3.5 w-3.5 text-gray-400" /> : i === 2 ? <Medal className="h-3.5 w-3.5 text-amber-500" /> : <span className="w-3.5 text-[10px] text-gray-400">{i + 1}</span>}
-                            <span className="text-xs font-medium text-gray-700">{m.name}</span>
-                          </div>
-                          <span className="text-[10px] text-gray-400">{m.wins}W {m.losses}L</span>
-                        </div>
-                      ))}
-                    {members.filter((m) => (stats.get(m.id)?.total || 0) > 0).length === 0 && <p className="text-[10px] text-gray-400 px-3">Belum ada data</p>}
-                  </div>
-                </div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-500">Mode</label>
