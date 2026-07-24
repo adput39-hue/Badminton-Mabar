@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
-import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member } from "@/lib/api-types";
+import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member, ApiMatch } from "@/lib/api-types";
 import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ export default function SchedulesPage() {
   const { items: schedules, add: addSchedule, update: updateSchedule, remove: removeSchedule } = useApi<Schedule>("schedules");
   const { items: members } = useApi<Member>("members");
   const { items: attendances, add: addAtt, update: updateAtt, remove: removeAtt } = useApi<Attendance>("attendances");
+  const { items: matches } = useApi<ApiMatch>("matches");
   const [showForm, setShowForm] = useState(false);
   const [showAtt, setShowAtt] = useState<string | null>(null);
   const [showPeserta, setShowPeserta] = useState<string | null>(null);
@@ -130,7 +131,7 @@ export default function SchedulesPage() {
               hadirCount={attendances.filter((a) => a.scheduleId === s.id && a.status === "hadir").length}
               onPilihPeserta={() => setShowPeserta(s.id)}
               onAttend={() => setShowAtt(s.id)}
-              onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} />
+              onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} hasMatches={matches.some((m) => m.scheduleId === s.id)} />
           ))}
           {past.length > 0 && <h2 className="pt-4 text-sm font-semibold text-gray-400 uppercase tracking-wider">Riwayat</h2>}
           {past.map((s) => (
@@ -139,7 +140,7 @@ export default function SchedulesPage() {
               hadirCount={attendances.filter((a) => a.scheduleId === s.id && a.status === "hadir").length}
               onPilihPeserta={() => setShowPeserta(s.id)}
               onAttend={() => setShowAtt(s.id)}
-              onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} />
+              onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} hasMatches={matches.some((m) => m.scheduleId === s.id)} />
           ))}
         </div>
       )}
@@ -279,9 +280,9 @@ export default function SchedulesPage() {
   );
 }
 
-function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, onPilihPeserta, onAttend, onEdit, isUsed }: {
+function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, onPilihPeserta, onAttend, onEdit, isUsed, hasMatches }: {
   schedule: Schedule; onStatus: (id: string, s: Schedule["status"]) => void; onDelete: (id: string) => void;
-  pesertaCount: number; hadirCount: number; onPilihPeserta: () => void; onAttend: () => void; onEdit: () => void; isUsed: boolean;
+  pesertaCount: number; hadirCount: number; onPilihPeserta: () => void; onAttend: () => void; onEdit: () => void; isUsed: boolean; hasMatches: boolean;
 }) {
   const d = new Date(schedule.date).toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
@@ -326,7 +327,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
           {schedule.status !== "cancelled" && <button onClick={onEdit} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Edit</button>}
           <button onClick={onPilihPeserta} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"><UserPlus className="h-3.5 w-3.5" />Pilih Peserta</button>
           <button onClick={onAttend} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Absen</button>
-          {isUpcoming && schedule.status === "planned" && <>
+          {isUpcoming && schedule.status === "planned" && !hasMatches && <>
             <button onClick={() => onStatus(schedule.id, "ongoing")} className="rounded-xl bg-[#ccfbf1] px-4 py-2 text-xs font-medium text-[#0d9488] transition-all hover:bg-[#99f6e4] hover:shadow-sm">Mulai</button>
             <button onClick={() => onStatus(schedule.id, "cancelled")} className="rounded-xl bg-red-50 px-4 py-2 text-xs font-medium text-red-600 transition-all hover:bg-red-100">Batal</button>
           </>}

@@ -188,7 +188,12 @@ export default function MembersPage() {
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">{m.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-gray-900">{m.name}</p>
+                              {m.gender && (
+                                <span className={`inline-block h-2.5 w-2.5 rounded-full ${m.gender === "L" ? "bg-blue-500" : "bg-pink-500"}`} />
+                              )}
+                            </div>
                         <span className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadge[m.class as MemberClass] || "bg-gray-100 text-gray-600"}`}>
                           {levelLabel(m.class)}
                         </span>

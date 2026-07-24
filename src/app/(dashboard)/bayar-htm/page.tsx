@@ -39,7 +39,7 @@ export default function BayarHtmPage() {
 
   const htmSchedules = useMemo(() => {
     return schedules
-      .filter((s) => s.htm && s.htm > 0)
+      .filter((s) => s.htm && s.htm > 0 && s.status !== "cancelled")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [schedules]);
 

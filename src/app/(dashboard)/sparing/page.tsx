@@ -7,6 +7,15 @@ import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-
 import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle } from "lucide-react";
 import { useToast } from "@/components/toast";
 
+function getOpponentMemberIds(schedule: ApiSchedule): string[] {
+  if (!schedule.notes) return [];
+  try {
+    const parsed = JSON.parse(schedule.notes);
+    if (Array.isArray(parsed.opponentMemberIds)) return parsed.opponentMemberIds;
+  } catch {}
+  return [];
+}
+
 const classBadge: Record<string, string> = {
   A: "bg-red-100 text-red-700", B: "bg-orange-100 text-orange-700",
   C: "bg-amber-100 text-amber-700", D: "bg-green-100 text-green-700",
@@ -127,8 +136,13 @@ export default function SparingPage() {
       sparingOpponent: formOpponent.trim(),
       status: "planned",
     });
+    const memberIds: string[] = [];
     for (const p of opponentPlayers) {
-      await addMember({ name: p.name, class: p.class, type: "2" });
+      const m = await addMember({ name: p.name, class: p.class, type: "2" });
+      memberIds.push(m.id);
+    }
+    if (sched && memberIds.length > 0) {
+      await updateSchedule(sched.id, { notes: JSON.stringify({ opponentMemberIds: memberIds }) });
     }
     setShowCreate(false);
     setFormOpponent("");
@@ -171,7 +185,9 @@ export default function SparingPage() {
     try {
       for (const att of sparingAtts) await removeAtt(att.id);
       for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
-      await updateSchedule(selSparingId, { notes: JSON.stringify({ draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
+      const sched = schedules.find((s) => s.id === selSparingId);
+      const extra = sched ? JSON.parse(sched.notes || "{}") : {};
+      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
       toast("success", "Pengaturan sparing berhasil disimpan");
       setShowAddOur(false);
     } catch (err) {
@@ -185,7 +201,11 @@ export default function SparingPage() {
   const byClass = (a: ApiMember, b: ApiMember) => (classOrder.indexOf(a.class || "Z") - classOrder.indexOf(b.class || "Z")) || a.name.localeCompare(b.name);
 
   const ourAvailable = useMemo(() => internalMembers.filter((m) => selectedOurIds.includes(m.id)).sort(byClass), [internalMembers, selectedOurIds]);
-  const oppAvailable = useMemo(() => [...externalMembers].sort(byClass), [externalMembers, selSparingId]);
+  const oppAvailable = useMemo(() => {
+    if (!selectedSparing) return [];
+    const ids = getOpponentMemberIds(selectedSparing);
+    return externalMembers.filter((m) => ids.includes(m.id)).sort(byClass);
+  }, [externalMembers, selectedSparing]);
 
   function toggleDraftSlot(side: "our" | "opp", memberId: string) {
     const [s1, s2, set1, set2] = side === "our"
@@ -266,16 +286,24 @@ export default function SparingPage() {
 
   async function addNewOpponent() {
     if (!newOppName.trim() || !newOppClass || !selSparingId) return;
-    await addMember({ name: newOppName.trim(), class: newOppClass, type: "2" });
+    const m = await addMember({ name: newOppName.trim(), class: newOppClass, type: "2" });
+    const sched = schedules.find((s) => s.id === selSparingId);
+    if (sched) {
+      const current = getOpponentMemberIds(sched);
+      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...JSON.parse(sched.notes || "{}"), opponentMemberIds: [...current, m.id] }) });
+    }
     setNewOppName(""); setNewOppClass(""); setShowAddOpp(false);
   }
 
-  const opposePlayers = useMemo(() =>
-    externalMembers.filter((m) => {
+  const opposePlayers = useMemo(() => {
+    if (!selectedSparing) return [];
+    const ids = getOpponentMemberIds(selectedSparing);
+    return externalMembers.filter((m) => {
+      if (!ids.includes(m.id)) return false;
       const schedMatchIds = sparingMatches.flatMap((m) => [m.team1Player1Id, m.team1Player2Id, m.team2Player1Id, m.team2Player2Id]);
       return !schedMatchIds.includes(m.id);
-    }),
-  [externalMembers, sparingMatches]);
+    });
+  }, [externalMembers, sparingMatches, selectedSparing]);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -302,10 +330,7 @@ export default function SparingPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sparings.map((s) => {
-            const extCount = externalMembers.filter((m) => {
-              const schedMatchIds = matches.filter((m2) => m2.scheduleId === s.id).flatMap((m2) => [m2.team1Player1Id, m2.team1Player2Id, m2.team2Player1Id, m2.team2Player2Id]);
-              return schedMatchIds.includes(m.id);
-            }).length;
+            const extCount = getOpponentMemberIds(s).length;
             return (
               <div key={s.id} onClick={() => setSelSparingId(s.id)}
                 className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[#0d9488]" : ""}`}>
@@ -454,7 +479,7 @@ export default function SparingPage() {
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3">Pemain {selectedSparing.sparingOpponent}</h3>
               <div className="mb-3 space-y-1">
-                {[...externalMembers].sort(byClass).map((m) => (
+                {externalMembers.filter((m) => getOpponentMemberIds(selectedSparing).includes(m.id)).sort(byClass).map((m) => (
                   <div key={m.id} className="rounded-lg border border-gray-100 px-3 py-2 text-sm">
                     {editOppId === m.id ? (
                       <div className="flex gap-2">
@@ -721,7 +746,7 @@ export default function SparingPage() {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                <button onClick={handleCreate} disabled={!formOpponent.trim() || opponentPlayers.length === 0}
+                <button onClick={handleCreate} disabled={!formOpponent.trim()}
                   className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">Simpan Sparing</button>
               </div>
             </div>
