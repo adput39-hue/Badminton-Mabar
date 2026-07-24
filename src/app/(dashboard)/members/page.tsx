@@ -56,9 +56,10 @@ export default function MembersPage() {
   }, [attendances, matches, matchHistory]);
   const [filterClass, setFilterClass] = useState<MemberClass | "all">("all");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "name", dir: "asc" });
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", photo: "", address: "", class: "A" as MemberClass });
+  const [form, setForm] = useState({ name: "", phone: "", photo: "", address: "", class: "A" as MemberClass, gender: "" });
   const [page, setPage] = useState(1);
   const perPage = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,18 +72,32 @@ export default function MembersPage() {
     .filter((m) => filterClass === "all" || m.class === filterClass)
     .filter((m) => !search.trim() || m.name.toLowerCase().includes(search.toLowerCase()));
 
-  const totalPages = Math.ceil(filtered.length / perPage);
-  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  function toggleSort(key: string) {
+    setSortBy((prev) => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
+    setPage(1);
+  }
 
   function onSearch(e: React.ChangeEvent<HTMLInputElement>) { setSearch(e.target.value); setPage(1); }
 
   function onFilterClass(k: MemberClass | "all") { setFilterClass(k); setPage(1); }
 
-  function openAdd() { setEditId(null); setForm({ name: "", phone: "", photo: "", address: "", class: "A" }); setShowForm(true); }
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aVal = (a as any)[sortBy.key] || "";
+      const bVal = (b as any)[sortBy.key] || "";
+      const cmp = typeof aVal === "number" ? aVal - bVal : String(aVal).localeCompare(String(bVal));
+      return sortBy.dir === "asc" ? cmp : -cmp;
+    });
+  }, [filtered, sortBy]);
+
+  const totalPages = Math.ceil(sorted.length / perPage);
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
+
+  function openAdd() { setEditId(null); setForm({ name: "", phone: "", photo: "", address: "", class: "A", gender: "" }); setShowForm(true); }
 
   function openEdit(m: Member) {
     setEditId(m.id);
-    setForm({ name: m.name, phone: m.phone || "", photo: m.photo || "", address: m.address || "", class: m.class as MemberClass });
+    setForm({ name: m.name, phone: m.phone || "", photo: m.photo || "", address: m.address || "", class: m.class as MemberClass, gender: m.gender || "" });
     setShowForm(true);
   }
 
@@ -99,7 +114,7 @@ export default function MembersPage() {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class };
+      const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class, gender: form.gender || null };
       if (editId) await update(editId, payload);
       else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
       toast("success", editId ? "Anggota berhasil diperbarui" : "Anggota berhasil ditambahkan");
@@ -152,11 +167,11 @@ export default function MembersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Anggota</th>
-                <th className="px-4 py-3">Telepon</th>
-                <th className="px-4 py-3">Kelas</th>
-                <th className="px-4 py-3 hidden md:table-cell">Alamat</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Bergabung</th>
+                <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort("name")}>Anggota{sortBy.key === "name" && (sortBy.dir === "asc" ? " ▲" : " ▼")}</th>
+                <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort("phone")}>Telepon{sortBy.key === "phone" && (sortBy.dir === "asc" ? " ▲" : " ▼")}</th>
+                <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort("class")}>Kelas{sortBy.key === "class" && (sortBy.dir === "asc" ? " ▲" : " ▼")}</th>
+                <th className="px-4 py-3 hidden md:table-cell cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort("address")}>Alamat{sortBy.key === "address" && (sortBy.dir === "asc" ? " ▲" : " ▼")}</th>
+                <th className="px-4 py-3 hidden sm:table-cell cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort("joinedAt")}>Bergabung{sortBy.key === "joinedAt" && (sortBy.dir === "asc" ? " ▲" : " ▼")}</th>
                 <th className="px-4 py-3 text-right">Aksi</th>
               </tr>
             </thead>
@@ -265,6 +280,14 @@ export default function MembersPage() {
                 <label className="block text-sm font-medium text-gray-700">Kelas</label>
                 <select value={form.class} onChange={(e) => setForm({ ...form, class: e.target.value as MemberClass })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
                   {CLASSES.map((k) => (<option key={k} value={k}>Kelas {k}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
+                <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                  <option value="">— Pilih —</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
                 </select>
               </div>
               <div className="flex justify-end gap-3 pt-2">

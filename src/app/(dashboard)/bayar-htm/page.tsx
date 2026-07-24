@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
-import type { ApiSchedule, ApiAttendance, ApiMember } from "@/lib/api-types";
+import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi } from "@/lib/api-types";
 import { Wallet, Pencil, X, Check, Save, Search, DollarSign } from "lucide-react";
+import { getClientPbId } from "@/lib/tenant";
 
 function getPaidMembers(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -72,8 +73,22 @@ export default function BayarHtmPage() {
     const s = htmSchedules.find((x) => x.id === scheduleId);
     if (!s) return;
     const paidIds = paidState[scheduleId] || getPaidMembers(s);
+    const oldPaidIds = getPaidMembers(s);
+    const newPaidIds = paidIds.filter((id) => !oldPaidIds.includes(id));
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
+
+    const pbId = getClientPbId();
+    for (const memberId of newPaidIds) {
+      const member = members.find((m) => m.id === memberId);
+      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}`;
+      await fetch("/api/kas-mutasi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+        body: JSON.stringify({ type: "masuk", amount: s.htm, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
+      });
+    }
+
     setExpandId(null);
   }
 

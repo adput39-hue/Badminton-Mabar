@@ -2,6 +2,7 @@ export interface ApiMember {
   id: string; pbId: string; name: string; phone: string | null;
   photo: string | null; address: string | null;
   class: string; type: string; isActive: boolean; joinedAt: string;
+  gender: string | null;
   createdAt: string; updatedAt: string;
 }
 
@@ -59,4 +60,20 @@ export interface ApiPb {
   phone: string | null;
   createdAt: string; updatedAt: string;
   _count?: { users: number; members: number; schedules: number };
+}
+
+export interface ApiKasBiaya {
+  id: string; pbId: string; name: string;
+  type: string; amount: number | null;
+  description: string | null; isActive: boolean;
+  createdAt: string; updatedAt: string;
+}
+
+export interface ApiKasMutasi {
+  id: string; pbId: string; type: string;
+  biayaId: string | null; description: string;
+  amount: number; tanggal: string;
+  reference: string | null; memberId: string | null;
+  createdBy: string | null;
+  createdAt: string; updatedAt: string;
 }
