@@ -152,7 +152,9 @@ export default function BayarHtmPage() {
             const paid = paidState[s.id] || paidIds;
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
-            const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
+            const savedPaidIds = getPaidMembers(s);
+            const savedPesertaPaid = savedPaidIds.filter((id) => peserta.some((p) => p.id === id));
+            const isLocked = peserta.length > 0 && savedPesertaPaid.length >= peserta.length;
 
             const allPlayerCocks = peserta.map((m) => getPlayerCockCost(s.id, m.id));
             const scheduleTotalCocks = allPlayerCocks.reduce((s, c) => s + c.totalCocks, 0);
