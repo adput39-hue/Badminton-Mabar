@@ -15,6 +15,7 @@ const allMenus = [
   { key: "riwayat", label: "Riwayat" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "live-score", label: "Live Score" },
+  { key: "laporan-cock", label: "Lap. Pemakaian Cock" },
   { key: "htm", label: "Bayar HTM" },
   { key: "master-biaya", label: "Master Biaya" },
   { key: "kas-mutasi", label: "Mutasi Kas" },
