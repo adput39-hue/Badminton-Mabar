@@ -14,6 +14,7 @@ const allNavItems = [
   { href: "/schedules", label: "Jadwal", icon: Calendar, menuKey: "schedules" },
   { href: "/mabar", label: "Mabar", icon: Heart, menuKey: "mabar" },
   { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
+  { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },
   { href: "/sparing/match", label: "Match", icon: Swords, menuKey: "sparing" },
   { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
   { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "live-score" },
@@ -27,7 +28,6 @@ const allNavItems = [
   { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
   { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
   { href: "/settings", label: "Pengaturan", icon: Settings, menuKey: "settings" },
-  { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },
   { href: "/laba-rugi", label: "Laba Rugi", icon: TrendingUp, menuKey: "laba-rugi" },
 ];
 

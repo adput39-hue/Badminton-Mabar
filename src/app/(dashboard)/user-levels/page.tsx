@@ -12,6 +12,7 @@ const allMenus = [
   { key: "schedules", label: "Jadwal" },
   { key: "mabar", label: "Mabar" },
   { key: "sparing", label: "Sparing" },
+  { key: "riwayat", label: "Riwayat" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "live-score", label: "Live Score" },
   { key: "htm", label: "Bayar HTM" },
@@ -24,7 +25,6 @@ const allMenus = [
   { key: "users", label: "Master User" },
   { key: "user-levels", label: "Level Manager" },
   { key: "settings", label: "Pengaturan" },
-  { key: "riwayat", label: "Riwayat" },
   { key: "laba-rugi", label: "Laba Rugi" },
 ];
 
