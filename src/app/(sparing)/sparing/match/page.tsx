@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
-import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -110,15 +109,15 @@ export default function SparingMatchPage() {
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
-  async function updateMatchViaSupabase(id: string, data: Record<string, unknown>) {
-    const { data: updated, error } = await supabase
-      .from("matches")
-      .update(data)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw error;
-    return updated as ApiMatch;
+  async function updateMatchViaApi(id: string, data: Record<string, unknown>) {
+    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    const res = await fetch(`/api/matches/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-pb-id": pbId },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text().catch(() => "API error"));
+    return res.json() as Promise<ApiMatch>;
   }
 
   async function assignMatch(matchId: string, courtNum: number) {
