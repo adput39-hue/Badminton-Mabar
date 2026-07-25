@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const pb = await prisma.pb.findUnique({ where: { id } });
+    if (!pb) return NextResponse.json({ error: "PB tidak ditemukan" }, { status: 404 });
+    return NextResponse.json(pb);
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -24,6 +35,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (phone !== undefined) data.phone = phone || null;
     if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl || null;
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor || null;
+    if (body.captionColor !== undefined) data.captionColor = body.captionColor || null;
+    if (body.bgColor !== undefined) data.bgColor = body.bgColor || null;
 
     const pb = await prisma.pb.update({
       where: { id },

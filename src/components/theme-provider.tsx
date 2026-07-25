@@ -61,15 +61,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const raw = localStorage.getItem("user");
         if (!raw) return;
         const u = JSON.parse(raw);
-        const serverPrimary = pb.primaryColor || DEFAULT_PRIMARY;
-        const localPrimary = u.primaryColor || u.pb?.primaryColor;
-        if (serverPrimary !== localPrimary) {
-          u.primaryColor = serverPrimary;
-          u.pb = { ...u.pb, primaryColor: serverPrimary };
+        const sp = pb.primaryColor || DEFAULT_PRIMARY;
+        const sc = pb.captionColor || DEFAULT_CAPTION;
+        const sb = pb.bgColor || DEFAULT_BG;
+        const lp = u.primaryColor || u.pb?.primaryColor || DEFAULT_PRIMARY;
+        const lc = u.captionColor || DEFAULT_CAPTION;
+        const lb = u.bgColor || DEFAULT_BG;
+        if (sp !== lp || sc !== lc || sb !== lb) {
+          u.primaryColor = sp;
+          u.captionColor = sc;
+          u.bgColor = sb;
+          u.pb = { ...(u.pb || {}), primaryColor: sp, captionColor: sc, bgColor: sb };
           localStorage.setItem("user", JSON.stringify(u));
-          const c = u.captionColor || DEFAULT_CAPTION;
-          const b = u.bgColor || DEFAULT_BG;
-          setCssVars(serverPrimary, c, b);
+          setCssVars(sp, sc, sb);
         }
       })
       .catch(() => {});

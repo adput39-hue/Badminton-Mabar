@@ -141,7 +141,7 @@ export default function SettingsPage() {
     if (!user?.pb?.id || !name.trim() || saving) return;
     setSaving(true);
     try {
-      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, primaryColor: primaryColor || null });
+      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, primaryColor: primaryColor || null, captionColor: captionColor || null, bgColor: bgColor || null });
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);

@@ -80,7 +80,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col"><ToastProvider>{children}</ToastProvider></body>
+      <body className="min-h-full flex flex-col"><ThemeProvider><ToastProvider>{children}</ToastProvider></ThemeProvider></body>
     </html>
   );
 }

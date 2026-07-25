@@ -12,6 +12,8 @@ model Pb {
   slug       String    @unique
   logoUrl    String?   @map("logo_url")
   primaryColor String? @map("primary_color")
+  captionColor String? @map("caption_color")
+  bgColor      String? @map("bg_color")
   address    String?
   phone      String?
   createdAt  DateTime  @default(now()) @map("created_at")
