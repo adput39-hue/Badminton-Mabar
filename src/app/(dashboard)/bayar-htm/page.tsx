@@ -58,13 +58,15 @@ export default function BayarHtmPage() {
     return fallback.slice(0, 20);
   }
 
-  function getScheduleCockCost(schedule: ApiSchedule, participantCount: number): { totalCocks: number; perPlayer: number } {
-    const price = schedule.cockPrice || 0;
-    if (price === 0 || participantCount === 0) return { totalCocks: 0, perPlayer: 0 };
-    const scheduleMatches = matches.filter((m) => m.scheduleId === schedule.id && m.status === "completed" && m.cockCount && m.cockCount > 0);
-    const totalCocks = scheduleMatches.reduce((sum, m) => sum + (m.cockCount || 0), 0);
-    const perPlayer = Math.round(totalCocks * price / participantCount);
-    return { totalCocks, perPlayer };
+  function getPlayerCockCost(scheduleId: string, memberId: string): { totalCocks: number; cost: number } {
+    const schedule = htmSchedules.find((s) => s.id === scheduleId);
+    if (!schedule || !schedule.cockPrice) return { totalCocks: 0, cost: 0 };
+    const playerMatches = matches.filter(
+      (m) => m.scheduleId === scheduleId && m.status === "completed" && m.cockCount && m.cockCount > 0
+        && (m.team1Player1Id === memberId || m.team1Player2Id === memberId || m.team2Player1Id === memberId || m.team2Player2Id === memberId)
+    );
+    const totalCocks = playerMatches.reduce((sum, m) => sum + (m.cockCount || 0), 0);
+    return { totalCocks, cost: totalCocks * (schedule.cockPrice || 0) };
   }
 
   function togglePaid(scheduleId: string, memberId: string) {
@@ -86,12 +88,12 @@ export default function BayarHtmPage() {
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
 
-    const cock = getScheduleCockCost(s, getParticipantMembers(s.id).length);
     const pbId = getClientPbId();
     for (const memberId of newPaidIds) {
       const member = members.find((m) => m.id === memberId);
-      const totalAmount = (s.htm || 0) + cock.perPlayer;
-      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.perPlayer ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock Rp${cock.perPlayer.toLocaleString("id-ID")})` : ""}`;
+      const cock = getPlayerCockCost(scheduleId, memberId);
+      const totalAmount = (s.htm || 0) + cock.cost;
+      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
       await fetch("/api/kas-mutasi", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
@@ -151,8 +153,10 @@ export default function BayarHtmPage() {
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
             const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
-    const cock = getScheduleCockCost(s, getParticipantMembers(s.id).length);
-            const totalPerPlayer = (s.htm || 0) + cock.perPlayer;
+
+            const allPlayerCocks = peserta.map((m) => getPlayerCockCost(s.id, m.id));
+            const scheduleTotalCocks = allPlayerCocks.reduce((s, c) => s + c.totalCocks, 0);
+            const scheduleTotalCockCost = allPlayerCocks.reduce((s, c) => s + c.cost, 0);
 
             return (
               <div key={s.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
@@ -173,7 +177,7 @@ export default function BayarHtmPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-bold text-[var(--color-primary)]">Rp {totalPerPlayer.toLocaleString("id-ID")}/org</p>
+                      <p className="text-sm font-bold text-[var(--color-primary)]">Rp {(s.htm||0).toLocaleString("id-ID")}/org</p>
                       <p className="text-xs text-gray-400">{peserta.length} pemain &middot; {paidIds.length} bayar</p>
                     </div>
                     {isOpen ? (
@@ -189,10 +193,10 @@ export default function BayarHtmPage() {
                 {isOpen && (
                   <div className="border-t border-gray-100 px-4 pb-5 pt-4 sm:px-5">
                     <div className="mb-3 flex items-center gap-4 text-sm">
-                      {cock.totalCocks > 0 && (
-                        <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">{cock.totalCocks} cock &times; Rp{(s.cockPrice||0).toLocaleString("id-ID")} = Rp{cock.perPlayer.toLocaleString("id-ID")}/org</span>
+                      {scheduleTotalCocks > 0 && (
+                        <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">Total {scheduleTotalCocks} cock: Rp{scheduleTotalCockCost.toLocaleString("id-ID")}</span>
                       )}
-                      <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")} + Cock Rp{cock.perPlayer.toLocaleString("id-ID")}</span>
+                      <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")}/org</span>
                     </div>
                     <div className="mb-3 flex items-center gap-2">
                       <input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Cari pemain..." className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
@@ -209,6 +213,7 @@ export default function BayarHtmPage() {
                             </div>
                             <span className="flex-1 text-sm font-medium text-gray-900">{m.name}</span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold text-gray-600">{m.class}</span>
+                            <span className="text-xs text-gray-400">{(s.htm||0).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
                             {paid.includes(m.id) && <span className="text-xs font-semibold text-[var(--color-primary)]">Lunas</span>}
                           </div>
                         ) : (
@@ -218,7 +223,8 @@ export default function BayarHtmPage() {
                             </div>
                             <span className="flex-1 text-sm font-medium text-gray-900">{m.name}</span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold text-gray-600">{m.class}</span>
-                            <span className="text-xs text-gray-400">Rp{totalPerPlayer.toLocaleString("id-ID")}</span>
+                            <span className="text-xs text-gray-400">{(s.htm||0).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
+                            <span className="text-xs font-semibold text-[var(--color-primary)]">Rp{((s.htm||0) + getPlayerCockCost(s.id, m.id).cost).toLocaleString("id-ID")}</span>
                           </label>
                         ))}
                       </div>
