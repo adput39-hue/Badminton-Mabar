@@ -54,7 +54,7 @@ export default function LaporanCockPage() {
       const existing = map.get(m.scheduleId) || { schedule: s, matches: [], totalCock: 0, totalCost: 0 };
       existing.matches.push(m);
       existing.totalCock += m.cockCount || 0;
-      existing.totalCost += (m.cockCount || 0) * (s.cockPrice || 0);
+      existing.totalCost += 4 * (s.cockPrice || 0);
       map.set(m.scheduleId, existing);
     });
     return Array.from(map.values()).sort((a, b) => new Date(b.schedule.date).getTime() - new Date(a.schedule.date).getTime());
@@ -141,6 +141,7 @@ export default function LaporanCockPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-gray-900">{m.cockCount} cock</p>
+                        <p className="text-xs text-orange-600">{formatRupiah(4 * (g.schedule.cockPrice || 0))}</p>
                         <p className="text-xs text-gray-500">{m.scoreTeam1}-{m.scoreTeam2}{m.totalGames === 2 && m.scoreTeam1Game2 !== null ? `, ${m.scoreTeam1Game2}-${m.scoreTeam2Game2}` : ""}</p>
                       </div>
                     </div>
