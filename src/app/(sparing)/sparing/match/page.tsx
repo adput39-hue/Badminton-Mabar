@@ -28,6 +28,7 @@ export default function SparingMatchPage() {
   const [selAssignMatch, setSelAssignMatch] = useState("");
   const [activeMatch, setActiveMatch] = useState<ApiMatch | null>(null);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const [cockCount, setCockCount] = useState("1");
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [pbName, setPbName] = useState("");
@@ -232,7 +233,7 @@ export default function SparingMatchPage() {
     } else {
       winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
     }
-    await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: winner });
+    await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
     setShowConfirmFinish(false);
     setActiveMatch(null);
   }
@@ -372,7 +373,7 @@ export default function SparingMatchPage() {
               </div>
 
               <div className="mt-6">
-                <button onClick={() => setShowConfirmFinish(true)} className={`w-full rounded-xl ${color.bg} px-6 py-3 text-sm font-semibold text-white shadow-sm hover:brightness-110`}>Selesaikan Pertandingan</button>
+                <button onClick={() => { setShowConfirmFinish(true); setCockCount("1"); }} className={`w-full rounded-xl ${color.bg} px-6 py-3 text-sm font-semibold text-white shadow-sm hover:brightness-110`}>Selesaikan Pertandingan</button>
               </div>
             </div>
 
@@ -383,6 +384,10 @@ export default function SparingMatchPage() {
                   <p className="text-sm text-gray-600 mb-4">
                     Skor saat ini: {s1} - {s2}{isTwoGame && g1Done ? ` (Game 2: ${g2s1} - ${g2s2})` : ""}
                   </p>
+                  <div className="mb-4 flex items-center justify-center gap-2">
+                    <span className="text-sm font-bold text-gray-700">Cock dipakai:</span>
+                    <input type="number" value={cockCount} onChange={(e) => setCockCount(e.target.value)} placeholder="1" className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
+                  </div>
                   <div className="flex gap-3 justify-end">
                     <button onClick={() => setShowConfirmFinish(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
                     <button onClick={finishMatch} className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]">Yakin, Selesai</button>

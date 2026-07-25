@@ -441,7 +441,7 @@ function MatchCard({ match, getName, onScore, onDelete }: {
             </div>
           )}
           <div className="flex items-center justify-center gap-2">
-            <span className="text-xs font-bold text-gray-400">Cock</span>
+            <span className="text-xs font-bold text-black">Cock</span>
             <input type="number" value={cockCount} onChange={(e) => setCockCount(e.target.value)} placeholder="1" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
           </div>
           <div className="flex justify-center gap-2">

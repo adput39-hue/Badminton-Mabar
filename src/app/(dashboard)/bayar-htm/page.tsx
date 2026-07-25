@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi, ApiMatch } from "@/lib/api-types";
 import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock } from "lucide-react";
@@ -34,25 +34,9 @@ export default function BayarHtmPage() {
   const { items: mutasis, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
   const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
-  const [cockPrice, setCockPrice] = useState(0);
   const [expandId, setExpandId] = useState<string | null>(null);
   const [paidState, setPaidState] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      if (raw) {
-        const u = JSON.parse(raw);
-        if (u.pb?.cockPrice) setCockPrice(u.pb.cockPrice);
-      }
-    } catch {}
-    const pbId = getClientPbId();
-    if (!pbId) return;
-    fetch("/api/pbs/" + pbId).then((r) => r.ok ? r.json() : null).then((pb) => {
-      if (pb?.cockPrice) setCockPrice(pb.cockPrice);
-    }).catch(() => {});
-  }, []);
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -73,12 +57,13 @@ export default function BayarHtmPage() {
     return fallback.slice(0, 20);
   }
 
-  function getScheduleCockCost(scheduleId: string): { totalCocks: number; perPlayer: number } {
-    const scheduleMatches = matches.filter((m) => m.scheduleId === scheduleId && m.status === "completed" && m.cockCount && m.cockCount > 0);
+  function getScheduleCockCost(schedule: ApiSchedule): { totalCocks: number; perPlayer: number } {
+    const price = schedule.cockPrice || 0;
+    if (price === 0) return { totalCocks: 0, perPlayer: 0 };
+    const scheduleMatches = matches.filter((m) => m.scheduleId === schedule.id && m.status === "completed" && m.cockCount && m.cockCount > 0);
     const totalCocks = scheduleMatches.reduce((sum, m) => sum + (m.cockCount || 0), 0);
-    const totalCost = totalCocks * cockPrice;
-    const peserta = getParticipantMembers(scheduleId).length;
-    return { totalCocks, perPlayer: peserta > 0 ? Math.round(totalCost / peserta) : 0 };
+    const perPlayer = totalCocks * price;
+    return { totalCocks, perPlayer };
   }
 
   function togglePaid(scheduleId: string, memberId: string) {
@@ -100,7 +85,7 @@ export default function BayarHtmPage() {
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
 
-    const cock = getScheduleCockCost(scheduleId);
+    const cock = getScheduleCockCost(s);
     const pbId = getClientPbId();
     for (const memberId of newPaidIds) {
       const member = members.find((m) => m.id === memberId);
@@ -164,7 +149,7 @@ export default function BayarHtmPage() {
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
             const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
-            const cock = getScheduleCockCost(s.id);
+            const cock = getScheduleCockCost(s);
             const totalPerPlayer = (s.htm || 0) + cock.perPlayer;
 
             return (
@@ -203,7 +188,7 @@ export default function BayarHtmPage() {
                   <div className="border-t border-gray-100 px-4 pb-5 pt-4 sm:px-5">
                     <div className="mb-3 flex items-center gap-4 text-sm">
                       {cock.totalCocks > 0 && (
-                        <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">{cock.totalCocks} cock &times; Rp{cockPrice.toLocaleString("id-ID")} = Rp{cock.perPlayer.toLocaleString("id-ID")}/org</span>
+                        <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">{cock.totalCocks} cock &times; Rp{(s.cockPrice||0).toLocaleString("id-ID")} = Rp{cock.perPlayer.toLocaleString("id-ID")}/org</span>
                       )}
                       <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")} + Cock Rp{cock.perPlayer.toLocaleString("id-ID")}</span>
                     </div>

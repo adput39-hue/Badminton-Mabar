@@ -102,6 +102,7 @@ model Schedule {
   maxParticipants Int          @default(20) @map("max_participants")
   courts         String?
   htm            Int?
+  cockPrice      Int?    @default(0) @map("cock_price")
   sparingOpponent String?  @map("sparing_opponent")
   notes           String?
   status          String       @default("planned")

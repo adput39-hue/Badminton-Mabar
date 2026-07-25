@@ -40,7 +40,7 @@ export default function SchedulesPage() {
   const [showTambahLap, setShowTambahLap] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editCourtIdx, setEditCourtIdx] = useState<number | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: "", htm: "", notes: "" });
+  const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: "", htm: "", cockPrice: "", notes: "" });
   const [courtsList, setCourtsList] = useState<{name: string; startTime: string; endTime: string}[]>([]);
   const [courtInput, setCourtInput] = useState({ name: "", startTime: "", endTime: "" });
   const [saving, setSaving] = useState(false);
@@ -49,12 +49,14 @@ export default function SchedulesPage() {
   const existingLocations = [...new Set(schedules.map((s) => s.location).filter(Boolean))] as string[];
   const usedSchedules = new Set(attendances.filter((a) => a.status !== "undangan").map((a) => a.scheduleId));
 
-  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: "", htm: "", notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
+  function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "", max_participants: "", htm: "", cockPrice: "", notes: "" }); setCourtsList([]); setCourtInput({ name: "", startTime: "", endTime: "" }); setShowForm(true); }
 
   function openEdit(s: Schedule) {
     setEditId(s.id);
     const htmVal = s.htm ? String(s.htm).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : "";
-    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, notes: s.notes || "" });
+    let notesVal = s.notes || "";
+    try { const parsed = JSON.parse(notesVal); if (parsed.gameMode && Object.keys(parsed).length === 1) notesVal = ""; else if (parsed.gameMode) { const { gameMode, ...rest } = parsed; notesVal = Object.keys(rest).length ? JSON.stringify(rest) : ""; } } catch {}
+    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, cockPrice: s.cockPrice ? String(s.cockPrice) : "", notes: notesVal });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
     setShowForm(true);
@@ -75,7 +77,7 @@ export default function SchedulesPage() {
     if (!form.title.trim() || !form.date) return;
     setSaving(true);
     try {
-      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: Number(form.max_participants) || 20, htm: form.htm === "" ? null : Number(form.htm.replace(/\D/g, '')), courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
+      const payload = { title: form.title.trim(), date: form.date, location: form.location || null, maxParticipants: Number(form.max_participants) || 20, htm: form.htm === "" ? null : Number(form.htm.replace(/\D/g, '')), cockPrice: form.cockPrice === "" ? 0 : Number(form.cockPrice.replace(/\D/g, '')), courts: courtsList.length > 0 ? JSON.stringify(courtsList) : null, notes: form.notes || null };
       if (editId) await updateSchedule(editId, payload);
       else await addSchedule(payload);
       toast("success", editId ? "Jadwal berhasil diperbarui" : "Jadwal berhasil dibuat");
@@ -157,7 +159,7 @@ export default function SchedulesPage() {
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700">Judul</label><input value={form.title} onChange={(e) => setForm({ ...form, title: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Mabar Senin" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Judul <span className="text-red-500">*</span></label><input value={form.title} onChange={(e) => setForm({ ...form, title: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Mabar Senin" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tanggal</label>
@@ -180,7 +182,8 @@ export default function SchedulesPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="text" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="text" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Harga Cock (Rp)</label><input type="text" value={form.cockPrice} onChange={(e) => setForm({ ...form, cockPrice: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
               </div>
 
               {/* Lapangan */}
