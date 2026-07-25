@@ -120,7 +120,6 @@ export default function SettingsPage() {
       setAddress(myPb.address || "");
       setPhone(myPb.phone || "");
       setLogoUrl(myPb.logoUrl || "");
-      setPrimaryColor(myPb.primaryColor || DEFAULT_PRIMARY);
       try { localStorage.setItem("pb_" + myPb.id, JSON.stringify(myPb)); } catch {}
     }
   }, [myPb]);
@@ -147,6 +146,7 @@ export default function SettingsPage() {
         const u = JSON.parse(raw);
         u.pb.name = name.trim();
         u.pb.logoUrl = result?.logoUrl || logoUrl || null;
+        u.pb.primaryColor = primaryColor;
         u.primaryColor = primaryColor;
         u.captionColor = captionColor;
         u.bgColor = bgColor;
