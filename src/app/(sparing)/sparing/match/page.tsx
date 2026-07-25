@@ -140,16 +140,16 @@ export default function SparingMatchPage() {
         const ns1 = team === 1 ? s1 + 1 : s1;
         const ns2 = team === 2 ? s2 + 1 : s2;
         const next = { ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 };
-        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+        await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
         setActiveMatch(next);
       } else {
         const ns1 = team === 1 ? g2s1 + 1 : g2s1;
         const ns2 = team === 2 ? g2s2 + 1 : g2s2;
         const next = { ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 };
-        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        await updateMatchViaApi(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setActiveMatch(next);
         if (ns1 >= 21 || ns2 >= 21) {
-          await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+          await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
         }
       }
@@ -157,10 +157,10 @@ export default function SparingMatchPage() {
       const maxScore = modeLabel === "1-42" ? 42 : 30;
       const ns1 = team === 1 ? s1 + 1 : s1;
       const ns2 = team === 2 ? s2 + 1 : s2;
-      await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+      await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
       if (ns1 >= maxScore || ns2 >= maxScore) {
-        await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+        await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         setActiveMatch(null);
       }
     }
@@ -180,18 +180,18 @@ export default function SparingMatchPage() {
       if (!g1Done) {
         const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
         const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+        await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
       } else {
         const ns1 = team === 1 ? Math.max(0, g2s1 - 1) : g2s1;
         const ns2 = team === 2 ? Math.max(0, g2s2 - 1) : g2s2;
-        await updateMatchViaSupabase(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        await updateMatchViaApi(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
       }
     } else {
       const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
       const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-      await updateMatchViaSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
+      await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
     }
   }
@@ -199,7 +199,7 @@ export default function SparingMatchPage() {
   async function swapTeams() {
     if (!activeMatch) return;
     const s = activeMatch;
-    await updateMatchViaSupabase(s.id, {
+    await updateMatchViaApi(s.id, {
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
@@ -232,7 +232,7 @@ export default function SparingMatchPage() {
     } else {
       winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
     }
-    await updateMatchViaSupabase(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
+    await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
     setShowConfirmFinish(false);
     setActiveMatch(null);
   }
