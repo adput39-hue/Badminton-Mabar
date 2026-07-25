@@ -12,16 +12,17 @@ export default function KasPage() {
   const [limit] = useState(10);
   const [showAll, setShowAll] = useState(false);
 
-  const totalMasuk = useMemo(() => mutasis.filter((m) => m.type === "masuk").reduce((s, m) => s + m.amount, 0), [mutasis]);
-  const totalKeluar = useMemo(() => mutasis.filter((m) => m.type === "keluar").reduce((s, m) => s + m.amount, 0), [mutasis]);
+  const active = useMemo(() => mutasis.filter((m) => m.void !== 1), [mutasis]);
+  const totalMasuk = useMemo(() => active.filter((m) => m.type === "masuk").reduce((s, m) => s + m.amount, 0), [active]);
+  const totalKeluar = useMemo(() => active.filter((m) => m.type === "keluar").reduce((s, m) => s + m.amount, 0), [active]);
   const saldo = totalMasuk - totalKeluar;
 
-  const sorted = useMemo(() => [...mutasis].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()), [mutasis]);
+  const sorted = useMemo(() => [...active].sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()), [active]);
   const displayed = showAll ? sorted : sorted.slice(0, limit);
 
   const summaryByBiaya = useMemo(() => {
     const map = new Map<string, { name: string; type: string; total: number; count: number }>();
-    mutasis.forEach((m) => {
+    active.forEach((m) => {
       const key = m.biayaId || "__no_category";
       const name = m.biayaId ? (biayas.find((b) => b.id === m.biayaId)?.name || "Tanpa Kategori") : "Tanpa Kategori";
       if (!map.has(key)) map.set(key, { name, type: m.type, total: 0, count: 0 });

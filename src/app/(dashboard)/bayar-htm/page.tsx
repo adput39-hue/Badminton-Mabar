@@ -100,7 +100,7 @@ export default function BayarHtmPage() {
         await fetch("/api/kas-mutasi/" + existing.id, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-          body: JSON.stringify({ amount: totalAmount, description: desc }),
+          body: JSON.stringify({ amount: totalAmount, description: desc, void: 0 }),
         });
       } else {
         await fetch("/api/kas-mutasi", {
@@ -115,11 +115,10 @@ export default function BayarHtmPage() {
     for (const memberId of removedIds) {
       const existing = existingMutasis.find((m) => m.memberId === memberId);
       if (existing) {
-        const member = members.find((m) => m.id === memberId);
         await fetch("/api/kas-mutasi/" + existing.id, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-          body: JSON.stringify({ amount: 0, description: `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title} (DIBATALKAN)` }),
+          body: JSON.stringify({ void: 1 }),
         });
       }
     }

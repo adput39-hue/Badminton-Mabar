@@ -74,7 +74,7 @@ export interface ApiKasMutasi {
   biayaId: string | null; description: string;
   amount: number; tanggal: string;
   reference: string | null; memberId: string | null;
-  createdBy: string | null;
+  createdBy: string | null; void: number;
   createdAt: string; updatedAt: string;
 }
 

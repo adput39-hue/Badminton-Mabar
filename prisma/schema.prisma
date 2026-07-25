@@ -220,6 +220,7 @@ model KasMutasi {
   createdBy   String?   @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+  void        Int       @default(0)
 
   pb          Pb        @relation(fields: [pbId], references: [id], onDelete: Cascade)
   biaya       KasBiaya? @relation(fields: [biayaId], references: [id], onDelete: SetNull)

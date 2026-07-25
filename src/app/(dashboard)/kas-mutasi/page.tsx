@@ -16,15 +16,17 @@ export default function KasMutasiPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0] });
 
-  const filtered = mutasis.filter((m) => {
+  const active = useMemo(() => mutasis.filter((m) => m.void !== 1), [mutasis]);
+
+  const filtered = active.filter((m) => {
     if (filter !== "all" && m.type !== filter) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return m.description.toLowerCase().includes(q);
   });
 
-  const totalMasuk = useMemo(() => mutasis.filter((m) => m.type === "masuk").reduce((s, m) => s + m.amount, 0), [mutasis]);
-  const totalKeluar = useMemo(() => mutasis.filter((m) => m.type === "keluar").reduce((s, m) => s + m.amount, 0), [mutasis]);
+  const totalMasuk = useMemo(() => active.filter((m) => m.type === "masuk").reduce((s, m) => s + m.amount, 0), [active]);
+  const totalKeluar = useMemo(() => active.filter((m) => m.type === "keluar").reduce((s, m) => s + m.amount, 0), [active]);
   const saldo = totalMasuk - totalKeluar;
 
   function getBiayaName(biayaId: string | null) { const b = biayas.find((x) => x.id === biayaId); return b ? b.name : ""; }

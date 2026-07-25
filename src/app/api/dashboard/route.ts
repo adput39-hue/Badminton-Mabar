@@ -10,11 +10,11 @@ export async function GET(request: Request) {
     prisma.match.findMany({ where }),
     prisma.attendance.findMany(),
     prisma.kasMutasi.findMany({
-      where: { ...where, type: "masuk" },
+      where: { ...where, type: "masuk", void: 0 },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
-    prisma.kasMutasi.findMany({ where }),
+    prisma.kasMutasi.findMany({ where: { ...where, void: 0 } }),
   ]);
 
   const today = new Date().toISOString().split("T")[0];
