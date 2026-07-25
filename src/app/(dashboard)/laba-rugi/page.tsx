@@ -210,7 +210,7 @@ export default function LabaRugiPage() {
                         const biaya = activeBiayas.find((b) => b.id === e.target.value);
                         setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], cockBiayaId: e.target.value || null, cockCost: biaya?.amount ?? edit.cockCost } }));
                       }} className="mb-1.5 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                        <option value="">Pilih master biaya cock</option>
+                        <option value="" disabled>Pilih biaya cock</option>
                         {activeBiayas.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.amount ? formatRupiah(b.amount) : "—"})</option>)}
                       </select>
                       <input type="text" value={edit.cockCost ? String(edit.cockCost).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ""} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], cockCost: parseInt(e.target.value.replace(/\D/g, '')) || 0 } }))}
@@ -222,7 +222,7 @@ export default function LabaRugiPage() {
                         const biaya = activeBiayas.find((b) => b.id === e.target.value);
                         setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], courtBiayaId: e.target.value || null, courtCost: biaya?.amount ?? edit.courtCost } }));
                       }} className="mb-1.5 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                        <option value="">Pilih master biaya sewa lapangan</option>
+                        <option value="" disabled>Pilih biaya lapangan</option>
                         {activeBiayas.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.amount ? formatRupiah(b.amount) : "—"})</option>)}
                       </select>
                       <input type="text" value={edit.courtCost ? String(edit.courtCost).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ""} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], courtCost: parseInt(e.target.value.replace(/\D/g, '')) || 0 } }))}
@@ -237,7 +237,7 @@ export default function LabaRugiPage() {
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
                     <button onClick={() => { setExpandId(null) }} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100">Batal</button>
-                    <button onClick={() => saveEdit(lr)} disabled={savingId === lr.id}
+                    <button onClick={() => saveEdit(lr)} disabled={savingId === lr.id || !edit.cockBiayaId || !edit.courtBiayaId}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
                       <Save className="h-3.5 w-3.5" /> {savingId === lr.id ? "Menyimpan..." : "Simpan"}
                     </button>

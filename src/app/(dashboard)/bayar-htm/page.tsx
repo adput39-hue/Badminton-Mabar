@@ -37,6 +37,7 @@ export default function BayarHtmPage() {
   const [expandId, setExpandId] = useState<string | null>(null);
   const [paidState, setPaidState] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -105,6 +106,7 @@ export default function BayarHtmPage() {
     const s = htmSchedules.find((x) => x.id === scheduleId);
     if (!s) return;
     setPaidState((prev) => ({ ...prev, [scheduleId]: getPaidMembers(s) }));
+    setMemberSearch("");
     setExpandId(scheduleId);
   }
 
@@ -192,12 +194,15 @@ export default function BayarHtmPage() {
                       )}
                       <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")} + Cock Rp{cock.perPlayer.toLocaleString("id-ID")}</span>
                     </div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Cari pemain..." className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                    </div>
                     <h4 className="mb-3 text-sm font-semibold text-gray-700">Daftar Pemain</h4>
                     {peserta.length === 0 ? (
                       <p className="py-4 text-center text-sm text-gray-400">Belum ada peserta terdaftar</p>
                     ) : (
                       <div className="space-y-1">
-                        {peserta.map((m) => isLocked ? (
+                        {peserta.filter((m) => !memberSearch || m.name.toLowerCase().includes(memberSearch.toLowerCase())).map((m) => isLocked ? (
                           <div key={m.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5">
                             <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${paid.includes(m.id) ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-gray-300"}`}>
                               {paid.includes(m.id) && <Check className="h-3.5 w-3.5 text-white" />}
