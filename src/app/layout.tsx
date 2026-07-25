@@ -33,6 +33,7 @@ export default function RootLayout({
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} ${teko.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <script
