@@ -126,7 +126,7 @@ export default function MabarPage() {
     setAssignCourtFor(null);
   }
 
-  async function handleScore(matchId: string, score1: number, score2: number, score1g2?: number, score2g2?: number) {
+  async function handleScore(matchId: string, score1: number, score2: number, cockCount: number, score1g2?: number, score2g2?: number) {
     const m = matches.find((x) => x.id === matchId); if (!m) return;
     let winner: number | null = null;
     if (m.totalGames === 1) {
@@ -138,7 +138,7 @@ export default function MabarPage() {
       const wins2 = (g1w === 2 ? 1 : 0) + (g2w === 2 ? 1 : 0);
       winner = wins1 > wins2 ? 1 : wins2 > wins1 ? 2 : null;
     }
-    const upd: Record<string, unknown> = { scoreTeam1: score1, scoreTeam2: score2, winnerTeam: winner, status: "completed" };
+    const upd: Record<string, unknown> = { scoreTeam1: score1, scoreTeam2: score2, winnerTeam: winner, status: "completed", cockCount };
     if (score1g2 !== undefined) { upd.scoreTeam1Game2 = score1g2; upd.scoreTeam2Game2 = score2g2; }
     await updateMatch(matchId, upd);
     const team1 = [m.team1Player1Id, m.team1Player2Id], team2 = [m.team2Player1Id, m.team2Player2Id];
@@ -320,7 +320,7 @@ export default function MabarPage() {
                       {cMatches.length === 0 ? (
                         <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
                       ) : (
-                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, s1g2, s2g2) => handleScore(m.id, s1, s2, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)
+                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2) => handleScore(m.id, s1, s2, cc, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)
                       )}
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -383,12 +383,13 @@ export default function MabarPage() {
 }
 
 function MatchCard({ match, getName, onScore, onDelete }: {
-  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
+  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
 }) {
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
   const [s1g2, setS1g2] = useState(match.scoreTeam1Game2 !== null ? String(match.scoreTeam1Game2) : "");
   const [s2g2, setS2g2] = useState(match.scoreTeam2Game2 !== null ? String(match.scoreTeam2Game2) : "");
+  const [cockCount, setCockCount] = useState(match.cockCount !== null ? String(match.cockCount) : "1");
   const [showScore, setShowScore] = useState(false);
   const team1Won = match.winnerTeam === 1; const team2Won = match.winnerTeam === 2;
   const isTwoGames = match.totalGames === 2;
@@ -439,8 +440,12 @@ function MatchCard({ match, getName, onScore, onDelete }: {
               <input type="number" value={s2g2} onChange={(e) => setS2g2(e.target.value)} placeholder="0" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
             </div>
           )}
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs font-bold text-gray-400">Cock</span>
+            <input type="number" value={cockCount} onChange={(e) => setCockCount(e.target.value)} placeholder="1" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
+          </div>
           <div className="flex justify-center gap-2">
-            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan</button>
+            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), n(cockCount), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan</button>
             <button onClick={() => setShowScore(false)} className="rounded-lg border border-gray-200 px-4 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Batal</button>
           </div>
         </div>

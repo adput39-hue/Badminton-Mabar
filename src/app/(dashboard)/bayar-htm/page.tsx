@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
-import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi } from "@/lib/api-types";
+import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi, ApiMatch } from "@/lib/api-types";
 import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -32,10 +32,27 @@ export default function BayarHtmPage() {
   const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
   const { items: mutasis, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
+  const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
+  const [cockPrice, setCockPrice] = useState(0);
   const [expandId, setExpandId] = useState<string | null>(null);
   const [paidState, setPaidState] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u.pb?.cockPrice) setCockPrice(u.pb.cockPrice);
+      }
+    } catch {}
+    const pbId = getClientPbId();
+    if (!pbId) return;
+    fetch("/api/pbs/" + pbId).then((r) => r.ok ? r.json() : null).then((pb) => {
+      if (pb?.cockPrice) setCockPrice(pb.cockPrice);
+    }).catch(() => {});
+  }, []);
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -44,11 +61,6 @@ export default function BayarHtmPage() {
       .filter((s) => s.htm && s.htm > 0 && s.status !== "cancelled")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [schedules]);
-
-  function getHadirMembers(scheduleId: string) {
-    const attIds = attendances.filter((a) => a.scheduleId === scheduleId && a.status === "hadir").map((a) => a.memberId);
-    return internalMembers.filter((m) => attIds.includes(m.id) || scheduleId.includes(m.id));
-  }
 
   function getParticipantMembers(scheduleId: string): ApiMember[] {
     const attIds = attendances.filter((a) => a.scheduleId === scheduleId && (a.status === "hadir" || a.status === "undangan")).map((a) => a.memberId);
@@ -59,6 +71,14 @@ export default function BayarHtmPage() {
       return mAtts.some((a) => schedules.find((s) => s.id === a.scheduleId && s.htm && s.htm > 0));
     });
     return fallback.slice(0, 20);
+  }
+
+  function getScheduleCockCost(scheduleId: string): { totalCocks: number; perPlayer: number } {
+    const scheduleMatches = matches.filter((m) => m.scheduleId === scheduleId && m.status === "completed" && m.cockCount && m.cockCount > 0);
+    const totalCocks = scheduleMatches.reduce((sum, m) => sum + (m.cockCount || 0), 0);
+    const totalCost = totalCocks * cockPrice;
+    const peserta = getParticipantMembers(scheduleId).length;
+    return { totalCocks, perPlayer: peserta > 0 ? Math.round(totalCost / peserta) : 0 };
   }
 
   function togglePaid(scheduleId: string, memberId: string) {
@@ -80,14 +100,16 @@ export default function BayarHtmPage() {
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
 
+    const cock = getScheduleCockCost(scheduleId);
     const pbId = getClientPbId();
     for (const memberId of newPaidIds) {
       const member = members.find((m) => m.id === memberId);
-      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}`;
+      const totalAmount = (s.htm || 0) + cock.perPlayer;
+      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.perPlayer ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock Rp${cock.perPlayer.toLocaleString("id-ID")})` : ""}`;
       await fetch("/api/kas-mutasi", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-        body: JSON.stringify({ type: "masuk", amount: s.htm, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
+        body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
       });
     }
 
@@ -109,13 +131,11 @@ export default function BayarHtmPage() {
 
   const totalPaid = useMemo(() => {
     let count = 0;
-    for (const s of htmSchedules) {
-      count += getPaidMembers(s).length;
-    }
+    for (const s of htmSchedules) count += getPaidMembers(s).length;
     return count;
   }, [htmSchedules]);
 
-  if (!schedulesLoaded || !attendancesLoaded || !membersLoaded || !mutasisLoaded) return <LoadingSpinner />;
+  if (!schedulesLoaded || !attendancesLoaded || !membersLoaded || !mutasisLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -144,8 +164,8 @@ export default function BayarHtmPage() {
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
             const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
-
-            if (!schedulesLoaded || !attendancesLoaded || !membersLoaded || !mutasisLoaded) return <LoadingSpinner />;
+            const cock = getScheduleCockCost(s.id);
+            const totalPerPlayer = (s.htm || 0) + cock.perPlayer;
 
             return (
               <div key={s.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
@@ -166,7 +186,7 @@ export default function BayarHtmPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-bold text-[var(--color-primary)]">Rp {s.htm!.toLocaleString("id-ID")}</p>
+                      <p className="text-sm font-bold text-[var(--color-primary)]">Rp {totalPerPlayer.toLocaleString("id-ID")}/org</p>
                       <p className="text-xs text-gray-400">{peserta.length} pemain &middot; {paidIds.length} bayar</p>
                     </div>
                     {isOpen ? (
@@ -181,6 +201,12 @@ export default function BayarHtmPage() {
 
                 {isOpen && (
                   <div className="border-t border-gray-100 px-4 pb-5 pt-4 sm:px-5">
+                    <div className="mb-3 flex items-center gap-4 text-sm">
+                      {cock.totalCocks > 0 && (
+                        <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">{cock.totalCocks} cock &times; Rp{cockPrice.toLocaleString("id-ID")} = Rp{cock.perPlayer.toLocaleString("id-ID")}/org</span>
+                      )}
+                      <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")} + Cock Rp{cock.perPlayer.toLocaleString("id-ID")}</span>
+                    </div>
                     <h4 className="mb-3 text-sm font-semibold text-gray-700">Daftar Pemain</h4>
                     {peserta.length === 0 ? (
                       <p className="py-4 text-center text-sm text-gray-400">Belum ada peserta terdaftar</p>
@@ -202,7 +228,7 @@ export default function BayarHtmPage() {
                             </div>
                             <span className="flex-1 text-sm font-medium text-gray-900">{m.name}</span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold text-gray-600">{m.class}</span>
-                            {paid.includes(m.id) && <span className="text-xs font-semibold text-[var(--color-primary)]">Lunas</span>}
+                            <span className="text-xs text-gray-400">Rp{totalPerPlayer.toLocaleString("id-ID")}</span>
                           </label>
                         ))}
                       </div>
@@ -229,4 +255,3 @@ export default function BayarHtmPage() {
     </div>
   );
 }
-

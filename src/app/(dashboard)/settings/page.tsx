@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY);
   const [captionColor, setCaptionColor] = useState(DEFAULT_CAPTION);
   const [bgColor, setBgColor] = useState(DEFAULT_BG);
+  const [cockPrice, setCockPrice] = useState(0);
   const [logoUploading, setLogoUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,6 +103,7 @@ export default function SettingsPage() {
           setPrimaryColor(u.primaryColor || u.pb?.primaryColor || DEFAULT_PRIMARY);
           setCaptionColor(u.captionColor || DEFAULT_CAPTION);
           setBgColor(u.bgColor || DEFAULT_BG);
+          setCockPrice(u.pb?.cockPrice || 0);
           const cached = localStorage.getItem("pb_" + u.pb.id);
           if (cached) {
             const p = JSON.parse(cached);
@@ -141,7 +143,7 @@ export default function SettingsPage() {
     if (!user?.pb?.id || !name.trim() || saving) return;
     setSaving(true);
     try {
-      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, primaryColor: primaryColor || null, captionColor: captionColor || null, bgColor: bgColor || null });
+      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, primaryColor: primaryColor || null, captionColor: captionColor || null, bgColor: bgColor || null, cockPrice });
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
@@ -151,6 +153,7 @@ export default function SettingsPage() {
         u.primaryColor = primaryColor;
         u.captionColor = captionColor;
         u.bgColor = bgColor;
+        u.pb.cockPrice = cockPrice;
         localStorage.setItem("user", JSON.stringify(u));
       }
       setCssVars(primaryColor, captionColor, bgColor);
@@ -207,6 +210,12 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="mt-1 text-xs text-gray-400">Upload gambar atau masukkan URL logo PB</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Harga Cock per Buah (Rp)</label>
+              <input type="number" value={cockPrice} onChange={(e) => setCockPrice(Number(e.target.value) || 0)} min={0}
+                className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+              <p className="mt-1 text-xs text-gray-400">Digunakan untuk menghitung biaya cock per pemain otomatis di Bayar HTM</p>
             </div>
           </div>
         </div>

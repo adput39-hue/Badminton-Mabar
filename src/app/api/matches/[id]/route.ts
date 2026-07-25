@@ -6,7 +6,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const body = await request.json();
   const data: Record<string, unknown> = {};
-  const fields = ["scheduleId","pbId","courtNumber","round","team1Player1Id","team1Player2Id","team2Player1Id","team2Player2Id","scoreTeam1","scoreTeam2","scoreTeam1Game2","scoreTeam2Game2","totalGames","winnerTeam","status","notes"];
+  const fields = ["scheduleId","pbId","courtNumber","round","team1Player1Id","team1Player2Id","team2Player1Id","team2Player2Id","scoreTeam1","scoreTeam2","scoreTeam1Game2","scoreTeam2Game2","totalGames","winnerTeam","cockCount","status","notes"];
   for (const f of fields) {
     if (body[f] !== undefined) data[f] = body[f];
   }

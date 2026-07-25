@@ -37,6 +37,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor || null;
     if (body.captionColor !== undefined) data.captionColor = body.captionColor || null;
     if (body.bgColor !== undefined) data.bgColor = body.bgColor || null;
+    if (body.cockPrice !== undefined) data.cockPrice = Number(body.cockPrice) || 0;
 
     const pb = await prisma.pb.update({
       where: { id },

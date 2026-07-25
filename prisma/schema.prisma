@@ -14,6 +14,7 @@ model Pb {
   primaryColor String? @map("primary_color")
   captionColor String? @map("caption_color")
   bgColor      String? @map("bg_color")
+  cockPrice    Int?    @default(0) @map("cock_price")
   address    String?
   phone      String?
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -149,6 +150,7 @@ model Match {
   scoreTeam2Game2 Int?         @map("score_team2_game2")
   totalGames     Int           @default(1) @map("total_games")
   winnerTeam     Int?          @map("winner_team")
+  cockCount      Int?          @map("cock_count")
   status         String        @default("scheduled")
   notes          String?
   createdAt      DateTime      @default(now()) @map("created_at")

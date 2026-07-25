@@ -26,8 +26,8 @@ export interface ApiMatch {
   team2Player1Id: string; team2Player2Id: string;
   scoreTeam1: number | null; scoreTeam2: number | null;
   scoreTeam1Game2: number | null; scoreTeam2Game2: number | null;
-  totalGames: number; winnerTeam: number | null; status: string;
-  notes: string | null; createdAt: string; updatedAt: string;
+  totalGames: number; winnerTeam: number | null; cockCount: number | null;
+  status: string; notes: string | null; createdAt: string; updatedAt: string;
 }
 
 export interface ApiMatchHistory {
@@ -58,7 +58,7 @@ export interface ApiPb {
   id: string; name: string; slug: string;
   logoUrl: string | null; address: string | null;
   phone: string | null; primaryColor: string | null;
-  createdAt: string; updatedAt: string;
+  cockPrice: number | null; createdAt: string; updatedAt: string;
   _count?: { users: number; members: number; schedules: number };
 }
 
