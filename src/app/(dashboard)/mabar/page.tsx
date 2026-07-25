@@ -575,8 +575,8 @@ function PlayerSelect({ players, selectedId, onSelect, placeholder, playerMatchC
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen(!open)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-        {selected ? <span>{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
+        className="w-full overflow-hidden rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+        {selected ? <span className="truncate block">{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
       </button>
       {open && (
         <>
@@ -670,7 +670,7 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
             <button type="button" onClick={pairByClass} disabled={filteredHadir.length < 4 || !gameMode} className="rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-50 whitespace-nowrap">Pair by Class</button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[{ label: "Tim 1", team: team1, t: 1 as const }, { label: "Tim 2", team: team2, t: 2 as const }].map(({ label, team, t }) => (
               <div key={label} className="rounded-xl border border-gray-200 p-4">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">{label}</p>
