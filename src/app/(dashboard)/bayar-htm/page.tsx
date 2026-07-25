@@ -27,6 +27,17 @@ function setPaidMembers(schedule: ApiSchedule, memberIds: string[]): string {
   }
 }
 
+function getHtmLocked(schedule: ApiSchedule): boolean {
+  if (!schedule.notes) return false;
+  try { const p = JSON.parse(schedule.notes); return p.htmLocked === true; } catch { return false; }
+}
+
+function toggleHtmLocked(schedule: ApiSchedule): string {
+  const parsed = schedule.notes ? JSON.parse(schedule.notes) : {};
+  parsed.htmLocked = !parsed.htmLocked;
+  return JSON.stringify(parsed);
+}
+
 export default function BayarHtmPage() {
   const { items: schedules, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
   const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
@@ -174,9 +185,7 @@ export default function BayarHtmPage() {
             const paid = paidState[s.id] || paidIds;
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
-            const savedPaidIds = getPaidMembers(s);
-            const savedPesertaPaid = savedPaidIds.filter((id) => peserta.some((p) => p.id === id));
-            const isLocked = peserta.length > 0 && savedPesertaPaid.length >= peserta.length;
+            const isLocked = getHtmLocked(s);
 
             const allPlayerCocks = peserta.map((m) => getPlayerCockCost(s.id, m.id));
             const scheduleTotalCocks = allPlayerCocks.reduce((s, c) => s + c.totalCocks, 0);
@@ -206,10 +215,13 @@ export default function BayarHtmPage() {
                     </div>
                     {isOpen ? (
                       <button onClick={() => setExpandId(null)} className="rounded-xl border border-gray-200 p-2.5 text-gray-400 hover:bg-gray-50"><X className="h-4 w-4" /></button>
-                    ) : isLocked ? (
-                      <span className="rounded-xl border border-gray-200 p-2.5 text-gray-300" title="Sudah tercatat di Kas"><Lock className="h-4 w-4" /></span>
                     ) : (
-                      <button onClick={() => openExpand(s.id)} className="rounded-xl border border-gray-200 p-2.5 text-gray-500 hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)]"><Pencil className="h-4 w-4" /></button>
+                      <>
+                        <button onClick={async () => { await updateSchedule(s.id, { notes: toggleHtmLocked(s) }); }} className="rounded-xl border border-gray-200 p-2.5 text-gray-400 hover:bg-gray-50" title={isLocked ? "Kunci dibuka" : "Kunci jadwal"}>
+                          <Lock className={`h-4 w-4 ${isLocked ? "text-red-400" : "text-gray-300"}`} />
+                        </button>
+                        <button onClick={() => openExpand(s.id)} className="rounded-xl border border-gray-200 p-2.5 text-gray-500 hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)]"><Pencil className="h-4 w-4" /></button>
+                      </>
                     )}
                   </div>
                 </div>
