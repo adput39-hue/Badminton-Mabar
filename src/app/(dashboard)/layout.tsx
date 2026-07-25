@@ -23,12 +23,12 @@ const allNavItems = [
   { href: "/kas-mutasi", label: "Mutasi Kas", icon: ArrowUpRight, menuKey: "kas-mutasi" },
   { href: "/kas", label: "Kas PB", icon: Wallet, menuKey: "finances" },
   { href: "/hutang", label: "Kartu Hutang", icon: BookOpen, menuKey: "hutang" },
+  { href: "/laba-rugi", label: "Laba Rugi", icon: TrendingUp, menuKey: "laba-rugi" },
   { href: "/laporan", label: "Laporan", icon: FileText, menuKey: "reports" },
   { href: "/statistik", label: "Statistik", icon: BarChart3, menuKey: "stats" },
   { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
   { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
   { href: "/settings", label: "Pengaturan", icon: Settings, menuKey: "settings" },
-  { href: "/laba-rugi", label: "Laba Rugi", icon: TrendingUp, menuKey: "laba-rugi" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

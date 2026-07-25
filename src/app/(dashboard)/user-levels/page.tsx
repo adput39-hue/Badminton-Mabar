@@ -20,12 +20,12 @@ const allMenus = [
   { key: "kas-mutasi", label: "Mutasi Kas" },
   { key: "finances", label: "Kas PB" },
   { key: "hutang", label: "Kartu Hutang" },
+  { key: "laba-rugi", label: "Laba Rugi" },
   { key: "reports", label: "Laporan" },
   { key: "stats", label: "Statistik" },
   { key: "users", label: "Master User" },
   { key: "user-levels", label: "Level Manager" },
   { key: "settings", label: "Pengaturan" },
-  { key: "laba-rugi", label: "Laba Rugi" },
 ];
 
 export default function UserLevelsPage() {
