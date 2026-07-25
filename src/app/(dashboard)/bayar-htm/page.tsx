@@ -58,12 +58,12 @@ export default function BayarHtmPage() {
     return fallback.slice(0, 20);
   }
 
-  function getScheduleCockCost(schedule: ApiSchedule): { totalCocks: number; perPlayer: number } {
+  function getScheduleCockCost(schedule: ApiSchedule, participantCount: number): { totalCocks: number; perPlayer: number } {
     const price = schedule.cockPrice || 0;
-    if (price === 0) return { totalCocks: 0, perPlayer: 0 };
+    if (price === 0 || participantCount === 0) return { totalCocks: 0, perPlayer: 0 };
     const scheduleMatches = matches.filter((m) => m.scheduleId === schedule.id && m.status === "completed" && m.cockCount && m.cockCount > 0);
     const totalCocks = scheduleMatches.reduce((sum, m) => sum + (m.cockCount || 0), 0);
-    const perPlayer = totalCocks * price;
+    const perPlayer = Math.round(totalCocks * price / participantCount);
     return { totalCocks, perPlayer };
   }
 
@@ -86,7 +86,7 @@ export default function BayarHtmPage() {
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
 
-    const cock = getScheduleCockCost(s);
+    const cock = getScheduleCockCost(s, getParticipantMembers(s.id).length);
     const pbId = getClientPbId();
     for (const memberId of newPaidIds) {
       const member = members.find((m) => m.id === memberId);
@@ -151,7 +151,7 @@ export default function BayarHtmPage() {
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
             const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
-            const cock = getScheduleCockCost(s);
+    const cock = getScheduleCockCost(s, getParticipantMembers(s.id).length);
             const totalPerPlayer = (s.htm || 0) + cock.perPlayer;
 
             return (
