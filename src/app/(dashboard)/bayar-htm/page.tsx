@@ -84,21 +84,44 @@ export default function BayarHtmPage() {
     if (!s) return;
     const paidIds = paidState[scheduleId] || getPaidMembers(s);
     const oldPaidIds = getPaidMembers(s);
-    const newPaidIds = paidIds.filter((id) => !oldPaidIds.includes(id));
     const newNotes = setPaidMembers(s, paidIds);
     await updateSchedule(scheduleId, { notes: newNotes });
 
     const pbId = getClientPbId();
-    for (const memberId of newPaidIds) {
+    const existingMutasis = mutasis.filter((m) => m.reference === scheduleId && m.description?.startsWith("Bayar HTM"));
+
+    for (const memberId of paidIds) {
       const member = members.find((m) => m.id === memberId);
       const cock = getPlayerCockCost(scheduleId, memberId);
       const totalAmount = (s.htm || 0) + cock.cost;
       const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
-      await fetch("/api/kas-mutasi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-        body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
-      });
+      const existing = existingMutasis.find((m) => m.memberId === memberId);
+      if (existing) {
+        await fetch("/api/kas-mutasi/" + existing.id, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+          body: JSON.stringify({ amount: totalAmount, description: desc }),
+        });
+      } else {
+        await fetch("/api/kas-mutasi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+          body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
+        });
+      }
+    }
+
+    const removedIds = oldPaidIds.filter((id) => !paidIds.includes(id));
+    for (const memberId of removedIds) {
+      const existing = existingMutasis.find((m) => m.memberId === memberId);
+      if (existing) {
+        const member = members.find((m) => m.id === memberId);
+        await fetch("/api/kas-mutasi/" + existing.id, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+          body: JSON.stringify({ amount: 0, description: `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title} (DIBATALKAN)` }),
+        });
+      }
     }
 
     setExpandId(null);
