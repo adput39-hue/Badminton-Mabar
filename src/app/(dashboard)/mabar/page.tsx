@@ -5,6 +5,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
 import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -15,11 +16,11 @@ const courtColors = [
 ];
 
 export default function MabarPage() {
-  const { items: schedules, update: updateSchedule } = useApi<ApiSchedule>("schedules");
-  const { items: members } = useApi<ApiMember>("members");
-  const { items: attendances, update: updateAtt, add: addAtt, remove: removeAtt } = useApi<ApiAttendance>("attendances");
-  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch } = useApi<ApiMatch>("matches");
-  const { items: history, add: addHistory } = useApi<ApiMatchHistory>("match-history");
+  const { items: schedules, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: attendances, update: updateAtt, add: addAtt, remove: removeAtt, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
+  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: history, add: addHistory, loaded: historyLoaded } = useApi<ApiMatchHistory>("match-history");
 
   const today = new Date().toISOString().split("T")[0];
   const todaySchedules = schedules.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled");
@@ -155,6 +156,8 @@ export default function MabarPage() {
 
   const notInvited = members.filter((m) => !invitedIds.includes(m.id) && m.isActive !== false);
   const filteredSearch = searchQ ? notInvited.filter((m) => m.name.toLowerCase().includes(searchQ.toLowerCase())) : notInvited;
+
+  if (!schedulesLoaded || !membersLoaded || !attendancesLoaded || !matchesLoaded || !historyLoaded) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)]">
@@ -627,6 +630,7 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
   function getAvailable(slotTeam: typeof team1, slotIdx: 0 | 1): ApiMember[] {
     return allPlayers.filter((p) => !selected.includes(p.id) || p.id === slotTeam[slotIdx]);
   }
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">

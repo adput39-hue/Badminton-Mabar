@@ -6,6 +6,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiMember as Member, ApiAttendance, ApiMatch, ApiMatchHistory } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin, Venus, Mars } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type MemberClass = "A" | "B" | "C" | "D" | "E" | "F";
 const CLASSES: MemberClass[] = ["A", "B", "C", "D", "E", "F"];
@@ -32,10 +33,10 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 export default function MembersPage() {
-  const { items: members, add, update, remove } = useApi<Member>("members");
-  const { items: attendances } = useApi<ApiAttendance>("attendances");
-  const { items: matches } = useApi<ApiMatch>("matches");
-  const { items: matchHistory } = useApi<ApiMatchHistory>("match-history");
+  const { items: members, add, update, remove, loaded: membersLoaded } = useApi<Member>("members");
+  const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
+  const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: matchHistory, loaded: matchHistoryLoaded } = useApi<ApiMatchHistory>("match-history");
 
   const usedMemberIds = useMemo(() => {
     const ids = new Set<string>();
@@ -127,6 +128,9 @@ export default function MembersPage() {
   }
 
   async function toggleActive(m: Member) { await update(m.id, { isActive: !m.isActive }); }
+
+
+  if (!membersLoaded || !attendancesLoaded || !matchesLoaded || !matchHistoryLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">

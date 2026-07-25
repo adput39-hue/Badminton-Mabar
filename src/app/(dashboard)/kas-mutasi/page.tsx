@@ -4,10 +4,11 @@ import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiKasMutasi, ApiKasBiaya } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, ArrowUpRight, ArrowDownRight, Search, Wallet } from "lucide-react";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function KasMutasiPage() {
-  const { items: mutasis, add, update, remove } = useApi<ApiKasMutasi>("kas-mutasi");
-  const { items: biayas } = useApi<ApiKasBiaya>("kas-biaya");
+  const { items: mutasis, add, update, remove, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
+  const { items: biayas, loaded: biayasLoaded } = useApi<ApiKasBiaya>("kas-biaya");
 
   const [filter, setFilter] = useState<"all" | "masuk" | "keluar">("all");
   const [search, setSearch] = useState("");
@@ -51,6 +52,9 @@ export default function KasMutasiPage() {
     else await add(payload);
     setShowForm(false);
   }
+
+
+  if (!mutasisLoaded || !biayasLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">

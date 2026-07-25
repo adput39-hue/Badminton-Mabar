@@ -5,6 +5,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiPb } from "@/lib/api-types";
 import { Save, Upload, ImageIcon, Palette, Type } from "lucide-react";
 import { useToast } from "@/components/toast";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function darken(hex: string, amount: number) {
   const num = parseInt(hex.replace("#", ""), 16);
@@ -72,7 +73,7 @@ const PRESETS = [
 ];
 
 export default function SettingsPage() {
-  const { items: pbs, update: updatePb } = useApi<ApiPb>("pbs");
+  const { items: pbs, update: updatePb, loaded: pbsLoaded } = useApi<ApiPb>("pbs");
 
   const [user, setUser] = useState<{ pb?: { id: string; name: string } } | null>(null);
   const [name, setName] = useState("");
@@ -160,6 +161,9 @@ export default function SettingsPage() {
       setSaving(false);
     }
   }
+
+
+  if (!pbsLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-2xl">

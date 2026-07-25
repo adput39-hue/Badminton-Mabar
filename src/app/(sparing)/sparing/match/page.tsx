@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -17,9 +18,9 @@ const courtColors = [
 ];
 
 export default function SparingMatchPage() {
-  const { items: schedules } = useApi<ApiSchedule>("schedules");
-  const { items: members } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches, update: updateMatch } = useApi<ApiMatch>("matches");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: matches, refresh: refreshMatches, update: updateMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
@@ -235,6 +236,8 @@ export default function SparingMatchPage() {
     setShowConfirmFinish(false);
     setActiveMatch(null);
   }
+
+  if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   // --- VIEW 1: Pilih Sparing ---
   if (!selSparingId) {
@@ -620,6 +623,9 @@ export default function SparingMatchPage() {
               const completed = cMatches.filter((m) => m.status === "completed").length;
               const hasLive = cMatches.some((m) => m.status !== "completed");
               const color = courtColors[i % courtColors.length];
+
+
+
               return (
                 <button key={i} onClick={() => { history.pushState(null, ""); setSelCourt(i + 1); }}
                   className={`group relative overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md sm:p-5 ${hasLive ? `${color.border} border-2` : "border-gray-200 hover:border-[var(--color-primary)]"}`}>

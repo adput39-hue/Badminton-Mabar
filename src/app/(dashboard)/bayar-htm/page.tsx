@@ -5,6 +5,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi } from "@/lib/api-types";
 import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function getPaidMembers(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -27,10 +28,10 @@ function setPaidMembers(schedule: ApiSchedule, memberIds: string[]): string {
 }
 
 export default function BayarHtmPage() {
-  const { items: schedules, update: updateSchedule } = useApi<ApiSchedule>("schedules");
-  const { items: attendances } = useApi<ApiAttendance>("attendances");
-  const { items: members } = useApi<ApiMember>("members");
-  const { items: mutasis } = useApi<ApiKasMutasi>("kas-mutasi");
+  const { items: schedules, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: mutasis, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
 
   const [expandId, setExpandId] = useState<string | null>(null);
   const [paidState, setPaidState] = useState<Record<string, string[]>>({});
@@ -114,6 +115,8 @@ export default function BayarHtmPage() {
     return count;
   }, [htmSchedules]);
 
+  if (!schedulesLoaded || !attendancesLoaded || !membersLoaded || !mutasisLoaded) return <LoadingSpinner />;
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -141,6 +144,9 @@ export default function BayarHtmPage() {
             const isOpen = expandId === s.id;
             const pesertaPaid = paid.filter((id) => peserta.some((p) => p.id === id));
             const isLocked = peserta.length > 0 && pesertaPaid.length >= peserta.length;
+
+            if (!schedulesLoaded || !attendancesLoaded || !membersLoaded || !mutasisLoaded) return <LoadingSpinner />;
+
             return (
               <div key={s.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
                 <div className="flex items-center justify-between gap-3 p-4 sm:p-5">

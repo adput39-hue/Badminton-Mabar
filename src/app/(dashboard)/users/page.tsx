@@ -4,10 +4,11 @@ import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiUser, ApiUserLevel } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Search, UserCheck, Shield, Mail, Phone as PhoneIcon } from "lucide-react";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function UsersPage() {
-  const { items: users, add: addUser, update: updateUser, remove: removeUser } = useApi<ApiUser>("users");
-  const { items: levels } = useApi<ApiUserLevel>("user-levels");
+  const { items: users, add: addUser, update: updateUser, remove: removeUser, loaded: usersLoaded } = useApi<ApiUser>("users");
+  const { items: levels, loaded: levelsLoaded } = useApi<ApiUserLevel>("user-levels");
 
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -57,6 +58,9 @@ export default function UsersPage() {
       alert(err instanceof Error ? err.message : "Gagal menghapus user");
     }
   }
+
+
+  if (!usersLoaded || !levelsLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">

@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiKasBiaya } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Tag, Search } from "lucide-react";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function MasterBiayaPage() {
-  const { items: biayas, add, update, remove } = useApi<ApiKasBiaya>("kas-biaya");
+  const { items: biayas, add, update, remove, loaded: biayasLoaded } = useApi<ApiKasBiaya>("kas-biaya");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -37,6 +38,9 @@ export default function MasterBiayaPage() {
   }
 
   async function toggleActive(b: ApiKasBiaya) { await update(b.id, { isActive: !b.isActive }); }
+
+
+  if (!biayasLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-4xl">

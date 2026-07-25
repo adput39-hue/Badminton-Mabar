@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getClientPbId } from "@/lib/tenant";
 
 function darken(hex: string, amount: number) {
   const num = parseInt(hex.replace("#", ""), 16);
@@ -44,16 +45,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const c = u.captionColor || DEFAULT_CAPTION;
         const b = u.bgColor || DEFAULT_BG;
         setCssVars(p, c, b);
-        if (!u.primaryColor) u.primaryColor = p;
-        if (!u.captionColor) u.captionColor = c;
-        if (!u.bgColor) u.bgColor = b;
-        localStorage.setItem("user", JSON.stringify(u));
       } else {
         setCssVars(DEFAULT_PRIMARY, DEFAULT_CAPTION, DEFAULT_BG);
       }
     } catch {
       setCssVars(DEFAULT_PRIMARY, DEFAULT_CAPTION, DEFAULT_BG);
     }
+
+    const pbId = getClientPbId();
+    if (!pbId) return;
+    fetch("/api/pbs/" + pbId)
+      .then((r) => r.ok ? r.json() : null)
+      .then((pb) => {
+        if (!pb) return;
+        const raw = localStorage.getItem("user");
+        if (!raw) return;
+        const u = JSON.parse(raw);
+        const serverPrimary = pb.primaryColor || DEFAULT_PRIMARY;
+        const localPrimary = u.primaryColor || u.pb?.primaryColor;
+        if (serverPrimary !== localPrimary) {
+          u.primaryColor = serverPrimary;
+          u.pb = { ...u.pb, primaryColor: serverPrimary };
+          localStorage.setItem("user", JSON.stringify(u));
+          const c = u.captionColor || DEFAULT_CAPTION;
+          const b = u.bgColor || DEFAULT_BG;
+          setCssVars(serverPrimary, c, b);
+        }
+      })
+      .catch(() => {});
   }, []);
   return <>{children}</>;
 }

@@ -5,6 +5,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiMatch as MatchItem, ApiSchedule as ScheduleItem, ApiMember as MemberItem, ApiAttendance as AttendanceItem, ApiMatchHistory as HistoryItem } from "@/lib/api-types";
 import { Plus, X, Swords, Trophy, Medal, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", liveBadge: "bg-green-500 text-white" },
@@ -15,11 +16,11 @@ const courtColors = [
 ];
 
 export default function MatchesPage() {
-  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch } = useApi<MatchItem>("matches");
-  const { items: schedules } = useApi<ScheduleItem>("schedules");
-  const { items: members } = useApi<MemberItem>("members");
-  const { items: attendances } = useApi<AttendanceItem>("attendances");
-  const { items: history, add: addHistory } = useApi<HistoryItem>("match-history");
+  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch, loaded: matchesLoaded } = useApi<MatchItem>("matches");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ScheduleItem>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<MemberItem>("members");
+  const { items: attendances, loaded: attendancesLoaded } = useApi<AttendanceItem>("attendances");
+  const { items: history, add: addHistory, loaded: historyLoaded } = useApi<HistoryItem>("match-history");
   const [showForm, setShowForm] = useState(false);
 
   const stats = useMemo(() => {
@@ -70,6 +71,8 @@ export default function MatchesPage() {
 
   const completed = matches.filter((m) => m.status === "completed");
   const scheduled = matches.filter((m) => m.status !== "completed");
+
+  if (!matchesLoaded || !schedulesLoaded || !membersLoaded || !attendancesLoaded || !historyLoaded) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)]">
@@ -261,6 +264,7 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
               <div className="mt-1.5 flex gap-2">
                 {[1, 2, 3, 4, 5].map((n) => {
                   const c = courtColors[(n - 1) % courtColors.length];
+
                   return (
                     <button key={n} type="button" onClick={() => setCourt(n)}
                       className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold transition-all ${court === n ? `${c.bg} text-white shadow-sm` : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>{n}</button>

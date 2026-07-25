@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiUserLevel } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Shield } from "lucide-react";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const allMenus = [
   { key: "dashboard", label: "Dashboard" },
@@ -28,7 +29,7 @@ const allMenus = [
 ];
 
 export default function UserLevelsPage() {
-  const { items: levels, add: addLevel, update: updateLevel, remove: removeLevel } = useApi<ApiUserLevel>("user-levels");
+  const { items: levels, add: addLevel, update: updateLevel, remove: removeLevel, loaded: levelsLoaded } = useApi<ApiUserLevel>("user-levels");
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -205,6 +206,9 @@ export default function UserLevelsPage() {
                   <div className="mt-3 max-h-48 overflow-y-auto rounded-xl border border-gray-200 p-2 space-y-1.5">
                     {allMenus.map((menu) => {
                       const selected = form.menus.includes(menu.key);
+
+                      if (!levelsLoaded) return <LoadingSpinner />;
+
                       return (
                         <button
                           key={menu.key}

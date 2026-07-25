@@ -6,6 +6,7 @@ import type { ApiMember } from "@/lib/api-types";
 import Link from "next/link";
 import { BookOpen, Search, Pencil, X, Save, Mars, Venus } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 interface HutangRekap {
   memberId: string;
@@ -23,7 +24,7 @@ export default function HutangPage() {
   const [loading, setLoading] = useState(true);
   const [editSaldo, setEditSaldo] = useState<string | null>(null);
   const [saldoValue, setSaldoValue] = useState("");
-  const { update: updateMember } = useApi<ApiMember>("members");
+  const { update: updateMember, loaded: membersLoaded } = useApi<ApiMember>("members");
 
   const fetchData = useCallback(async () => {
     const pbId = getClientPbId();
@@ -52,6 +53,9 @@ export default function HutangPage() {
   });
 
   const totalHutang = data.reduce((sum, d) => sum + d.totalDebt, 0);
+
+
+  if (!membersLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-5xl">

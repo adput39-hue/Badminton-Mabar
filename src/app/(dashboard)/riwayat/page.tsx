@@ -4,11 +4,12 @@ import { useState, useMemo, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 export default function RiwayatPage() {
-  const { items: matches, refresh: refreshMatches } = useApi<ApiMatch>("matches");
-  const { items: schedules } = useApi<ApiSchedule>("schedules");
-  const { items: members } = useApi<ApiMember>("members");
+  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
 
   const [filterSchedule, setFilterSchedule] = useState("");
   const [page, setPage] = useState(1);
@@ -83,6 +84,9 @@ export default function RiwayatPage() {
           {paged.map((m) => {
             const s = getSchedule(m.scheduleId);
             const scoreText = `${m.scoreTeam1}-${m.scoreTeam2}` + (m.totalGames === 2 && m.scoreTeam1Game2 !== null ? `, ${m.scoreTeam1Game2}-${m.scoreTeam2Game2}` : "");
+
+            if (!matchesLoaded || !schedulesLoaded || !membersLoaded) return <LoadingSpinner />;
+
             return (
               <div key={m.id} className="border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
                 style={{ borderColor: "#E2E8F0", borderRadius: 18, boxShadow: "0 4px 18px rgba(0,0,0,0.05)" }}>

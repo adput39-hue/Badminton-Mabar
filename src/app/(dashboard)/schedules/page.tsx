@@ -6,6 +6,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member, ApiMatch } from "@/lib/api-types";
 import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const statusStyle: Record<string, string> = {
   planned: "bg-amber-50 text-amber-700 border-amber-200",
@@ -29,10 +30,10 @@ function getDayLabel(dateStr: string) {
 }
 
 export default function SchedulesPage() {
-  const { items: schedules, add: addSchedule, update: updateSchedule, remove: removeSchedule } = useApi<Schedule>("schedules");
-  const { items: members } = useApi<Member>("members");
-  const { items: attendances, add: addAtt, update: updateAtt, remove: removeAtt } = useApi<Attendance>("attendances");
-  const { items: matches } = useApi<ApiMatch>("matches");
+  const { items: schedules, add: addSchedule, update: updateSchedule, remove: removeSchedule, loaded: schedulesLoaded } = useApi<Schedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<Member>("members");
+  const { items: attendances, add: addAtt, update: updateAtt, remove: removeAtt, loaded: attendancesLoaded } = useApi<Attendance>("attendances");
+  const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
   const [showForm, setShowForm] = useState(false);
   const [showAtt, setShowAtt] = useState<string | null>(null);
   const [showPeserta, setShowPeserta] = useState<string | null>(null);
@@ -107,6 +108,8 @@ export default function SchedulesPage() {
   const today = new Date().toISOString().split("T")[0];
   const upcoming = schedules.filter((s) => new Date(s.date).toISOString().split("T")[0] >= today && s.status !== "cancelled");
   const past = schedules.filter((s) => new Date(s.date).toISOString().split("T")[0] < today || s.status === "completed" || s.status === "cancelled");
+
+  if (!schedulesLoaded || !membersLoaded || !attendancesLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -456,6 +459,7 @@ function AttendanceModal({ scheduleId: _scheduleId, members, attendances, onChan
           ) : attendances.map((att) => {
             const m = members.find((x) => x.id === att.memberId);
             if (!m) return null;
+
             return (
               <div key={att.id} className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-gray-50">
                 <span className="text-sm font-medium text-gray-900">{m.name}</span>

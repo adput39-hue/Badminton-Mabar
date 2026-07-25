@@ -6,6 +6,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-types";
 import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle } from "lucide-react";
 import { useToast } from "@/components/toast";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function getOpponentMemberIds(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -29,10 +30,10 @@ const classColors: Record<string, string> = {
 };
 
 export default function SparingPage() {
-  const { items: schedules, add: addSchedule, update: updateSchedule } = useApi<ApiSchedule>("schedules");
-  const { items: members, add: addMember, update: updateMember, remove: removeMember } = useApi<ApiMember>("members");
-  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch } = useApi<ApiMatch>("matches");
-  const { items: attendances, add: addAtt, remove: removeAtt } = useApi<ApiAttendance>("attendances");
+  const { items: schedules, add: addSchedule, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, add: addMember, update: updateMember, remove: removeMember, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: attendances, add: addAtt, remove: removeAtt, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
 
   const [pbName, setPbName] = useState("");
 
@@ -447,6 +448,9 @@ export default function SparingPage() {
                 }).map((id) => {
                   const m = members.find((x) => x.id === id);
                   if (!m) return null;
+
+                  if (!schedulesLoaded || !membersLoaded || !matchesLoaded || !attendancesLoaded) return <LoadingSpinner />;
+
                   return (
                     <div key={m.id} className="rounded-lg border border-gray-100 px-3 py-2 text-sm">
                       <div className="flex items-center justify-between">
