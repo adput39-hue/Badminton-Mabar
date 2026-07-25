@@ -65,7 +65,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Master User</h1>
           <p className="mt-0.5 text-sm text-gray-500">{users.length} total user</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
           <Plus className="h-4 w-4" /> Tambah User
         </button>
       </div>
@@ -73,7 +73,7 @@ export default function UsersPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari user..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari user..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export default function UsersPage() {
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Shield className="mx-auto h-10 w-10 text-gray-300" />
           <p className="mt-3 text-sm text-gray-500">{users.length === 0 ? "Belum ada user" : "Tidak ditemukan"}</p>
-          {users.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Tambah user pertama</button>}
+          {users.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[var(--color-primary)] hover:underline">Tambah user pertama</button>}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -101,7 +101,7 @@ export default function UsersPage() {
                 <tr key={u.id} className="transition-colors hover:bg-gray-50/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0d9488] text-sm font-bold text-white shadow-sm">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-bold text-white shadow-sm">
                         {u.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -114,7 +114,7 @@ export default function UsersPage() {
                     {u.phone ? <span className="inline-flex items-center gap-1"><PhoneIcon className="h-3 w-3" />{u.phone}</span> : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-[#ccfbf1] px-2.5 py-0.5 text-xs font-medium text-[#0d9488]">{u.role}</span>
+                    <span className="rounded-full bg-[var(--color-primary-light)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">{u.role}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                     {u.level ? (
@@ -155,23 +155,23 @@ export default function UsersPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Nama user" />
+                <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Nama user" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="user@email.com" />
+                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="user@email.com" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Telepon</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="08xxx" />
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="08xxx" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Password {editId && <span className="text-gray-400 font-normal">(kosongkan jika tidak diganti)</span>}</label>
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editId} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Minimal 6 karakter" />
+                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editId} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Minimal 6 karakter" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Role</label>
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   <option value="admin_pb">Admin PB</option>
                   <option value="operator">Operator</option>
                   <option value="viewer">Viewer</option>
@@ -179,7 +179,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Level</label>
-                <select value={form.levelId} onChange={(e) => setForm({ ...form, levelId: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                <select value={form.levelId} onChange={(e) => setForm({ ...form, levelId: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   <option value="">— Tanpa Level —</option>
                   {levels.map((l) => (
                     <option key={l.id} value={l.id}>{l.name}</option>
@@ -188,7 +188,7 @@ export default function UsersPage() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
               </div>
             </form>
           </div>
@@ -197,3 +197,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

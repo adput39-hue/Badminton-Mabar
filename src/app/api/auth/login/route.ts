@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     where: { email },
     include: {
       level: { select: { id: true, name: true, slug: true, menus: true } },
-      pb: { select: { id: true, name: true, logoUrl: true } },
+      pb: { select: { id: true, name: true, logoUrl: true, primaryColor: true } },
     },
   });
 
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       levelId: user.levelId,
       level: user.level,
       pb: user.pb,
+      primaryColor: user.pb?.primaryColor || null,
     },
   });
 }

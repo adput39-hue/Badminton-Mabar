@@ -72,11 +72,11 @@ export default function MatchesPage() {
   const scheduled = matches.filter((m) => m.status !== "completed");
 
   return (
-    <div className="relative min-h-screen bg-[#f0fdfa]">
+    <div className="relative min-h-screen bg-[var(--color-bg)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[#0d9488]/3 blur-2xl" />
+        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[var(--color-primary)]/5 blur-3xl" />
+        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[var(--color-primary)]/5 blur-3xl" />
+        <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[var(--color-primary)]/3 blur-2xl" />
       </div>
       <div className="relative mx-auto max-w-6xl">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -84,7 +84,7 @@ export default function MatchesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Pertandingan</h1>
           <p className="mt-0.5 text-sm text-gray-500">{matches.length} total &middot; {completed.length} selesai</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md"><Plus className="h-4 w-4" /> Buat Pertandingan</button>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md"><Plus className="h-4 w-4" /> Buat Pertandingan</button>
       </div>
 
       {matches.length === 0 ? (
@@ -106,13 +106,13 @@ export default function MatchesPage() {
                 {members.map((m) => ({ ...m, ...(stats.get(m.id) || { wins: 0, losses: 0, total: 0 }) }))
                   .filter((m) => m.total > 0).sort((a, b) => b.wins - a.wins).slice(0, 10)
                   .map((m, i) => (
-                    <div key={m.id} className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${i === 0 ? "bg-[#ccfbf1]" : i === 1 ? "bg-gray-50" : i === 2 ? "bg-amber-50" : ""}`}>
+                    <div key={m.id} className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${i === 0 ? "bg-[var(--color-primary-light)]" : i === 1 ? "bg-gray-50" : i === 2 ? "bg-amber-50" : ""}`}>
                       <div className="flex items-center gap-3">
-                        {i === 0 ? <Medal className="h-4 w-4 text-[#0d9488]" /> : i === 1 ? <Medal className="h-4 w-4 text-gray-400" /> : i === 2 ? <Medal className="h-4 w-4 text-amber-500" /> : <span className="w-4 text-xs text-gray-400">{i + 1}</span>}
+                        {i === 0 ? <Medal className="h-4 w-4 text-[var(--color-primary)]" /> : i === 1 ? <Medal className="h-4 w-4 text-gray-400" /> : i === 2 ? <Medal className="h-4 w-4 text-amber-500" /> : <span className="w-4 text-xs text-gray-400">{i + 1}</span>}
                         <span className="text-sm font-medium text-gray-900">{m.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-[#0d9488]">{m.wins}W</span>
+                        <span className="font-semibold text-[var(--color-primary)]">{m.wins}W</span>
                         <span className="text-gray-300">|</span>
                         <span className="font-semibold text-red-500">{m.losses}L</span>
                       </div>
@@ -168,7 +168,7 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
                 <button onClick={() => setShowScore(!showScore)} className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-medium transition-all hover:bg-gray-50">Input Skor</button>
               )}
               {match.status === "completed" && (
-                <span className={`rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm ${team1Won || team2Won ? "bg-[#ccfbf1] text-[#0d9488]" : "bg-gray-100 text-gray-500"}`}>
+                <span className={`rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm ${team1Won || team2Won ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "bg-gray-100 text-gray-500"}`}>
                   {match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}
                 </span>
               )}
@@ -185,17 +185,17 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
         </div>
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-        <div className={`rounded-xl border-2 p-4 text-center transition-all ${team1Won ? "border-[#0d9488] bg-[#ccfbf1] shadow-sm" : "border-gray-100"}`}>
+        <div className={`rounded-xl border-2 p-4 text-center transition-all ${team1Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-sm" : "border-gray-100"}`}>
           <p className="text-sm font-bold text-gray-900">{getName(match.team1Player1Id)}</p>
           <p className="text-xs text-gray-400">berpasangan dengan</p>
           <p className="text-sm font-bold text-gray-900">{getName(match.team1Player2Id)}</p>
-          {team1Won && <span className="mt-1.5 inline-block rounded-full bg-[#0d9488] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
+          {team1Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>
-        <div className={`rounded-xl border-2 p-4 text-center transition-all ${team2Won ? "border-[#0d9488] bg-[#ccfbf1] shadow-sm" : "border-gray-100"}`}>
+        <div className={`rounded-xl border-2 p-4 text-center transition-all ${team2Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-sm" : "border-gray-100"}`}>
           <p className="text-sm font-bold text-gray-900">{getName(match.team2Player1Id)}</p>
           <p className="text-xs text-gray-400">berpasangan dengan</p>
           <p className="text-sm font-bold text-gray-900">{getName(match.team2Player2Id)}</p>
-          {team2Won && <span className="mt-1.5 inline-block rounded-full bg-[#0d9488] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
+          {team2Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>
       </div>
       {showScore && <ScoreInput s1={s1} s2={s2} s1g2={s1g2} s2g2={s2g2} onS1={setS1} onS2={setS2} onS1g2={setS1g2} onS2g2={setS2g2} isTwoGames={isTwoGames} canSave={canSave} onSubmit={() => onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined)} />}
@@ -209,21 +209,21 @@ function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames
   isTwoGames: boolean; canSave: boolean; onSubmit: () => void;
 }) {
   return (
-    <div className="mt-4 space-y-2 rounded-xl bg-[#ccfbf1] p-4">
+    <div className="mt-4 space-y-2 rounded-xl bg-[var(--color-primary-light)] p-4">
       <div className="flex items-center justify-center gap-3">
-        <input type="number" value={s1} onChange={(e) => onS1(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" min={0} />
+        <input type="number" value={s1} onChange={(e) => onS1(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
         <span className="text-sm font-bold text-gray-400">Game 1</span>
-        <input type="number" value={s2} onChange={(e) => onS2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" min={0} />
+        <input type="number" value={s2} onChange={(e) => onS2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
       </div>
       {isTwoGames && (
         <div className="flex items-center justify-center gap-3">
-          <input type="number" value={s1g2} onChange={(e) => onS1g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" min={0} />
+          <input type="number" value={s1g2} onChange={(e) => onS1g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
           <span className="text-sm font-bold text-gray-400">Game 2</span>
-          <input type="number" value={s2g2} onChange={(e) => onS2g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" min={0} />
+          <input type="number" value={s2g2} onChange={(e) => onS2g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
         </div>
       )}
       <div className="flex justify-center">
-        <button disabled={!canSave} onClick={onSubmit} className="rounded-xl bg-[#0d9488] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50">Simpan</button>
+        <button disabled={!canSave} onClick={onSubmit} className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">Simpan</button>
       </div>
     </div>
   );
@@ -249,7 +249,7 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div><label className="block text-sm font-medium text-gray-700">Pilih Jadwal</label>
-            <select value={scheduleId} onChange={(e) => { setScheduleId(e.target.value); setTeam1([null, null]); setTeam2([null, null]); }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+            <select value={scheduleId} onChange={(e) => { setScheduleId(e.target.value); setTeam1([null, null]); setTeam2([null, null]); }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
               <option value="">-- Pilih jadwal --</option>
               {schedules.filter((s) => s.status !== "cancelled").map((s) => (<option key={s.id} value={s.id}>{s.title} ({new Date(s.date).toLocaleDateString("id-ID")}) - {getAttendees(s.id).length} hadir</option>))}
             </select>
@@ -268,9 +268,9 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
                 })}
               </div>
             </div>
-            <div><label className="block text-sm font-medium text-gray-700">Ronde</label><input type="number" value={round} onChange={(e) => setRound(Number(e.target.value))} min={1} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+            <div><label className="block text-sm font-medium text-gray-700">Ronde</label><input type="number" value={round} onChange={(e) => setRound(Number(e.target.value))} min={1} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" /></div>
             <div><label className="block text-sm font-medium text-gray-700">Game</label>
-              <select value={totalGames} onChange={(e) => setTotalGames(Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+              <select value={totalGames} onChange={(e) => setTotalGames(Number(e.target.value))} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                 <option value={1}>1 Game</option>
                 <option value={2}>2 Game</option>
               </select>
@@ -282,11 +282,11 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
                 <div key={label} className="rounded-xl border border-gray-200 p-4">
                   <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">{label}</p>
                   <div className="space-y-2">
-                    <select value={team[0] || ""} onChange={(e) => st([e.target.value, team[1]])} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                    <select value={team[0] || ""} onChange={(e) => st([e.target.value, team[1]])} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">Pemain 1</option>
                       {attendees.filter((p) => !selected.includes(p.id) || p.id === team[0]).map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                     </select>
-                    <select value={team[1] || ""} onChange={(e) => st([team[0], e.target.value])} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                    <select value={team[1] || ""} onChange={(e) => st([team[0], e.target.value])} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">Pemain 2</option>
                       {attendees.filter((p) => !selected.includes(p.id) || p.id === team[1]).map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                     </select>
@@ -297,10 +297,12 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50">Buat</button>
+            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">Buat</button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+

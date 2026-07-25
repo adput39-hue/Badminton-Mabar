@@ -11,6 +11,7 @@ model Pb {
   name       String
   slug       String    @unique
   logoUrl    String?   @map("logo_url")
+  primaryColor String? @map("primary_color")
   address    String?
   phone      String?
   createdAt  DateTime  @default(now()) @map("created_at")
@@ -22,6 +23,7 @@ model Pb {
   matchHistories MatchHistory[]
   kasBiayas      KasBiaya[]
   kasMutasis     KasMutasi[]
+  labaRugis      LabaRugi[]
 
   @@map("pb")
 }
@@ -107,6 +109,7 @@ model Schedule {
   createdByUser   User?        @relation(fields: [createdBy], references: [id])
   attendances     Attendance[]
   matches         Match[]
+  labaRugi        LabaRugi?
 
   @@index([pbId])
   @@index([date])
@@ -192,6 +195,8 @@ model KasBiaya {
 
   pb          Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
   mutasis     KasMutasi[]
+  labaRugiCock   LabaRugi[] @relation("cock_biaya")
+  labaRugiCourt  LabaRugi[] @relation("court_biaya")
 
   @@index([pbId])
   @@map("kas_biaya")
@@ -224,4 +229,28 @@ model SiteConfig {
   value String
 
   @@map("site_config")
+}
+
+model LabaRugi {
+  id           String   @id @default(uuid())
+  scheduleId   String   @map("schedule_id")
+  pbId         String   @map("pb_id")
+  totalIncome  Int      @map("total_income")
+  cockCost     Int      @default(0) @map("cock_cost")
+  courtCost    Int      @default(0) @map("court_cost")
+  cockBiayaId  String?  @map("cock_biaya_id")
+  courtBiayaId String?  @map("court_biaya_id")
+  profitLoss   Int      @map("profit_loss")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  pb          Pb        @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  cockBiaya   KasBiaya? @relation("cock_biaya", fields: [cockBiayaId], references: [id], onDelete: SetNull)
+  courtBiaya  KasBiaya? @relation("court_biaya", fields: [courtBiayaId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleId])
+  @@index([pbId])
+  @@map("laba_rugi")
 }

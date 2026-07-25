@@ -53,12 +53,12 @@ export default function KasPage() {
           </div>
           <p className="mt-2 text-2xl font-bold text-red-700">Rp {totalKeluar.toLocaleString("id-ID")}</p>
         </div>
-        <div className={`rounded-2xl border p-4 sm:p-5 ${saldo >= 0 ? "border-[#0d9488] bg-[#f0fdfa]" : "border-red-300 bg-red-50"}`}>
+        <div className={`rounded-2xl border p-4 sm:p-5 ${saldo >= 0 ? "border-[var(--color-primary)] bg-[var(--color-bg)]" : "border-red-300 bg-red-50"}`}>
           <div className="flex items-center gap-2">
-            <DollarSign className={`h-4 w-4 ${saldo >= 0 ? "text-[#0d9488]" : "text-red-600"}`} />
+            <DollarSign className={`h-4 w-4 ${saldo >= 0 ? "text-[var(--color-primary)]" : "text-red-600"}`} />
             <p className="text-xs font-medium text-gray-600">Saldo</p>
           </div>
-          <p className={`mt-2 text-2xl font-bold ${saldo >= 0 ? "text-[#0d9488]" : "text-red-600"}`}>Rp {saldo.toLocaleString("id-ID")}</p>
+          <p className={`mt-2 text-2xl font-bold ${saldo >= 0 ? "text-[var(--color-primary)]" : "text-red-600"}`}>Rp {saldo.toLocaleString("id-ID")}</p>
         </div>
       </div>
 
@@ -135,7 +135,7 @@ export default function KasPage() {
               </div>
             ))}
             {sorted.length > limit && (
-              <button onClick={() => setShowAll(!showAll)} className="w-full px-5 py-3 text-center text-sm font-medium text-[#0d9488] hover:bg-gray-50 transition-colors">
+              <button onClick={() => setShowAll(!showAll)} className="w-full px-5 py-3 text-center text-sm font-medium text-[var(--color-primary)] hover:bg-gray-50 transition-colors">
                 {showAll ? "Tampilkan lebih sedikit" : `Tampilkan ${sorted.length - limit} transaksi lagi`}
               </button>
             )}
@@ -145,3 +145,4 @@ export default function KasPage() {
     </div>
   );
 }
+

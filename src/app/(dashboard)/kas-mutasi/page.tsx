@@ -59,7 +59,7 @@ export default function KasMutasiPage() {
           <h1 className="text-2xl font-bold text-gray-900">Mutasi Kas</h1>
           <p className="mt-0.5 text-sm text-gray-500">{mutasis.length} transaksi</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
           <Plus className="h-4 w-4" /> Tambah Mutasi
         </button>
       </div>
@@ -73,20 +73,20 @@ export default function KasMutasiPage() {
           <p className="text-xs font-medium text-red-600">Pengeluaran</p>
           <p className="mt-1 text-xl font-bold text-red-700">Rp {totalKeluar.toLocaleString("id-ID")}</p>
         </div>
-        <div className={`rounded-2xl border p-4 ${saldo >= 0 ? "border-[#0d9488] bg-[#f0fdfa]" : "border-red-300 bg-red-50"}`}>
+        <div className={`rounded-2xl border p-4 ${saldo >= 0 ? "border-[var(--color-primary)] bg-[var(--color-bg)]" : "border-red-300 bg-red-50"}`}>
           <p className="text-xs font-medium text-gray-600">Saldo</p>
-          <p className={`mt-1 text-xl font-bold ${saldo >= 0 ? "text-[#0d9488]" : "text-red-600"}`}>Rp {saldo.toLocaleString("id-ID")}</p>
+          <p className={`mt-1 text-xl font-bold ${saldo >= 0 ? "text-[var(--color-primary)]" : "text-red-600"}`}>Rp {saldo.toLocaleString("id-ID")}</p>
         </div>
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari transaksi..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari transaksi..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
         </div>
         <div className="flex gap-1.5">
           {(["all", "masuk", "keluar"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${filter === f ? "bg-[#0d9488] text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${filter === f ? "bg-[var(--color-primary)] text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>
               {f === "all" ? "Semua" : f === "masuk" ? "Masuk" : "Keluar"}
             </button>
           ))}
@@ -97,7 +97,7 @@ export default function KasMutasiPage() {
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Wallet className="mx-auto h-10 w-10 text-gray-300" />
           <p className="mt-3 text-sm text-gray-500">{mutasis.length === 0 ? "Belum ada transaksi" : "Tidak ditemukan"}</p>
-          {mutasis.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Tambah transaksi pertama</button>}
+          {mutasis.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[var(--color-primary)] hover:underline">Tambah transaksi pertama</button>}
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -164,11 +164,11 @@ export default function KasMutasiPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tanggal</label>
-                <input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                <input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Kategori (opsional)</label>
-                <select value={form.biayaId} onChange={(e) => setForm({ ...form, biayaId: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                <select value={form.biayaId} onChange={(e) => setForm({ ...form, biayaId: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   <option value="">— Pilih Kategori —</option>
                   {biayas.filter((b) => b.isActive && b.type === form.type).map((b) => (
                     <option key={b.id} value={b.id}>{b.name}{b.amount ? ` (Rp ${b.amount.toLocaleString("id-ID")})` : ""}</option>
@@ -177,7 +177,7 @@ export default function KasMutasiPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
-                <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi transaksi" />
+                <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Deskripsi transaksi" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Jumlah (Rp)</label>
@@ -187,11 +187,11 @@ export default function KasMutasiPage() {
                   if (!form.biayaId) return;
                   const b = biayas.find((x) => x.id === form.biayaId);
                   if (b && b.amount && !editId) setForm((prev) => ({ ...prev, amount: String(b.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.') }));
-                }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="50000" />
+                }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="50000" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
               </div>
             </form>
           </div>
@@ -200,3 +200,4 @@ export default function KasMutasiPage() {
     </div>
   );
 }
+

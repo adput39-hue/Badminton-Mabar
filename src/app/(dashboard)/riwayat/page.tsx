@@ -49,7 +49,7 @@ export default function RiwayatPage() {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4" style={{ color: "#64748B" }} />
               <select value={filterSchedule} onChange={(e) => { setFilterSchedule(e.target.value); setPage(1); }}
-                className="rounded-xl border px-4 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-[#0d9488]/10"
+                className="rounded-xl border px-4 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-[var(--color-primary)]/10"
                 style={{ borderColor: "#E2E8F0", color: "#0F172A" }}>
                 <option value="">Semua Jadwal</option>
                 {scheduleOpts.map((s) => <option key={s.id} value={s.id}>{s.title} ({formatDate(s.date)})</option>)}
@@ -91,7 +91,7 @@ export default function RiwayatPage() {
                   <span className="text-[11px] font-medium truncate" style={{ color: "#64748B" }}>
                     {s ? formatDate(s.date) : ""} · {s?.title || ""}
                   </span>
-                  <span className="shrink-0 text-base font-extrabold tracking-tight" style={{ color: "#0D9488" }}>
+                  <span className="shrink-0 text-base font-extrabold tracking-tight" style={{ color: "var(--color-primary)" }}>
                     {scoreText}
                   </span>
                 </div>
@@ -101,30 +101,30 @@ export default function RiwayatPage() {
                   {/* Team 1 */}
                   <div className="rounded-xl border-2 p-2.5 text-center transition-colors"
                     style={{
-                      backgroundColor: m.winnerTeam === 1 ? "#CCFBF1" : "#FFFFFF",
-                      borderColor: m.winnerTeam === 1 ? "#0D9488" : "#E2E8F0",
+                      backgroundColor: m.winnerTeam === 1 ? "var(--color-primary-light)" : "#FFFFFF",
+                      borderColor: m.winnerTeam === 1 ? "var(--color-primary)" : "#E2E8F0",
                     }}>
                     <p className="text-[13px] font-bold" style={{ color: "#0F172A" }}>{getName(m.team1Player1Id)}</p>
                     <p className="text-[10px] font-medium" style={{ color: "#94A3B8" }}>+</p>
                     <p className="text-[13px] font-bold" style={{ color: "#0F172A" }}>{getName(m.team1Player2Id)}</p>
                     {m.winnerTeam === 1 && (
                       <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                        style={{ backgroundColor: "#0F766E" }}>Tim Menang</span>
+                        style={{ backgroundColor: "var(--color-primary-hover)" }}>Tim Menang</span>
                     )}
                   </div>
 
                   {/* Team 2 */}
                   <div className="rounded-xl border-2 p-2.5 text-center transition-colors"
                     style={{
-                      backgroundColor: m.winnerTeam === 2 ? "#CCFBF1" : "#FFFFFF",
-                      borderColor: m.winnerTeam === 2 ? "#0D9488" : "#E2E8F0",
+                      backgroundColor: m.winnerTeam === 2 ? "var(--color-primary-light)" : "#FFFFFF",
+                      borderColor: m.winnerTeam === 2 ? "var(--color-primary)" : "#E2E8F0",
                     }}>
                     <p className="text-[13px] font-bold" style={{ color: "#0F172A" }}>{getName(m.team2Player1Id)}</p>
                     <p className="text-[10px] font-medium" style={{ color: "#94A3B8" }}>+</p>
                     <p className="text-[13px] font-bold" style={{ color: "#0F172A" }}>{getName(m.team2Player2Id)}</p>
                     {m.winnerTeam === 2 && (
                       <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                        style={{ backgroundColor: "#0F766E" }}>Tim Menang</span>
+                        style={{ backgroundColor: "var(--color-primary-hover)" }}>Tim Menang</span>
                     )}
                   </div>
                 </div>
@@ -146,3 +146,4 @@ export default function RiwayatPage() {
     </div>
   );
 }
+

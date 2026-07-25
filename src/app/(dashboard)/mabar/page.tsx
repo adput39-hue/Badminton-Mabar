@@ -157,11 +157,11 @@ export default function MabarPage() {
   const filteredSearch = searchQ ? notInvited.filter((m) => m.name.toLowerCase().includes(searchQ.toLowerCase())) : notInvited;
 
   return (
-    <div className="relative min-h-screen bg-[#f0fdfa]">
+    <div className="relative min-h-screen bg-[var(--color-bg)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#0d9488]/5 blur-3xl" />
-        <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[#0d9488]/3 blur-2xl" />
+        <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[var(--color-primary)]/5 blur-3xl" />
+        <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[var(--color-primary)]/5 blur-3xl" />
+        <div className="absolute top-1/3 right-10 h-32 w-32 rounded-full bg-[var(--color-primary)]/3 blur-2xl" />
       </div>
       <div className="relative mx-auto max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
@@ -185,9 +185,9 @@ export default function MabarPage() {
               <div className="flex-1 min-w-[200px]">
                 <h3 className="text-base font-bold text-gray-900 mb-3">📊 Dashboard</h3>
                 <div className="flex flex-wrap gap-4 text-sm">
-                  <div className="rounded-xl bg-[#f0fdfa] px-4 py-3 min-w-[100px]">
+                  <div className="rounded-xl bg-[var(--color-bg)] px-4 py-3 min-w-[100px]">
                     <p className="text-xs text-gray-500">Hadir</p>
-                    <p className="text-xl font-bold text-[#0d9488]">{hadirIds.length}</p>
+                    <p className="text-xl font-bold text-[var(--color-primary)]">{hadirIds.length}</p>
                   </div>
                   <div className="rounded-xl bg-gray-50 px-4 py-3 min-w-[100px]">
                     <p className="text-xs text-gray-500">Antrian</p>
@@ -202,7 +202,7 @@ export default function MabarPage() {
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-500">Mode</label>
                 <select value={gameMode} onChange={(e) => saveGameMode(e.target.value)}
-                  className="rounded-xl border border-gray-200 px-3 py-2 text-xs shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                  className="rounded-xl border border-gray-200 px-3 py-2 text-xs shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   <option value="" disabled>Pilih dulu</option>
                   <option value="1-30">1G 30</option>
                   <option value="1-42">1G 42</option>
@@ -213,19 +213,19 @@ export default function MabarPage() {
                 <button onClick={() => setShowAbsen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Absen</button>
                 <button onClick={() => setShowSearch(!showSearch)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><UserPlus className="h-3.5 w-3.5" /> Tambah</button>
                 <button onClick={() => setShowStats(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><BarChart3 className="h-3.5 w-3.5" /> Rotasi</button>
-                {schedule?.status !== "completed" && <button onClick={handleSelesai} className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e]"><Check className="h-3.5 w-3.5" /> Selesai</button>}
+                {schedule?.status !== "completed" && <button onClick={handleSelesai} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)]"><Check className="h-3.5 w-3.5" /> Selesai</button>}
                 <a href="/riwayat" className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Riwayat</a>
               </div>
             </div>
 
             {showSearch && (
               <div className="mt-4">
-                <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 {filteredSearch.length > 0 && (
                   <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                     {filteredSearch.map((m) => (
-                      <button key={m.id} onClick={() => addPeserta(m.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#f0fdfa] text-left">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ccfbf1] text-xs font-bold text-[#0d9488]">{m.name[0]}</span>
+                      <button key={m.id} onClick={() => addPeserta(m.id)} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-[var(--color-bg)] text-left">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-xs font-bold text-[var(--color-primary)]">{m.name[0]}</span>
                         <div><p className="font-medium">{m.name}</p><p className="text-xs text-gray-400">Kelas {m.class}</p></div>
                       </button>
                     ))}
@@ -240,8 +240,8 @@ export default function MabarPage() {
             {/* Antrian */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="flex items-center gap-2 text-base font-bold text-gray-900"><ListChecks className="h-4 w-4 text-[#0d9488]" /> Antrian</h3>
-                  <button onClick={() => setShowCreate(true)} disabled={!gameMode} className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="h-3.5 w-3.5" /> Draft</button>
+                  <h3 className="flex items-center gap-2 text-base font-bold text-gray-900"><ListChecks className="h-4 w-4 text-[var(--color-primary)]" /> Antrian</h3>
+                  <button onClick={() => setShowCreate(true)} disabled={!gameMode} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="h-3.5 w-3.5" /> Draft</button>
                 </div>
                 {draftMatches.length === 0 ? (
                   <p className="text-sm text-gray-400 py-3 text-center">Belum ada draft pertandingan. Buat draft, lalu assign ke lapangan.</p>
@@ -259,12 +259,12 @@ export default function MabarPage() {
                           {assignCourtFor === m.id ? (
                             <div className="flex items-center gap-1">
                               {courts.map((c, ci) => (
-                                <button key={ci} onClick={() => assignCourt(m.id, ci)} className="rounded-lg bg-[#0d9488] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#0f766e]">{c.name}</button>
+                                <button key={ci} onClick={() => assignCourt(m.id, ci)} className="rounded-lg bg-[var(--color-primary)] px-2.5 py-1 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">{c.name}</button>
                               ))}
                               <button onClick={() => setAssignCourtFor(null)} className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100">X</button>
                             </div>
                           ) : (
-                            courts.length > 0 && <button onClick={() => setAssignCourtFor(m.id)} className="rounded-lg bg-[#ccfbf1] px-3 py-1 text-xs font-medium text-[#0d9488] hover:bg-[#99f6e4]">Assign</button>
+                            courts.length > 0 && <button onClick={() => setAssignCourtFor(m.id)} className="rounded-lg bg-[var(--color-primary-light)] px-3 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-lighter)]">Assign</button>
                           )}
                           <button onClick={() => { setEditMatch(m); setShowCreate(true); }} className="rounded-lg p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>
                           <button onClick={() => removeMatch(m.id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><XIcon className="h-3.5 w-3.5" /></button>
@@ -405,25 +405,25 @@ function MatchCard({ match, getName, onScore, onDelete }: {
         </div>
         {match.status === "scheduled" && <button onClick={() => setShowScore(!showScore)} className="rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-medium hover:bg-gray-50">Input Skor</button>}
         {match.status === "completed" && (
-          <span className="text-xs font-bold text-[#0d9488]">{match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}</span>
+          <span className="text-xs font-bold text-[var(--color-primary)]">{match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}</span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-center text-sm">
-        <div className={`rounded-lg border-2 p-2 ${team1Won ? "border-[#0d9488] bg-[#ccfbf1]" : "border-gray-100"}`}>
+        <div className={`rounded-lg border-2 p-2 ${team1Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-100"}`}>
           <p className="font-medium">{getName(match.team1Player1Id)}</p>
           <p className="text-xs text-gray-400">+</p>
           <p className="font-medium">{getName(match.team1Player2Id)}</p>
-          {team1Won && <span className="mt-0.5 inline-block rounded-full bg-[#0d9488] px-2 py-0.5 text-[10px] font-bold text-white">MENANG</span>}
+          {team1Won && <span className="mt-0.5 inline-block rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold text-white">MENANG</span>}
         </div>
-        <div className={`rounded-lg border-2 p-2 ${team2Won ? "border-[#0d9488] bg-[#ccfbf1]" : "border-gray-100"}`}>
+        <div className={`rounded-lg border-2 p-2 ${team2Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-100"}`}>
           <p className="font-medium">{getName(match.team2Player1Id)}</p>
           <p className="text-xs text-gray-400">+</p>
           <p className="font-medium">{getName(match.team2Player2Id)}</p>
-          {team2Won && <span className="mt-0.5 inline-block rounded-full bg-[#0d9488] px-2 py-0.5 text-[10px] font-bold text-white">MENANG</span>}
+          {team2Won && <span className="mt-0.5 inline-block rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold text-white">MENANG</span>}
         </div>
       </div>
       {showScore && (
-        <div className="mt-2 space-y-2 rounded-lg bg-[#ccfbf1] p-3">
+        <div className="mt-2 space-y-2 rounded-lg bg-[var(--color-primary-light)] p-3">
           <div className="flex items-center justify-center gap-2">
             <input type="number" value={s1} onChange={(e) => setS1(e.target.value)} placeholder="0" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
             <span className="text-xs font-bold text-gray-400">G1</span>
@@ -437,7 +437,7 @@ function MatchCard({ match, getName, onScore, onDelete }: {
             </div>
           )}
           <div className="flex justify-center gap-2">
-            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} className="rounded-lg bg-[#0d9488] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">Simpan</button>
+            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan</button>
             <button onClick={() => setShowScore(false)} className="rounded-lg border border-gray-200 px-4 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Batal</button>
           </div>
         </div>
@@ -462,7 +462,7 @@ function AttendanceModal({ members, attendances, onChangeStatus, onClose }: {
           <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><XIcon className="h-5 w-5" /></button>
         </div>
         <div className="flex gap-4 border-b border-gray-100 px-6 py-3 text-sm">
-          <span className="font-medium text-[#0d9488]">✅ Hadir {hadir}</span>
+          <span className="font-medium text-[var(--color-primary)]">✅ Hadir {hadir}</span>
           <span className="font-medium text-red-500">❌ Tidak Jadi {tidakJadi}</span>
           <span className="font-medium text-gray-400">⏳ Belum {belum}</span>
         </div>
@@ -480,7 +480,7 @@ function AttendanceModal({ members, attendances, onChangeStatus, onClose }: {
                     <button key={s} onClick={() => onChangeStatus(m.id, s)}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                         att.status === s
-                          ? s === "hadir" ? "bg-[#ccfbf1] text-[#0d9488] border-[#99f6e4] shadow-sm"
+                          ? s === "hadir" ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-lighter)] shadow-sm"
                             : s === "tidak_jadi" ? "bg-red-50 text-red-600 border-red-200 shadow-sm"
                             : "bg-gray-100 text-gray-500 border-gray-200 shadow-sm"
                           : "border-gray-200 text-gray-500 hover:bg-gray-50"
@@ -520,15 +520,15 @@ function StatsModal({ members, playerMatchCounts, invitedIds, hadirIds, onClose 
               return (
                 <div key={m.id} className={`flex items-center justify-between rounded-xl px-4 py-3 ${i < 3 ? "bg-amber-50" : ""}`}>
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${isHadir ? "bg-[#ccfbf1] text-[#0d9488]" : "bg-gray-100 text-gray-400"}`}>{m.name[0]}</span>
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${isHadir ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "bg-gray-100 text-gray-400"}`}>{m.name[0]}</span>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{m.name}</p>
                       <p className="text-xs text-gray-400">Kelas {m.class}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${count === 0 ? "text-red-500" : count <= 2 ? "text-amber-500" : "text-[#0d9488]"}`}>{count}x</span>
-                    <span className={`h-2 w-2 rounded-full ${isHadir ? "bg-[#0d9488]" : "bg-gray-300"}`} />
+                    <span className={`text-sm font-bold ${count === 0 ? "text-red-500" : count <= 2 ? "text-amber-500" : "text-[var(--color-primary)]"}`}>{count}x</span>
+                    <span className={`h-2 w-2 rounded-full ${isHadir ? "bg-[var(--color-primary)]" : "bg-gray-300"}`} />
                   </div>
                 </div>
               );
@@ -558,7 +558,7 @@ function PlayerSelect({ players, selectedId, onSelect, placeholder, playerMatchC
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen(!open)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
         {selected ? <span>{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
       </button>
       {open && (
@@ -569,7 +569,7 @@ function PlayerSelect({ players, selectedId, onSelect, placeholder, playerMatchC
               const count = playerMatchCounts.get(p.id) || 0;
               return (
                 <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[#ccfbf1]">
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-primary-light)]">
                   <span className="flex-1 truncate text-left">{p.name}</span>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadgeStyle[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span>
                   <span className="w-8 shrink-0 text-right text-xs text-gray-400">({count})</span>
@@ -640,16 +640,16 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Mode Pairing</label>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => onPairMode("all")} className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${pairMode === "all" ? "bg-[#0d9488] text-white shadow-sm" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>All Class</button>
+              <button type="button" onClick={() => onPairMode("all")} className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${pairMode === "all" ? "bg-[var(--color-primary)] text-white shadow-sm" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>All Class</button>
               {classes.map((c) => (
-                <button key={c} type="button" onClick={() => onPairMode(c)} className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${pairMode === c ? "bg-[#0d9488] text-white shadow-sm" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>Kelas {c}</button>
+                <button key={c} type="button" onClick={() => onPairMode(c)} className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${pairMode === c ? "bg-[var(--color-primary)] text-white shadow-sm" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>Kelas {c}</button>
               ))}
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500">Mode: <span className="font-semibold text-gray-700">{gameMode.startsWith("2") ? "2 Game 21 Poin" : gameMode === "1-42" ? "1 Game 42 Poin" : "1 Game 30 Poin"}</span></span>
-            <button type="button" onClick={pairByClass} disabled={filteredHadir.length < 4 || !gameMode} className="rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488] disabled:opacity-50 whitespace-nowrap">Pair by Class</button>
+            <button type="button" onClick={pairByClass} disabled={filteredHadir.length < 4 || !gameMode} className="rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-50 whitespace-nowrap">Pair by Class</button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -666,10 +666,12 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">{editMatch ? "Simpan" : "Buat Draft"}</button>
+            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{editMatch ? "Simpan" : "Buat Draft"}</button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+

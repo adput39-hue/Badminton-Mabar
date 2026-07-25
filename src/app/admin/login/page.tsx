@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
               <div className="relative mt-1.5">
                 <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                  className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10"
+                  className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
                   placeholder="admin@badminton.com" />
               </div>
             </div>
@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
-                  className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10"
+                  className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
                   placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -100,15 +100,16 @@ export default function AdminLoginPage() {
             </div>
             {error && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
             <button type="submit" disabled={loading}
-              className="w-full rounded-xl bg-[#0d9488] py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50">
+              className="w-full rounded-xl bg-[var(--color-primary)] py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">
               {loading ? "Memuat..." : "Masuk ke Admin"}
             </button>
           </form>
           <div className="mt-4 text-center">
-            <Link href="/auth/login" className="text-xs text-gray-400 hover:text-[#0d9488]">← Masuk sebagai Admin PB</Link>
+            <Link href="/auth/login" className="text-xs text-gray-400 hover:text-[var(--color-primary)]">← Masuk sebagai Admin PB</Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

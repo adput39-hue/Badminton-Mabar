@@ -64,7 +64,7 @@ export default function HutangPage() {
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pl-10 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pl-10 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export default function HutangPage() {
                 <tr key={d.memberId} className="transition-colors hover:bg-gray-50/50">
                   <td className="px-5 py-3">
                     <Link href={`/hutang/${d.memberId}`} className="flex items-center gap-2.5 group">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold text-gray-600 group-hover:bg-[#0d9488]/10 group-hover:text-[#0d9488] transition-colors">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold text-gray-600 group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)] transition-colors">
                         {d.gender === "L" ? (
                           <Mars className="h-4 w-4 text-blue-500" />
                         ) : d.gender === "P" ? (
@@ -104,7 +104,7 @@ export default function HutangPage() {
                         )}
                       </span>
                       <div>
-                        <p className="font-medium text-gray-900 group-hover:text-[#0d9488] transition-colors">{d.memberName}</p>
+                        <p className="font-medium text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{d.memberName}</p>
                         <p className="text-xs text-gray-400">{d.memberClass}</p>
                       </div>
                     </Link>
@@ -113,7 +113,7 @@ export default function HutangPage() {
                     {editSaldo === d.memberId ? (
                       <div className="inline-flex items-center gap-1">
                         <input type="number" value={saldoValue} onChange={(e) => setSaldoValue(e.target.value)} className="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm" />
-                        <button onClick={() => saveSaldoAwal(d.memberId)} className="rounded-lg p-1 text-[#0d9488] hover:bg-[#ccfbf1]"><Save className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => saveSaldoAwal(d.memberId)} className="rounded-lg p-1 text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]"><Save className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setEditSaldo(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"><X className="h-3.5 w-3.5" /></button>
                       </div>
                     ) : d.saldoAwal > 0 ? (
@@ -141,7 +141,7 @@ export default function HutangPage() {
                       <button onClick={() => { setEditSaldo(d.memberId); setSaldoValue(String(d.saldoAwal)); }} className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit Saldo Awal">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <Link href={`/hutang/${d.memberId}`} className="rounded-lg px-3 py-1.5 text-xs font-medium text-[#0d9488] hover:bg-[#ccfbf1]">
+                      <Link href={`/hutang/${d.memberId}`} className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]">
                         Detail
                       </Link>
                     </div>

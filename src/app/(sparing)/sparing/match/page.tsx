@@ -239,8 +239,8 @@ export default function SparingMatchPage() {
   // --- VIEW 1: Pilih Sparing ---
   if (!selSparingId) {
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -259,7 +259,7 @@ export default function SparingMatchPage() {
               const color = courtColors[i % courtColors.length];
               return (
                 <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); }}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[#0d9488] sm:p-5">
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
                   {hasLive && (
                     <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
                       <Star className="h-4 w-4 text-white" fill="white" />
@@ -304,8 +304,8 @@ export default function SparingMatchPage() {
     const color = courtColors[ci % courtColors.length];
 
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-4 pt-4">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-4 pt-4">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -382,7 +382,7 @@ export default function SparingMatchPage() {
                   </p>
                   <div className="flex gap-3 justify-end">
                     <button onClick={() => setShowConfirmFinish(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
-                    <button onClick={finishMatch} className="rounded-xl bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e]">Yakin, Selesai</button>
+                    <button onClick={finishMatch} className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]">Yakin, Selesai</button>
                   </div>
                 </div>
               </div>
@@ -396,8 +396,8 @@ export default function SparingMatchPage() {
   // --- VIEW 3: Belum Assign ---
   if (selCourt !== null && selCourt === 0) {
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -444,8 +444,8 @@ export default function SparingMatchPage() {
   if (selCourt !== null) {
     const color = courtColors[(selCourt - 1) % courtColors.length];
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -477,19 +477,19 @@ export default function SparingMatchPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-4 flex items-center gap-2">
             <select value={selRound} onChange={(e) => setSelRound(Number(e.target.value))}
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
               {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
                 <option key={r} value={r}>Round {r}</option>
               ))}
             </select>
-            <span className="rounded-full bg-[#0d9488]/10 px-3 py-1 text-xs font-medium text-[#0d9488]">Round {selRound}</span>
+            <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--color-primary)]">Round {selRound}</span>
           </div>
 
           {unassignedMatches.length > 0 && (
             <div className="mb-6 rounded-xl border border-dashed border-gray-300 bg-white p-4 shadow-sm">
               <h3 className="text-xs font-semibold text-gray-500 mb-2">Assign Pertandingan</h3>
               <select value={selAssignMatch} onChange={async (e) => { const v = e.target.value; if (v) { await assignMatch(v, selCourt); setSelAssignMatch(""); } }}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                 <option value="" disabled>Pilih pertandingan...</option>
                 {unassignedMatches.map((m) => (
                   <option key={m.id} value={m.id}>R{m.round} — {getName(m.team1Player1Id)} + {getName(m.team1Player2Id)} vs {getName(m.team2Player1Id)} + {getName(m.team2Player2Id)}</option>
@@ -511,7 +511,7 @@ export default function SparingMatchPage() {
                 const matchColor = courtColors[(selCourt - 1 + i) % courtColors.length];
                 return (
                   <div key={m.id}
-                    className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${isCompleted ? "border-gray-200" : "border-gray-200 hover:shadow-md"} ${!isCompleted ? "cursor-pointer hover:border-[#0d9488]" : ""}`}
+                    className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${isCompleted ? "border-gray-200" : "border-gray-200 hover:shadow-md"} ${!isCompleted ? "cursor-pointer hover:border-[var(--color-primary)]" : ""}`}
                     onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); }}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -537,14 +537,14 @@ export default function SparingMatchPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 text-right">
                         <p className="font-bold text-gray-900">{getName(m.team1Player1Id)} <span className="text-gray-400 font-normal">-</span> {getName(m.team1Player2Id)}</p>
-                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 1 ? "#0d9488" : "#6b7280" }}>{m.scoreTeam1}{m.totalGames > 1 && `, ${m.scoreTeam1Game2}`}</p>}
+                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 1 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam1}{m.totalGames > 1 && `, ${m.scoreTeam1Game2}`}</p>}
                       </div>
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="text-xs text-gray-300 font-bold">VS</span>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="font-bold text-gray-900">{getName(m.team2Player1Id)} <span className="text-gray-400 font-normal">-</span> {getName(m.team2Player2Id)}</p>
-                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 2 ? "#0d9488" : "#6b7280" }}>{m.scoreTeam2}{m.totalGames > 1 && `, ${m.scoreTeam2Game2}`}</p>}
+                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 2 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam2}{m.totalGames > 1 && `, ${m.scoreTeam2Game2}`}</p>}
                       </div>
                     </div>
                     {!isCompleted && (
@@ -566,9 +566,9 @@ export default function SparingMatchPage() {
 
   // --- VIEW 5: Grid Lapangan ---
   return (
-    <div className="relative min-h-screen bg-[#f0fdfa]">
+    <div className="relative min-h-screen bg-[var(--color-bg)]">
       {/* Header gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -622,7 +622,7 @@ export default function SparingMatchPage() {
               const color = courtColors[i % courtColors.length];
               return (
                 <button key={i} onClick={() => { history.pushState(null, ""); setSelCourt(i + 1); }}
-                  className={`group relative overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md sm:p-5 ${hasLive ? `${color.border} border-2` : "border-gray-200 hover:border-[#0d9488]"}`}>
+                  className={`group relative overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md sm:p-5 ${hasLive ? `${color.border} border-2` : "border-gray-200 hover:border-[var(--color-primary)]"}`}>
                   {hasLive && (
                     <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
                       <Star className="h-4 w-4 text-white" fill="white" />
@@ -665,7 +665,7 @@ export default function SparingMatchPage() {
             })}
             {unassignedMatches.length > 0 && (
               <button onClick={() => { history.pushState(null, ""); setSelCourt(0); }}
-                className="group relative overflow-hidden rounded-2xl border border-dashed border-gray-300 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[#0d9488] sm:p-5">
+                className="group relative overflow-hidden rounded-2xl border border-dashed border-gray-300 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gray-200 sm:h-14 sm:w-14">
                     <CourtIcon size={28} color="#9ca3af" className="sm:size-8" />
@@ -684,3 +684,4 @@ export default function SparingMatchPage() {
     </div>
   );
 }
+

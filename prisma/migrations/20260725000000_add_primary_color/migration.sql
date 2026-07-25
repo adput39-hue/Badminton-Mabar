@@ -1,0 +1,1 @@
+ALTER TABLE "pb" ADD COLUMN IF NOT EXISTS "primary_color" TEXT;

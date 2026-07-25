@@ -13,6 +13,7 @@ const TABLE_MAP: Record<string, string> = {
   "user-levels": "user_levels",
   "kas-mutasi": "kas_mutasi",
   "kas-biaya": "kas_biaya",
+  "laba-rugi": "laba_rugi",
 };
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {

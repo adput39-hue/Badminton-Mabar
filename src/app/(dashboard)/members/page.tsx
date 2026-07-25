@@ -135,7 +135,7 @@ export default function MembersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Anggota</h1>
           <p className="mt-0.5 text-sm text-gray-500">{internalMembers.length} total anggota</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
           <Plus className="h-4 w-4" /> Tambah Anggota
         </button>
       </div>
@@ -143,10 +143,10 @@ export default function MembersPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={onSearch} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+          <input value={search} onChange={onSearch} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => onFilterClass("all")} className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${filterClass === "all" ? "bg-[#0d9488] text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>Semua</button>
+          <button onClick={() => onFilterClass("all")} className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${filterClass === "all" ? "bg-[var(--color-primary)] text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}>Semua</button>
           {CLASSES.map((k) => (
             <button key={k} onClick={() => onFilterClass(k)} className={`rounded-lg px-3 py-2 text-xs font-medium transition-all ${filterClass === k ? "text-white shadow-sm" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
               style={filterClass === k ? { backgroundImage: classColors[k].replace("bg-gradient-to-br ", "") } : {}}>
@@ -160,7 +160,7 @@ export default function MembersPage() {
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Users className="mx-auto h-10 w-10 text-gray-300" />
           <p className="mt-3 text-sm text-gray-500">{internalMembers.length === 0 ? "Belum ada anggota" : "Tidak ditemukan"}</p>
-          {internalMembers.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Tambah anggota pertama</button>}
+          {internalMembers.length === 0 && <button onClick={openAdd} className="mt-3 text-sm font-medium text-[var(--color-primary)] hover:underline">Tambah anggota pertama</button>}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -234,7 +234,7 @@ export default function MembersPage() {
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setPage(p)} className={`min-w-[32px] rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${p === page ? "bg-[#0d9488] text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
+                  <button key={p} onClick={() => setPage(p)} className={`min-w-[32px] rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${p === page ? "bg-[var(--color-primary)] text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"}`}>{p}</button>
                 ))}
                 <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 transition-all hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
               </div>
@@ -270,25 +270,25 @@ export default function MembersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nama</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Nama anggota" />
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Nama anggota" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Telepon</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="08xxx" />
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="08xxx" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Alamat</label>
-                <textarea value={form.address} onChange={(e) => setForm({ ...form, address: toTitleCase(e.target.value) })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Alamat anggota" />
+                <textarea value={form.address} onChange={(e) => setForm({ ...form, address: toTitleCase(e.target.value) })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Alamat anggota" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Kelas</label>
-                <select value={form.class} onChange={(e) => setForm({ ...form, class: e.target.value as MemberClass })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                <select value={form.class} onChange={(e) => setForm({ ...form, class: e.target.value as MemberClass })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   {CLASSES.map((k) => (<option key={k} value={k}>Kelas {k}</option>))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Jenis Kelamin</label>
-                <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                   <option value="">— Pilih —</option>
                   <option value="L">Laki-laki</option>
                   <option value="P">Perempuan</option>
@@ -296,7 +296,7 @@ export default function MembersPage() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Tambah")}</button>
+                <button type="submit" disabled={saving} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>
@@ -314,3 +314,4 @@ function levelLabel(cls: string) {
 function Users(props: React.ComponentProps<"svg">) {
   return (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>);
 }
+

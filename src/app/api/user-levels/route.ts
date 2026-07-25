@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const level = await prisma.userLevel.create({
-      data: { name, slug, description: description || null, color: color || "#0d9488", menus: menus || [] },
+      data: { name, slug, description: description || null, color: color || "var(--color-primary)", menus: menus || [] },
       include: { _count: { select: { users: true } } },
     });
     return NextResponse.json(level, { status: 201 });
@@ -38,3 +38,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
+

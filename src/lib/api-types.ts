@@ -57,7 +57,7 @@ export interface ApiUserLevel {
 export interface ApiPb {
   id: string; name: string; slug: string;
   logoUrl: string | null; address: string | null;
-  phone: string | null;
+  phone: string | null; primaryColor: string | null;
   createdAt: string; updatedAt: string;
   _count?: { users: number; members: number; schedules: number };
 }
@@ -76,4 +76,15 @@ export interface ApiKasMutasi {
   reference: string | null; memberId: string | null;
   createdBy: string | null;
   createdAt: string; updatedAt: string;
+}
+
+export interface ApiLabaRugi {
+  id: string; scheduleId: string; pbId: string;
+  totalIncome: number; cockCost: number; courtCost: number;
+  cockBiayaId: string | null; courtBiayaId: string | null;
+  profitLoss: number; notes: string | null;
+  createdAt: string; updatedAt: string;
+  schedule?: ApiSchedule;
+  cockBiaya?: ApiKasBiaya | null;
+  courtBiaya?: ApiKasBiaya | null;
 }

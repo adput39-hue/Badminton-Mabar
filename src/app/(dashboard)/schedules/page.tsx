@@ -9,7 +9,7 @@ import { toTitleCase } from "@/lib/utils";
 
 const statusStyle: Record<string, string> = {
   planned: "bg-amber-50 text-amber-700 border-amber-200",
-  ongoing: "bg-[#ccfbf1] text-[#0d9488] border-[#99f6e4]",
+  ongoing: "bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-lighter)]",
   completed: "bg-gray-100 text-gray-500 border-gray-200",
   cancelled: "bg-red-50 text-red-600 border-red-200",
 };
@@ -115,14 +115,14 @@ export default function SchedulesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Jadwal Mabar</h1>
           <p className="mt-0.5 text-sm text-gray-500">{upcoming.length} jadwal mendatang</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md"><Plus className="h-4 w-4" /> Buat Jadwal</button>
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md"><Plus className="h-4 w-4" /> Buat Jadwal</button>
       </div>
 
       {schedules.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Calendar className="mx-auto h-10 w-10 text-gray-300" />
           <p className="mt-3 text-sm text-gray-500">Belum ada jadwal</p>
-          <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Buat jadwal baru</button>
+          <button onClick={openAdd} className="mt-3 text-sm font-medium text-[var(--color-primary)] hover:underline">Buat jadwal baru</button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -154,14 +154,14 @@ export default function SchedulesPage() {
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700">Judul</label><input value={form.title} onChange={(e) => setForm({ ...form, title: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Mabar Senin" /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Judul</label><input value={form.title} onChange={(e) => setForm({ ...form, title: toTitleCase(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Mabar Senin" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tanggal</label>
                   <div className="relative mt-1.5">
-                    <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                     {form.date && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-[#ccfbf1] px-2 py-0.5 text-xs font-bold text-[#0d9488]">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-[var(--color-primary-light)] px-2 py-0.5 text-xs font-bold text-[var(--color-primary)]">
                         {getDayLabel(form.date)}
                       </div>
                     )}
@@ -169,15 +169,15 @@ export default function SchedulesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Lokasi</label>
-                  <input value={form.location} onChange={(e) => setForm({ ...form, location: toTitleCase(e.target.value) })} list="location-list" className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="GOR ABC" />
+                  <input value={form.location} onChange={(e) => setForm({ ...form, location: toTitleCase(e.target.value) })} list="location-list" className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="GOR ABC" />
                   <datalist id="location-list">
                     {existingLocations.map((loc) => <option key={loc} value={loc} />)}
                   </datalist>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="text" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="0" /></div>
+                <div><label className="block text-sm font-medium text-gray-700">Max Peserta</label><input type="number" value={form.max_participants} onChange={(e) => setForm({ ...form, max_participants: e.target.value })} min={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700">HTM (Rp)</label><input type="text" value={form.htm} onChange={(e) => setForm({ ...form, htm: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="0" /></div>
               </div>
 
               {/* Lapangan */}
@@ -188,7 +188,7 @@ export default function SchedulesPage() {
                     {courtsList.map((c, i) => (
                       <div key={i} className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0d9488] text-xs font-bold text-white">{c.name}</span>
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-xs font-bold text-white">{c.name}</span>
                           <span className="text-sm font-medium text-gray-700">{c.startTime.slice(0,5)} - {c.endTime.slice(0,5)}</span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -204,14 +204,14 @@ export default function SchedulesPage() {
                     ))}
                   </div>
                 )}
-                <button type="button" onClick={() => { setCourtInput({ name: "", startTime: "", endTime: "" }); setEditCourtIdx(null); setShowTambahLap(true); }} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 transition-all hover:border-[#0d9488] hover:text-[#0d9488]">
+                <button type="button" onClick={() => { setCourtInput({ name: "", startTime: "", endTime: "" }); setEditCourtIdx(null); setShowTambahLap(true); }} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 transition-all hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">
                   <Plus className="h-4 w-4" /> Tambah Lapangan
                 </button>
               </div>
-              <div><label className="block text-sm font-medium text-gray-700">Catatan</label><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: toTitleCase(e.target.value) })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" rows={2} /></div>
+              <div><label className="block text-sm font-medium text-gray-700">Catatan</label><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: toTitleCase(e.target.value) })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" rows={2} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                <button type="submit" disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Buat")}</button>
+                <button type="submit" disabled={saving} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : (editId ? "Simpan" : "Buat")}</button>
               </div>
             </form>
           </div>
@@ -231,15 +231,15 @@ export default function SchedulesPage() {
                 <label className="block text-xs font-medium text-gray-700">Nama (angka/huruf)</label>
                 <input value={editCourtIdx !== null ? courtInput.name.replace(/^L\./i, "") : courtInput.name}
                   onChange={(e) => setCourtInput({ ...courtInput, name: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="1, A" />
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="1, A" />
                 {courtInput.name.trim() && (
-                  <p className="mt-1 text-xs text-[#0d9488] font-medium">Preview: L.{courtInput.name.trim().replace(/^L\./i, "")}</p>
+                  <p className="mt-1 text-xs text-[var(--color-primary)] font-medium">Preview: L.{courtInput.name.trim().replace(/^L\./i, "")}</p>
                 )}
               </div>
               {editCourtIdx === null && (
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className="block text-xs font-medium text-gray-700">Jam Mulai</label><input type="time" value={courtInput.startTime} onChange={(e) => setCourtInput({ ...courtInput, startTime: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
-                  <div><label className="block text-xs font-medium text-gray-700">Jam Selesai</label><input type="time" value={courtInput.endTime} onChange={(e) => setCourtInput({ ...courtInput, endTime: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700">Jam Mulai</label><input type="time" value={courtInput.startTime} onChange={(e) => setCourtInput({ ...courtInput, startTime: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700">Jam Selesai</label><input type="time" value={courtInput.endTime} onChange={(e) => setCourtInput({ ...courtInput, endTime: e.target.value })} className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" /></div>
                 </div>
               )}
               <div className="flex justify-end gap-2 pt-2">
@@ -253,7 +253,7 @@ export default function SchedulesPage() {
                     } else { addCourt(); }
                     setShowTambahLap(false);
                   }}
-                  className="rounded-xl bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-40">{editCourtIdx !== null ? "Simpan" : "Tambah"}</button>
+                  className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-40">{editCourtIdx !== null ? "Simpan" : "Tambah"}</button>
               </div>
             </div>
           </div>
@@ -296,7 +296,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
-          <div className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-[#0d9488] text-white">
+          <div className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--color-primary)] text-white">
             <span className="text-[10px] font-bold">{badge.day}</span>
             <span className="text-lg font-bold leading-none">{badge.date}</span>
             <span className="text-[9px]">{badge.month}</span>
@@ -309,7 +309,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-500">
               {schedule.startTime && <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{schedule.startTime.slice(0, 5)} - {schedule.endTime?.slice(0,5) || ""}</span>}
               {schedule.location && <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{schedule.location}</span>}
-              {schedule.htm ? <span className="inline-flex items-center gap-1.5 font-medium text-[#0d9488]"><DollarSign className="h-3.5 w-3.5" />Rp {schedule.htm.toLocaleString("id-ID")}</span> : null}
+              {schedule.htm ? <span className="inline-flex items-center gap-1.5 font-medium text-[var(--color-primary)]"><DollarSign className="h-3.5 w-3.5" />Rp {schedule.htm.toLocaleString("id-ID")}</span> : null}
               {schedule.courts && (() => { try {
                 const courts = JSON.parse(schedule.courts) as {name:string;startTime:string;endTime:string}[];
                 return courts.length > 0 && <span className="inline-flex items-center gap-1.5"><Grid3X3 className="h-3.5 w-3.5" />{courts.map(c => `${c.name} (${c.startTime.slice(0,5)}-${c.endTime.slice(0,5)})`).join(", ")}</span>;
@@ -317,7 +317,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
             </div>
             <div className="mt-3 flex items-center gap-2">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                <div className={`h-full rounded-full transition-all ${full ? "bg-amber-500" : "bg-[#0d9488]"}`} style={{ width: `${Math.min(progress, 100)}%` }} />
+                <div className={`h-full rounded-full transition-all ${full ? "bg-amber-500" : "bg-[var(--color-primary)]"}`} style={{ width: `${Math.min(progress, 100)}%` }} />
               </div>
               <span className="whitespace-nowrap text-xs text-gray-500">{hadirCount}/{schedule.maxParticipants} {full ? "Penuh" : "Terisi"}</span>
             </div>
@@ -329,7 +329,7 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
           <button onClick={onPilihPeserta} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"><UserPlus className="h-3.5 w-3.5" />Pilih Peserta</button>
           <button onClick={onAttend} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Absen</button>
           {isUpcoming && schedule.status === "planned" && !hasMatches && <>
-            <button onClick={() => onStatus(schedule.id, "ongoing")} className="rounded-xl bg-[#ccfbf1] px-4 py-2 text-xs font-medium text-[#0d9488] transition-all hover:bg-[#99f6e4] hover:shadow-sm">Mulai</button>
+            <button onClick={() => onStatus(schedule.id, "ongoing")} className="rounded-xl bg-[var(--color-primary-light)] px-4 py-2 text-xs font-medium text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary-lighter)] hover:shadow-sm">Mulai</button>
             <button onClick={() => onStatus(schedule.id, "cancelled")} className="rounded-xl bg-red-50 px-4 py-2 text-xs font-medium text-red-600 transition-all hover:bg-red-100">Batal</button>
           </>}
           {schedule.status === "ongoing" && <button onClick={() => onStatus(schedule.id, "completed")} className="rounded-xl bg-gray-800 px-4 py-2 text-xs font-medium text-white transition-all hover:bg-gray-700 hover:shadow-sm">Selesai</button>}
@@ -374,15 +374,15 @@ function SelectParticipantsModal({ members, selectedIds, onSave, onClose }: {
         <div className="px-6 py-4">
           <div className="relative">
             <input value={search} onChange={(e) => setSearch(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
-              placeholder="Cari nama anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+              placeholder="Cari nama anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             {search && focused && (
               <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
                 {filtered.map((m) => {
                   const isSel = selected.includes(m.id);
                   return (
                     <button key={m.id} type="button" onMouseDown={(e) => { e.preventDefault(); toggleMember(m.id); }}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[#ccfbf1] ${isSel ? "bg-[#ccfbf1]/50 text-[#0d9488]" : "text-gray-700"}`}>
-                      <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${isSel ? "border-[#0d9488] bg-[#0d9488]" : "border-gray-300"}`}>
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] ${isSel ? "bg-[var(--color-primary-light)]/50 text-[var(--color-primary)]" : "text-gray-700"}`}>
+                      <div className={`flex h-4 w-4 items-center justify-center rounded border-2 ${isSel ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-gray-300"}`}>
                         {isSel && <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                       </div>
                       <span>{m.name}</span>
@@ -407,7 +407,7 @@ function SelectParticipantsModal({ members, selectedIds, onSave, onClose }: {
                 return (
                   <div key={id} className="flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ccfbf1] text-xs font-bold text-[#0d9488]">{m.name.charAt(0)}</div>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-light)] text-xs font-bold text-[var(--color-primary)]">{m.name.charAt(0)}</div>
                       <span className="text-sm font-medium text-gray-900">{m.name}</span>
                     </div>
                     <button type="button" onClick={() => removeMember(id)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
@@ -421,7 +421,7 @@ function SelectParticipantsModal({ members, selectedIds, onSave, onClose }: {
           <p className="text-sm text-gray-500">{selected.length} peserta</p>
           <div className="flex gap-3">
             <button onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-            <button onClick={() => onSave(selected)} className="rounded-xl bg-[#0d9488] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] hover:shadow-md">Simpan</button>
+            <button onClick={() => onSave(selected)} className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-md">Simpan</button>
           </div>
         </div>
       </div>
@@ -446,7 +446,7 @@ function AttendanceModal({ scheduleId: _scheduleId, members, attendances, onChan
           <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex gap-4 border-b border-gray-100 px-6 py-3 text-sm">
-          <span className="font-medium text-[#0d9488]">✅ Hadir {hadir}</span>
+          <span className="font-medium text-[var(--color-primary)]">✅ Hadir {hadir}</span>
           <span className="font-medium text-red-500">❌ Tidak Jadi {tidakJadi}</span>
           <span className="font-medium text-gray-400">⏳ Belum {belum}</span>
         </div>
@@ -464,7 +464,7 @@ function AttendanceModal({ scheduleId: _scheduleId, members, attendances, onChan
                     <button key={s} onClick={() => onChangeStatus(m.id, s)}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                         att.status === s
-                          ? s === "hadir" ? "bg-[#ccfbf1] text-[#0d9488] border-[#99f6e4] shadow-sm"
+                          ? s === "hadir" ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-lighter)] shadow-sm"
                             : s === "tidak_jadi" ? "bg-red-50 text-red-600 border-red-200 shadow-sm"
                             : "bg-gray-100 text-gray-500 border-gray-200 shadow-sm"
                           : "border-gray-200 text-gray-500 hover:bg-gray-50"
@@ -479,3 +479,4 @@ function AttendanceModal({ scheduleId: _scheduleId, members, attendances, onChan
     </div>
   );
 }
+

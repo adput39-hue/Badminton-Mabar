@@ -25,7 +25,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (name !== undefined) data.name = name;
     if (slug !== undefined) data.slug = slug;
     if (description !== undefined) data.description = description || null;
-    if (color !== undefined) data.color = color || "#0d9488";
+    if (color !== undefined) data.color = color || "var(--color-primary)";
     if (menus !== undefined) data.menus = menus;
 
     const level = await prisma.userLevel.update({
@@ -52,3 +52,4 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
+

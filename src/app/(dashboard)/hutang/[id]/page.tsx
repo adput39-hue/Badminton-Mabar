@@ -182,7 +182,7 @@ export default function HutangDetailPage() {
                 onClick={() => e.scheduleId && toggleSelect(e.scheduleId)}
                 className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50"
               >
-                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all ${selected.has(e.scheduleId!) ? "border-[#0d9488] bg-[#0d9488]" : "border-gray-300"}`}>
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all ${selected.has(e.scheduleId!) ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-gray-300"}`}>
                   {selected.has(e.scheduleId!) && <Check className="h-3.5 w-3.5 text-white" />}
                 </div>
                 <div className="flex-1">
@@ -198,7 +198,7 @@ export default function HutangDetailPage() {
             <button
               onClick={bayarSelected}
               disabled={selected.size === 0 || saving}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-3.5 w-3.5" /> {saving ? "Menyimpan..." : "Bayar"}
             </button>

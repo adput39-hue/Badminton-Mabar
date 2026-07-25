@@ -90,8 +90,8 @@ export default function ScoreboardLivePage() {
 
   if (!selSparingId) {
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -110,7 +110,7 @@ export default function ScoreboardLivePage() {
               const sColor = courtColors[i % courtColors.length];
               return (
                 <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); }}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[#0d9488] sm:p-5">
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
                       <span className="text-base font-bold text-white sm:text-lg">{s.sparingOpponent?.replace(/^PB\s*/i, "").slice(0, 2).toUpperCase() || "PB"}</span>
@@ -140,8 +140,8 @@ export default function ScoreboardLivePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#f0fdfa] overflow-hidden">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-3 pt-3 sm:pb-4 sm:pt-4">
+    <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -195,7 +195,7 @@ export default function ScoreboardLivePage() {
                 <span className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase sm:text-xs">Round:</span>
                 {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
                   <button key={r} onClick={() => setSelRound(r)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all sm:text-sm ${selRound === r ? "bg-[#0d9488] text-white shadow-sm" : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all sm:text-sm ${selRound === r ? "bg-[var(--color-primary)] text-white shadow-sm" : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
                     Round {r}
                   </button>
                 ))}
@@ -428,3 +428,5 @@ function modeLabel(notes: string) {
   if (notes.startsWith("1-42")) return "1G42";
   return "1G30";
 }
+
+

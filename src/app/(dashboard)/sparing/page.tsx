@@ -316,7 +316,7 @@ export default function SparingPage() {
           {selectedSparing && (
             <Link href="/sparing/match" className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"><ExternalLink className="h-3.5 w-3.5" /> Match Controller</Link>
           )}
-          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e]">
+          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]">
           <Plus className="h-4 w-4" /> Sparing Baru
         </button>
         </div>
@@ -333,9 +333,9 @@ export default function SparingPage() {
             const extCount = getOpponentMemberIds(s).length;
             return (
               <div key={s.id} onClick={() => setSelSparingId(s.id)}
-                className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[#0d9488]" : ""}`}>
+                className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[var(--color-primary)]" : ""}`}>
                 <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                  <Swords className="h-4 w-4 text-[#0d9488]" /> {pbName || "Sparing"} vs {s.sparingOpponent}
+                  <Swords className="h-4 w-4 text-[var(--color-primary)]" /> {pbName || "Sparing"} vs {s.sparingOpponent}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
                 <p className="mt-2 text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</p>
@@ -358,8 +358,8 @@ export default function SparingPage() {
 
           {/* Tab bar */}
           <div className="mb-6 flex gap-1 border-b border-gray-200">
-            <button onClick={() => setTab("pengaturan")} className={`px-4 py-2.5 text-sm font-medium transition-colors ${tab === "pengaturan" ? "border-b-2 border-[#0d9488] text-[#0d9488]" : "text-gray-500 hover:text-gray-700"}`}>Pengaturan</button>
-            <button onClick={() => setTab("draft")} className={`px-4 py-2.5 text-sm font-medium transition-colors ${tab === "draft" ? "border-b-2 border-[#0d9488] text-[#0d9488]" : "text-gray-500 hover:text-gray-700"}`}>Draft Pertandingan</button>
+            <button onClick={() => setTab("pengaturan")} className={`px-4 py-2.5 text-sm font-medium transition-colors ${tab === "pengaturan" ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]" : "text-gray-500 hover:text-gray-700"}`}>Pengaturan</button>
+            <button onClick={() => setTab("draft")} className={`px-4 py-2.5 text-sm font-medium transition-colors ${tab === "draft" ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]" : "text-gray-500 hover:text-gray-700"}`}>Draft Pertandingan</button>
           </div>
 
           {/* Tab content */}
@@ -370,7 +370,7 @@ export default function SparingPage() {
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500">Mode Game</label>
               <select value={draftGames} onChange={(e) => setDraftGames(e.target.value)}
-                className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                 <option value="1-30">1 Game 30 Poin</option>
                 <option value="1-42">1 Game 42 Poin</option>
                 <option value="2-21">2 Game 21 Poin</option>
@@ -379,12 +379,12 @@ export default function SparingPage() {
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500">Per Round</label>
               <input type="number" min={1} value={matchesPerRound} onChange={(e) => setMatchesPerRound(Math.max(1, Number(e.target.value)))}
-                className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500">Jumlah Round</label>
               <input type="number" min={1} value={totalRoundsSetting} onChange={(e) => setTotalRoundsSetting(Math.max(1, Number(e.target.value)))}
-                className="w-14 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                className="w-14 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
           </div>
 
@@ -394,27 +394,27 @@ export default function SparingPage() {
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 block mb-1">Lokasi</label>
               <input value={lokasi} onChange={(e) => setLokasi(e.target.value)} placeholder="Nama tempat / alamat"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 block mb-1">HTM (Rp)</label>
               <input type="number" value={htm} onChange={(e) => setHtm(Math.max(0, Number(e.target.value)))} min={0} placeholder="0"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium text-gray-500">{lapanganList.length} lapangan</span>
-              {!showAddLapangan && <button onClick={() => { setEditLapIdx(null); setLapName(""); setLapStart(""); setLapEnd(""); setShowAddLapangan(true); }} className="rounded-xl border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488]"><Plus className="h-3 w-3 inline" /> Tambah Lapangan</button>}
+              {!showAddLapangan && <button onClick={() => { setEditLapIdx(null); setLapName(""); setLapStart(""); setLapEnd(""); setShowAddLapangan(true); }} className="rounded-xl border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"><Plus className="h-3 w-3 inline" /> Tambah Lapangan</button>}
             </div>
             {showAddLapangan && (
               <div className="mb-3 flex flex-wrap gap-2 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
                 <input value={lapName} onChange={(e) => setLapName(e.target.value)} placeholder="A"
-                  className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                  className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 <input type="time" value={lapStart} onChange={(e) => setLapStart(e.target.value)} placeholder="Mulai"
-                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 <span className="self-center text-xs text-gray-400">—</span>
                 <input type="time" value={lapEnd} onChange={(e) => setLapEnd(e.target.value)} placeholder="Selesai"
-                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
-                <button onClick={addLapangan} disabled={!lapName.trim() || !lapStart || !lapEnd} className="rounded-xl bg-[#0d9488] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">{editLapIdx !== null ? "Simpan" : <Plus className="h-3.5 w-3.5" />}</button>
+                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                <button onClick={addLapangan} disabled={!lapName.trim() || !lapStart || !lapEnd} className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{editLapIdx !== null ? "Simpan" : <Plus className="h-3.5 w-3.5" />}</button>
                 <button onClick={() => { setShowAddLapangan(false); setEditLapIdx(null); setLapName(""); }} className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50"><X className="h-3.5 w-3.5" /></button>
               </div>
             )}
@@ -462,7 +462,7 @@ export default function SparingPage() {
               {showAddOur ? (
                 <div className="flex gap-2">
                   <select value="" onChange={(e) => { if (e.target.value) { toggleOurMember(e.target.value); } }}
-                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                     <option value="">Pilih anggota...</option>
                     {[...internalMembers].filter((m) => !selectedOurIds.includes(m.id)).sort(byClass).map((m) => (
                       <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
@@ -471,7 +471,7 @@ export default function SparingPage() {
                   <button onClick={() => setShowAddOur(false)} className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><X className="h-4 w-4" /></button>
                 </div>
               ) : (
-                <button onClick={() => setShowAddOur(true)} className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488]"><Plus className="h-3.5 w-3.5 inline" /> Tambah Anggota</button>
+                <button onClick={() => setShowAddOur(true)} className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"><Plus className="h-3.5 w-3.5 inline" /> Tambah Anggota</button>
               )}
             </div>
 
@@ -490,7 +490,7 @@ export default function SparingPage() {
                           <option value="">—</option>
                           {["A","B","C","D","E","F"].map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
-                        <button onClick={() => saveOppEdit(m.id)} disabled={!editOppName.trim() || !editOppClass} className="rounded-lg bg-[#0d9488] px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">Simpan</button>
+                        <button onClick={() => saveOppEdit(m.id)} disabled={!editOppName.trim() || !editOppClass} className="rounded-lg bg-[var(--color-primary)] px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">Simpan</button>
                         <button onClick={() => { setEditOppId(null); setEditOppName(""); setEditOppClass(""); }} className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600"><X className="h-3 w-3" /></button>
                       </div>
                     ) : (
@@ -509,23 +509,23 @@ export default function SparingPage() {
               {showAddOpp ? (
                 <div className="flex gap-2">
                   <input value={newOppName} onChange={(e) => setNewOppName(e.target.value)} placeholder="Nama pemain baru"
-                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                   <select value={newOppClass} onChange={(e) => setNewOppClass(e.target.value)}
-                    className="rounded-xl border border-gray-200 px-2 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                    className="rounded-xl border border-gray-200 px-2 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                     <option value="">—</option>
                     {["A","B","C","D","E","F"].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <button onClick={addNewOpponent} disabled={!newOppName.trim() || !newOppClass} className="rounded-xl bg-[#0d9488] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50"><Plus className="h-4 w-4" /></button>
+                  <button onClick={addNewOpponent} disabled={!newOppName.trim() || !newOppClass} className="rounded-xl bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50"><Plus className="h-4 w-4" /></button>
                   <button onClick={() => { setShowAddOpp(false); setNewOppName(""); setNewOppClass(""); }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><X className="h-4 w-4" /></button>
                 </div>
               ) : (
-                <button onClick={() => setShowAddOpp(true)} className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-500 hover:border-[#0d9488] hover:text-[#0d9488]"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pemain</button>
+                <button onClick={() => setShowAddOpp(true)} className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pemain</button>
               )}
             </div>
           </div>
           <div className="mt-4 flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
             <div className="flex items-center gap-3">
-              <button onClick={saveOurSelection} disabled={saving} className="rounded-xl bg-[#0d9488] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : "Simpan Pengaturan"}</button>
+              <button onClick={saveOurSelection} disabled={saving} className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed">{saving ? "Menyimpan..." : "Simpan Pengaturan"}</button>
             </div>
           </div>
           </div>
@@ -534,13 +534,13 @@ export default function SparingPage() {
           {tab === "draft" && (
           <div>
             {/* Round selector - Step 1 */}
-            <div className="mb-6 rounded-xl border-2 border-[#0d9488] bg-[#f0fdfa] p-4">
+            <div className="mb-6 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-bg)] p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0d9488] text-xs font-bold text-white">1</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">1</div>
                 <h3 className="text-sm font-bold text-gray-700">Pilih Round</h3>
               </div>
               <select value={selectedRound} onChange={(e) => { setSelectedRound(Number(e.target.value)); setDraftOur1(""); setDraftOur2(""); setDraftOpp1(""); setDraftOpp2(""); }}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                 {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
                   <option key={r} value={r}>Round {r}</option>
                 ))}
@@ -558,28 +558,28 @@ export default function SparingPage() {
                 <div className="space-y-2">
                   {roundMatches.map((m, i) => (
                     editMatchId === m.id ? (
-                      <div key={m.id} className="rounded-lg border border-[#0d9488] px-4 py-3 text-sm">
+                      <div key={m.id} className="rounded-lg border border-[var(--color-primary)] px-4 py-3 text-sm">
                         <div className="grid gap-2 md:grid-cols-2 mb-2">
                           <div className="flex gap-1">
                             <select value={editMatchOur1} onChange={(e) => setEditMatchOur1(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                               <option value="">Kita 1</option>
                               {ourAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                             <select value={editMatchOur2} onChange={(e) => setEditMatchOur2(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                               <option value="">Kita 2</option>
                               {ourAvailable.filter((p) => p.id !== editMatchOur1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                           </div>
                           <div className="flex gap-1">
                             <select value={editMatchOpp1} onChange={(e) => setEditMatchOpp1(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                               <option value="">Lawan 1</option>
                               {oppAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                             <select value={editMatchOpp2} onChange={(e) => setEditMatchOpp2(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                               <option value="">Lawan 2</option>
                               {oppAvailable.filter((p) => p.id !== editMatchOpp1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
@@ -587,20 +587,20 @@ export default function SparingPage() {
                         </div>
                         <div className="flex items-center justify-end gap-2">
                           <select value={editMatchMode} onChange={(e) => setEditMatchMode(e.target.value)}
-                            className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                            className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                             <option value="1-30">1 Game 30</option>
                             <option value="1-42">1 Game 42</option>
                             <option value="2-21">2 Game 21</option>
                           </select>
                           <button onClick={() => saveEditMatch(m.id)} disabled={!editMatchOur1 || !editMatchOur2 || !editMatchOpp1 || !editMatchOpp2}
-                            className="rounded bg-[#0d9488] px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Simpan</button>
+                            className="rounded bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Simpan</button>
                           <button onClick={() => setEditMatchId(null)} className="rounded border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50">Batal</button>
                         </div>
                       </div>
                     ) : (
                     <div key={m.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3 text-sm">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ccfbf1] text-xs font-bold text-[#0d9488]">{i + 1}</span>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-xs font-bold text-[var(--color-primary)]">{i + 1}</span>
                         <div>
                           <span className="font-semibold text-gray-800">{getName(m.team1Player1Id)} & {getName(m.team1Player2Id)}</span>
                           <span className="mx-2 text-gray-300">vs</span>
@@ -612,7 +612,7 @@ export default function SparingPage() {
                         {lapanganList.length > 0 && (
                           <>
                           <select value={m.courtNumber || ""} onChange={async (e) => { const v = e.target.value; if (v) { await updateMatch(m.id, { courtNumber: Number(v) }); } else { await updateMatch(m.id, { courtNumber: null }); } }}
-                            className="rounded border border-gray-200 px-2 py-1 text-[10px] focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                            className="rounded border border-gray-200 px-2 py-1 text-[10px] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                             <option value="">Lapangan</option>
                             {lapanganList.map((c, ci) => <option key={ci} value={ci+1}>{c.name}</option>)}
                           </select>
@@ -634,7 +634,7 @@ export default function SparingPage() {
             {/* Create new match - Step 2 */}
             <div className="rounded-xl border-2 border-dashed border-gray-300 p-4">
               <div className="flex items-center gap-2 mb-4">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0d9488] text-xs font-bold text-white">2</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">2</div>
                 <h3 className="text-sm font-bold text-gray-700">Pilih Pemain — Round {selectedRound}</h3>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
@@ -643,14 +643,14 @@ export default function SparingPage() {
                   <label className="block text-xs font-medium text-gray-500 mb-2">Pemain Kita</label>
                   <div className="flex gap-2">
                     <select value={draftOur1} onChange={(e) => setDraftOur1(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">—</option>
                       {ourAvailable.map((m) => (
                         <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
                       ))}
                     </select>
                     <select value={draftOur2} onChange={(e) => setDraftOur2(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">—</option>
                       {ourAvailable.filter((m) => m.id !== draftOur1).map((m) => (
                         <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
@@ -664,14 +664,14 @@ export default function SparingPage() {
                   <label className="block text-xs font-medium text-gray-500 mb-2">Pemain {selectedSparing.sparingOpponent}</label>
                   <div className="flex gap-2">
                     <select value={draftOpp1} onChange={(e) => setDraftOpp1(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">—</option>
                       {oppAvailable.map((m) => (
                         <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
                       ))}
                     </select>
                     <select value={draftOpp2} onChange={(e) => setDraftOpp2(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                       <option value="">—</option>
                       {oppAvailable.filter((m) => m.id !== draftOpp1).map((m) => (
                         <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
@@ -684,7 +684,7 @@ export default function SparingPage() {
               <div className="mt-4 flex items-center justify-end gap-3">
                 <span className="text-xs text-gray-500">Mode: {modeLabel[draftGames]}</span>
                 <button onClick={createDraftMatch} disabled={!draftOur1 || !draftOur2 || !draftOpp1 || !draftOpp2}
-                  className="rounded-xl bg-[#0d9488] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pertandingan</button>
+                  className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pertandingan</button>
               </div>
             </div>
           </div>
@@ -706,12 +706,12 @@ export default function SparingPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tanggal</label>
                   <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nama PB Lawan</label>
                   <input value={formOpponent} onChange={(e) => setFormOpponent(e.target.value)} placeholder="PB ..."
-                    className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 </div>
               </div>
 
@@ -720,13 +720,13 @@ export default function SparingPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Pemain Lawan</label>
                 <div className="flex gap-2 mb-2">
                   <input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Nama"
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" />
+                    className="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                   <select value={playerClass} onChange={(e) => setPlayerClass(e.target.value)}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10">
+                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                     <option value="">—</option>
                     {["A","B","C","D","E","F"].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <button onClick={addPlayer} disabled={!playerName.trim() || !playerClass} className="rounded-xl bg-[#0d9488] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">{editPlayerIdx !== null ? "Simpan" : <Plus className="h-4 w-4" />}</button>
+                  <button onClick={addPlayer} disabled={!playerName.trim() || !playerClass} className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{editPlayerIdx !== null ? "Simpan" : <Plus className="h-4 w-4" />}</button>
                   {editPlayerIdx !== null && <button onClick={() => { setEditPlayerIdx(null); setPlayerName(""); setPlayerClass(""); }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><X className="h-4 w-4" /></button>}
                 </div>
                 {opponentPlayers.length > 0 && (
@@ -747,7 +747,7 @@ export default function SparingPage() {
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
                 <button onClick={handleCreate} disabled={!formOpponent.trim()}
-                  className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0f766e] disabled:opacity-50">Simpan Sparing</button>
+                  className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan Sparing</button>
               </div>
             </div>
           </div>
@@ -756,3 +756,5 @@ export default function SparingPage() {
     </div>
   );
 }
+
+

@@ -120,8 +120,8 @@ export default function ScoreboardPage() {
 
   if (!selSparingId) {
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -142,7 +142,7 @@ export default function ScoreboardPage() {
               const hasLiveMatches = matches.some((m) => m.scheduleId === s.id && (m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
               return (
                 <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); setCourtEntryTimestamps({}); }}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[#0d9488] sm:p-5">
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
                   {hasLiveMatches && (
                     <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${sColor.bg}`}>
                       <Star className="h-4 w-4 text-white" fill="white" />
@@ -180,8 +180,8 @@ export default function ScoreboardPage() {
     const savedSettingsLocal = savedSettings;
     const courtList = savedSettingsLocal?.courts as { name: string; startTime: string; endTime: string }[] || [];
     return (
-      <div className="relative min-h-screen bg-[#f0fdfa]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-6 pt-4 sm:pb-8 sm:pt-6">
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -256,8 +256,8 @@ export default function ScoreboardPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#f0fdfa] overflow-hidden">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#0d9488] to-[#0f766e] pb-3 pt-3 sm:pb-4 sm:pt-4">
+    <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -366,7 +366,7 @@ export default function ScoreboardPage() {
 
                 <div className="mx-auto mt-1 flex items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-100 sm:mt-2 sm:gap-3 sm:px-5 sm:py-2 md:mt-3 md:gap-6 md:rounded-2xl md:px-6 md:py-2.5 lg:mt-4 lg:gap-8 lg:px-8 lg:py-3">
                   <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-2 md:text-sm lg:gap-2.5 lg:text-base">
-                    <Clock className="h-3 w-3 text-[#0d9488] sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                    <Clock className="h-3 w-3 text-[var(--color-primary)] sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
                     <span>Durasi <strong className="font-bold text-gray-700">{fmtDuration(elapsed)}</strong></span>
                   </div>
                   <div className="h-4 w-px bg-gray-200 sm:h-5 md:h-6" />
@@ -389,3 +389,5 @@ export default function ScoreboardPage() {
     </div>
   );
 }
+
+

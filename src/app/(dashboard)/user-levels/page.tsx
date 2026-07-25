@@ -24,6 +24,7 @@ const allMenus = [
   { key: "stats", label: "Statistik" },
   { key: "reports", label: "Laporan" },
   { key: "settings", label: "Pengaturan" },
+  { key: "laba-rugi", label: "Laba Rugi" },
 ];
 
 export default function UserLevelsPage() {
@@ -31,7 +32,7 @@ export default function UserLevelsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", slug: "", description: "", color: "#0d9488", menus: [] as string[] });
+  const [form, setForm] = useState({ name: "", slug: "", description: "", color: "var(--color-primary)", menus: [] as string[] });
   const [error, setError] = useState("");
 
   function generateSlug(name: string) {
@@ -55,14 +56,14 @@ export default function UserLevelsPage() {
 
   function openAdd() {
     setEditId(null);
-    setForm({ name: "", slug: "", description: "", color: "#0d9488", menus: ["dashboard"] });
+    setForm({ name: "", slug: "", description: "", color: "var(--color-primary)", menus: ["dashboard"] });
     setError("");
     setShowForm(true);
   }
 
   function openEdit(l: ApiUserLevel) {
     setEditId(l.id);
-    setForm({ name: l.name, slug: l.slug, description: l.description || "", color: l.color || "#0d9488", menus: l.menus || [] });
+    setForm({ name: l.name, slug: l.slug, description: l.description || "", color: l.color || "var(--color-primary)", menus: l.menus || [] });
     setError("");
     setShowForm(true);
   }
@@ -87,7 +88,7 @@ export default function UserLevelsPage() {
     }
   }
 
-  const presetColors = ["#0d9488", "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#3b82f6"];
+  const presetColors = ["var(--color-primary)", "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#3b82f6"];
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -96,7 +97,7 @@ export default function UserLevelsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Level Manager</h1>
           <p className="mt-0.5 text-sm text-gray-500">Atur hak akses menu untuk setiap level user</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
           <Plus className="h-4 w-4" /> Tambah Level
         </button>
       </div>
@@ -105,7 +106,7 @@ export default function UserLevelsPage() {
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Shield className="mx-auto h-10 w-10 text-gray-300" />
           <p className="mt-3 text-sm text-gray-500">Belum ada level</p>
-          <button onClick={openAdd} className="mt-3 text-sm font-medium text-[#0d9488] hover:underline">Buat level pertama</button>
+          <button onClick={openAdd} className="mt-3 text-sm font-medium text-[var(--color-primary)] hover:underline">Buat level pertama</button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -167,16 +168,16 @@ export default function UserLevelsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Nama Level</label>
-                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Admin Utama" />
+                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: editId ? form.slug : generateSlug(e.target.value) })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Admin Utama" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Slug</label>
-                    <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-mono shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="admin_utama" />
+                    <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-mono shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="admin_utama" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
-                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/10" placeholder="Deskripsi level" />
+                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Deskripsi level" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Warna</label>
@@ -196,7 +197,7 @@ export default function UserLevelsPage() {
                   <div className="flex items-center justify-between">
                     <label className="block text-sm font-medium text-gray-700">Akses Menu</label>
                     <div className="flex gap-2">
-                      <button type="button" onClick={selectAll} className="text-xs font-medium text-[#0d9488] hover:underline">Pilih Semua</button>
+                      <button type="button" onClick={selectAll} className="text-xs font-medium text-[var(--color-primary)] hover:underline">Pilih Semua</button>
                       <span className="text-xs text-gray-300">|</span>
                       <button type="button" onClick={deselectAll} className="text-xs font-medium text-gray-400 hover:underline">Hapus Semua</button>
                     </div>
@@ -210,11 +211,11 @@ export default function UserLevelsPage() {
                           type="button"
                           onClick={() => toggleMenu(menu.key)}
                           className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-all ${
-                            selected ? "border-[#0d9488] bg-[#f0fdfa] text-gray-900" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                            selected ? "border-[var(--color-primary)] bg-[var(--color-bg)] text-gray-900" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
                           }`}
                         >
                           <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-all ${
-                            selected ? "border-[#0d9488] bg-[#0d9488] text-white" : "border-gray-300"
+                            selected ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-gray-300"
                           }`}>
                             {selected && <span className="text-[10px]">✓</span>}
                           </div>
@@ -229,7 +230,7 @@ export default function UserLevelsPage() {
 
               <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 bg-gray-50">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[#0d9488] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0f766e] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
               </div>
             </form>
           </div>
@@ -238,3 +239,5 @@ export default function UserLevelsPage() {
     </div>
   );
 }
+
+
