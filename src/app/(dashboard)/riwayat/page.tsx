@@ -75,7 +75,9 @@ export default function RiwayatPage() {
         </div>
       </div>
 
-      {paged.length === 0 ? (
+      {!matchesLoaded || !schedulesLoaded || !membersLoaded ? (
+        <LoadingSpinner />
+      ) : paged.length === 0 ? (
         <div className="rounded-2xl border bg-white px-6 py-20 text-center shadow-sm" style={{ borderColor: "#E2E8F0", borderRadius: 18 }}>
           <p className="mt-3 text-sm font-medium" style={{ color: "#64748B" }}>Belum ada pertandingan selesai</p>
         </div>
@@ -84,8 +86,6 @@ export default function RiwayatPage() {
           {paged.map((m) => {
             const s = getSchedule(m.scheduleId);
             const scoreText = `${m.scoreTeam1}-${m.scoreTeam2}` + (m.totalGames === 2 && m.scoreTeam1Game2 !== null ? `, ${m.scoreTeam1Game2}-${m.scoreTeam2Game2}` : "");
-
-            if (!matchesLoaded || !schedulesLoaded || !membersLoaded) return <LoadingSpinner />;
 
             return (
               <div key={m.id} className="border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"

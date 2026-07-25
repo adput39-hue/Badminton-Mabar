@@ -458,9 +458,15 @@ function AttendanceModal({ members, attendances, onChangeStatus, onClose }: {
   members: ApiMember[]; attendances: ApiAttendance[];
   onChangeStatus: (memberId: string, status: ApiAttendance["status"]) => void; onClose: () => void;
 }) {
+  const [searchAbsen, setSearchAbsen] = useState("");
   const hadir = attendances.filter((a) => a.status === "hadir").length;
   const tidakJadi = attendances.filter((a) => a.status === "tidak_jadi").length;
   const belum = attendances.filter((a) => a.status === "undangan").length;
+
+  const filtered = searchAbsen ? attendances.filter((a) => {
+    const m = members.find((x) => x.id === a.memberId);
+    return m?.name.toLowerCase().includes(searchAbsen.toLowerCase());
+  }) : attendances;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
@@ -474,10 +480,13 @@ function AttendanceModal({ members, attendances, onChangeStatus, onClose }: {
           <span className="font-medium text-red-500">❌ Tidak Jadi {tidakJadi}</span>
           <span className="font-medium text-gray-400">⏳ Belum {belum}</span>
         </div>
+        <div className="px-4 pt-3">
+          <input value={searchAbsen} onChange={(e) => setSearchAbsen(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+        </div>
         <div className="flex-1 space-y-1 overflow-y-auto p-4">
-          {attendances.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">Belum ada peserta.</p>
-          ) : attendances.map((att) => {
+          {filtered.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">{(searchAbsen ? "Anggota tidak ditemukan" : "Belum ada peserta.")}</p>
+          ) : filtered.map((att) => {
             const m = members.find((x) => x.id === att.memberId);
             if (!m) return null;
             return (

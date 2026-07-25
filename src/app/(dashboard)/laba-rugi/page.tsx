@@ -213,7 +213,7 @@ export default function LabaRugiPage() {
                         <option value="">Pilih master biaya cock</option>
                         {activeBiayas.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.amount ? formatRupiah(b.amount) : "—"})</option>)}
                       </select>
-                      <input type="number" value={edit.cockCost} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], cockCost: parseInt(e.target.value) || 0 } }))}
+                      <input type="text" value={edit.cockCost ? String(edit.cockCost).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ""} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], cockCost: parseInt(e.target.value.replace(/\D/g, '')) || 0 } }))}
                         placeholder="0" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                     </div>
                     <div>
@@ -225,7 +225,7 @@ export default function LabaRugiPage() {
                         <option value="">Pilih master biaya sewa lapangan</option>
                         {activeBiayas.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.amount ? formatRupiah(b.amount) : "—"})</option>)}
                       </select>
-                      <input type="number" value={edit.courtCost} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], courtCost: parseInt(e.target.value) || 0 } }))}
+                      <input type="text" value={edit.courtCost ? String(edit.courtCost).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ""} onChange={(e) => setEditMap((prev) => ({ ...prev, [lr.id]: { ...prev[lr.id], courtCost: parseInt(e.target.value.replace(/\D/g, '')) || 0 } }))}
                         placeholder="0" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                     </div>
                     <div>

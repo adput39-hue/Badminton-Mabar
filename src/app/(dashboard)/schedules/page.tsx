@@ -55,7 +55,7 @@ export default function SchedulesPage() {
     setEditId(s.id);
     const htmVal = s.htm ? String(s.htm).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : "";
     let notesVal = s.notes || "";
-    try { const parsed = JSON.parse(notesVal); if (parsed.gameMode && Object.keys(parsed).length === 1) notesVal = ""; else if (parsed.gameMode) { const { gameMode, ...rest } = parsed; notesVal = Object.keys(rest).length ? JSON.stringify(rest) : ""; } } catch {}
+    try { const parsed = JSON.parse(notesVal); const { gameMode, paidMembers, ...rest } = parsed; notesVal = Object.keys(rest).length ? JSON.stringify(rest) : ""; } catch {}
     setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, cockPrice: s.cockPrice ? String(s.cockPrice) : "", notes: notesVal });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
