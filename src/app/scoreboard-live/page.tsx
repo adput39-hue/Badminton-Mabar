@@ -8,6 +8,7 @@ import {
   Swords, ChevronLeft, Clock, Radio, Trophy, Minus, Plus,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const courtColors = [
   { bg: "bg-green-500", text: "text-green-600", light: "bg-green-50", border: "border-green-500" },
@@ -18,9 +19,9 @@ const courtColors = [
 ];
 
 export default function ScoreboardLivePage() {
-  const { items: schedules } = useApi<ApiSchedule>("schedules");
-  const { items: members } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches } = useApi<ApiMatch>("matches");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selRound, setSelRound] = useState(1);
@@ -138,6 +139,8 @@ export default function ScoreboardLivePage() {
       </div>
     );
   }
+
+  if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">

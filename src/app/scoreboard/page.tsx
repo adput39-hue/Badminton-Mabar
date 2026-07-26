@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
@@ -17,9 +18,9 @@ const courtColors = [
 ];
 
 export default function ScoreboardPage() {
-  const { items: schedules } = useApi<ApiSchedule>("schedules");
-  const { items: members } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches } = useApi<ApiMatch>("matches");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
+  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
+  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
@@ -254,6 +255,8 @@ export default function ScoreboardPage() {
       </div>
     );
   }
+
+  if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
