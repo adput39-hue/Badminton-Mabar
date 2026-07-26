@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
-import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star } from "lucide-react";
+import { useToast } from "@/components/toast";
+import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
@@ -365,15 +366,10 @@ export default function MabarPage() {
         <AttendanceModal
           members={members}
           attendances={atts}
-          onChangeStatus={async (memberId, status) => {
-            const existing = atts.find((a) => a.memberId === memberId);
-            if (status === "tidak_jadi" && existing) { await updateAtt(existing.id, { status: "tidak_jadi" }); }
-            else if (status === "undangan" && existing) { await removeAtt(existing.id); }
-            else if (status === "hadir") {
-              if (existing) { await updateAtt(existing.id, { status: "hadir" }); }
-              else { await addAtt({ scheduleId: selId, memberId, status: "hadir" }); }
-            }
-          }}
+          selId={selId}
+          addAtt={addAtt}
+          updateAtt={updateAtt}
+          removeAtt={removeAtt}
           onClose={() => setShowAbsen(false)}
         />
       )}
@@ -454,59 +450,104 @@ function MatchCard({ match, getName, onScore, onDelete }: {
   );
 }
 
-function AttendanceModal({ members, attendances, onChangeStatus, onClose }: {
-  members: ApiMember[]; attendances: ApiAttendance[];
-  onChangeStatus: (memberId: string, status: ApiAttendance["status"]) => void; onClose: () => void;
+function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt, removeAtt, onClose }: {
+  members: ApiMember[]; attendances: ApiAttendance[]; selId: string;
+  addAtt: (d: Record<string, unknown>) => Promise<ApiAttendance>;
+  updateAtt: (id: string, d: Record<string, unknown>) => Promise<ApiAttendance>;
+  removeAtt: (id: string) => Promise<void>; onClose: () => void;
 }) {
+  const { toast } = useToast();
+  const [selected, setSelected] = useState<Set<string>>(() =>
+    new Set(atts.filter((a) => a.status === "hadir").map((a) => a.memberId))
+  );
+  const [saving, setSaving] = useState(false);
   const [searchAbsen, setSearchAbsen] = useState("");
-  const hadir = attendances.filter((a) => a.status === "hadir").length;
-  const tidakJadi = attendances.filter((a) => a.status === "tidak_jadi").length;
-  const belum = attendances.filter((a) => a.status === "undangan").length;
 
-  const filtered = searchAbsen ? attendances.filter((a) => {
-    const m = members.find((x) => x.id === a.memberId);
-    return m?.name.toLowerCase().includes(searchAbsen.toLowerCase());
-  }) : attendances;
+  const hadirCount = selected.size;
+  const totalCount = atts.length;
+
+  const filtered = searchAbsen
+    ? atts.filter((a) => {
+        const m = members.find((x) => x.id === a.memberId);
+        return m?.name.toLowerCase().includes(searchAbsen.toLowerCase());
+      })
+    : atts;
+
+  function toggle(memberId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(memberId)) next.delete(memberId);
+      else next.add(memberId);
+      return next;
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const ops: Promise<unknown>[] = [];
+      for (const att of atts) {
+        if (selected.has(att.memberId)) {
+          if (att.status !== "hadir") ops.push(updateAtt(att.id, { status: "hadir" }));
+        } else {
+          if (att.status === "hadir") ops.push(removeAtt(att.id));
+          else if (att.status === "undangan") ops.push(removeAtt(att.id));
+        }
+      }
+      for (const memberId of selected) {
+        if (!atts.find((a) => a.memberId === memberId)) {
+          ops.push(addAtt({ scheduleId: selId, memberId, status: "hadir" }));
+        }
+      }
+      await Promise.all(ops);
+      toast("success", "Absensi berhasil disimpan");
+      onClose();
+    } catch {
+      toast("error", "Gagal menyimpan absensi");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">Absensi</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><XIcon className="h-5 w-5" /></button>
+          <button onClick={onClose} disabled={saving} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><XIcon className="h-5 w-5" /></button>
         </div>
         <div className="flex gap-4 border-b border-gray-100 px-6 py-3 text-sm">
-          <span className="font-medium text-[var(--color-primary)]">✅ Hadir {hadir}</span>
-          <span className="font-medium text-red-500">❌ Tidak Jadi {tidakJadi}</span>
-          <span className="font-medium text-gray-400">⏳ Belum {belum}</span>
+          <span className="font-medium text-[var(--color-primary)]">✅ Hadir {hadirCount}</span>
+          <span className="font-medium text-gray-400">⏳ Total {totalCount}</span>
         </div>
         <div className="px-4 pt-3">
-          <input value={searchAbsen} onChange={(e) => setSearchAbsen(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+          <input value={searchAbsen} onChange={(e) => setSearchAbsen(e.target.value)} placeholder="Cari anggota..." disabled={saving} className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 disabled:opacity-50" />
         </div>
         <div className="flex-1 space-y-1 overflow-y-auto p-4">
           {filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">{(searchAbsen ? "Anggota tidak ditemukan" : "Belum ada peserta.")}</p>
+            <p className="py-8 text-center text-sm text-gray-500">{searchAbsen ? "Anggota tidak ditemukan" : "Belum ada peserta."}</p>
           ) : filtered.map((att) => {
             const m = members.find((x) => x.id === att.memberId);
             if (!m) return null;
+            const checked = selected.has(att.memberId);
             return (
-              <div key={att.id} className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-gray-50">
-                <span className="text-sm font-medium text-gray-900">{m.name} <span className="text-xs text-gray-400">{m.class}</span></span>
-                <div className="flex gap-1">
-                  {(["hadir", "tidak_jadi", "undangan"] as ApiAttendance["status"][]).map((s) => (
-                    <button key={s} onClick={() => onChangeStatus(m.id, s)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        att.status === s
-                          ? s === "hadir" ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] border-[var(--color-primary-lighter)] shadow-sm"
-                            : s === "tidak_jadi" ? "bg-red-50 text-red-600 border-red-200 shadow-sm"
-                            : "bg-gray-100 text-gray-500 border-gray-200 shadow-sm"
-                          : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                      }`}>{s === "hadir" ? "Hadir" : s === "tidak_jadi" ? "Tidak Jadi" : "Belum"}</button>
-                  ))}
+              <label key={att.id} className={`flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors ${saving ? "" : "hover:bg-gray-50"}`}>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={checked} disabled={saving} onChange={() => toggle(att.memberId)}
+                    className="h-5 w-5 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:opacity-50" />
+                  <span className="text-sm font-medium text-gray-900">{m.name} <span className="text-xs text-gray-400">{m.class}</span></span>
                 </div>
-              </div>
+                {att.status === "undangan" && !checked && <span className="text-[10px] text-gray-400">undangan</span>}
+              </label>
             );
           })}
+        </div>
+        <div className="border-t border-gray-100 px-6 py-4">
+          <button onClick={handleSave} disabled={saving}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {saving ? "Menyimpan..." : "Simpan"}
+          </button>
         </div>
       </div>
     </div>
