@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import {
-  Swords, ChevronLeft, Clock, Radio, Trophy, Minus, Plus,
+  Swords, ChevronLeft, Radio, Minus,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -66,16 +66,38 @@ export default function ScoreboardLivePage() {
     return parts.length > 1 ? parts[0] + " " + parts[parts.length - 1][0] + "." : name;
   }
 
-  const stats = useMemo(() => {
-    const completed = roundMatches.filter((m) => m.status === "completed");
-    const total = roundMatches.length;
-    const selesai = completed.length;
-    const kitaWins = completed.filter((m) => m.winnerTeam === 1).length;
-    const lawanWins = completed.filter((m) => m.winnerTeam === 2).length;
-    const kitaPoints = roundMatches.reduce((sum, m) => sum + (m.scoreTeam1 || 0) + (m.scoreTeam1Game2 || 0), 0);
-    const lawanPoints = roundMatches.reduce((sum, m) => sum + (m.scoreTeam2 || 0) + (m.scoreTeam2Game2 || 0), 0);
-    return { total, selesai, kitaWins, lawanWins, kitaPoints, lawanPoints, sisa: total - selesai };
-  }, [roundMatches]);
+  const roundStatsMap = useMemo(() => {
+    const map: Record<number, { kitaWins: number; lawanWins: number; total: number; completed: number }> = {};
+    for (let r = 1; r <= totalRounds; r++) {
+      const rm = sparingMatches.filter((m) => m.round === r);
+      const completed = rm.filter((m) => m.status === "completed");
+      map[r] = {
+        total: rm.length,
+        completed: completed.length,
+        kitaWins: completed.filter((m) => m.winnerTeam === 1).length,
+        lawanWins: completed.filter((m) => m.winnerTeam === 2).length,
+      };
+    }
+    return map;
+  }, [sparingMatches, totalRounds]);
+
+  const allRoundsDone = useMemo(() => {
+    if (totalRounds === 0) return false;
+    for (let r = 1; r <= totalRounds; r++) {
+      const s = roundStatsMap[r];
+      if (!s || s.total === 0 || s.completed < s.total) return false;
+    }
+    return true;
+  }, [roundStatsMap, totalRounds]);
+
+  const finalStats = useMemo(() => {
+    let kitaWins = 0, lawanWins = 0;
+    for (let r = 1; r <= totalRounds; r++) {
+      kitaWins += roundStatsMap[r]?.kitaWins || 0;
+      lawanWins += roundStatsMap[r]?.lawanWins || 0;
+    }
+    return { kitaWins, lawanWins };
+  }, [roundStatsMap, totalRounds]);
 
   const viewRef = useRef({ selSparingId });
   useEffect(() => { viewRef.current = { selSparingId }; });
@@ -143,55 +165,63 @@ export default function ScoreboardLivePage() {
   if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
-    <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
       <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
-        <div className="relative mx-auto flex max-w-[1440px] items-center justify-between px-3 sm:px-4">
-          <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
-            <ChevronLeft className="h-3.5 w-3.5" /> Kembali
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
-              {pbName || "PB"} vs {selectedSparing?.sparingOpponent || "—"}
-            </span>
-            <span className="text-xs text-white/60">{new Date(selectedSparing?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+        <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
+          <div className="flex items-center justify-between">
+            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
+              <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
+                {pbName || "PB"} vs {selectedSparing?.sparingOpponent || "—"}
+              </span>
+              <span className="text-xs text-white/60">{new Date(selectedSparing?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+            </div>
+            <div className="w-20" />
           </div>
-          <div className="w-20" />
+
+          {/* Round stats */}
+          <div className="mt-1.5 space-y-0.5 border-t border-white/10 pt-1.5 sm:mt-2 sm:pt-2">
+            {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => {
+              const s = roundStatsMap[r];
+              if (!s || s.total === 0) return null;
+              return (
+                <div key={r} className="flex items-center gap-1.5 text-[13px] text-white/90 sm:text-sm">
+                  <span className="w-16 shrink-0 text-right text-white/50">Round {r}</span>
+                  <span className="text-white/40">:</span>
+                  <span className="ml-1.5 font-semibold text-white">{pbName || "PB"}</span>
+                  <span className="ml-1.5 font-black tabular-nums text-white">{s.kitaWins}</span>
+                  <span className="mx-1.5 text-white/40">vs</span>
+                  <span className="font-black tabular-nums text-white">{s.lawanWins}</span>
+                  <span className="ml-1.5 font-semibold text-white">{selectedSparing?.sparingOpponent || "Lawan"}</span>
+                </div>
+              );
+            })}
+            {allRoundsDone && finalStats && (
+              <>
+                <div className="border-t border-white/10" />
+                <div className="flex items-center gap-1.5 text-sm font-bold text-white sm:text-base">
+                  <span className="w-16 shrink-0 text-right text-white/50">FINAL</span>
+                  <span className="text-white/40">:</span>
+                  <span className="ml-1.5 text-white">{pbName || "PB"}</span>
+                  <span className="ml-1.5 font-black tabular-nums text-white">{finalStats.kitaWins}</span>
+                  <span className="mx-1.5 text-white/40">vs</span>
+                  <span className="font-black tabular-nums text-white">{finalStats.lawanWins}</span>
+                  <span className="ml-1.5 text-white">{selectedSparing?.sparingOpponent || "Lawan"}</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Mobile stats bar (bottom fixed) */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white shadow-lg lg:hidden">
-        <div className="flex items-center justify-around px-3 py-2 text-xs">
-          <div className="text-center">
-            <p className="font-semibold text-gray-900">{stats.total}</p>
-            <p className="text-gray-500">Total</p>
-          </div>
-          <div className="flex items-center gap-1 text-green-600">
-            <Trophy className="h-3 w-3" fill="currentColor" />
-            <span className="font-semibold">{stats.kitaWins}</span>
-          </div>
-          <div className="flex items-center gap-1 text-blue-600">
-            <Trophy className="h-3 w-3" fill="currentColor" />
-            <span className="font-semibold">{stats.lawanWins}</span>
-          </div>
-          <div className="text-center">
-            <p className="font-semibold text-gray-900">{stats.kitaPoints}</p>
-            <p className="text-gray-400">Poin</p>
-          </div>
-          <div className="border-l border-gray-200 pl-2 text-center">
-            <p className="font-semibold text-gray-400">{stats.sisa > 0 ? `${stats.sisa} sisa` : "Selesai"}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative mx-auto flex h-[calc(100vh-52px)] max-w-[1440px] flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4">
-        <div className="flex flex-1 gap-3 overflow-hidden lg:gap-4">
-          {/* Main */}
-          <div className="flex-1 overflow-y-auto pb-14 lg:pb-0">
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col overflow-hidden p-2 sm:p-3 md:p-4">
+        <div className="flex-1 overflow-y-auto">
             {/* Round selector */}
             {totalRounds > 1 && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -343,84 +373,6 @@ export default function ScoreboardLivePage() {
               </div>
             )}
           </div>
-
-          {/* Desktop sidebar */}
-          <div className="hidden w-56 shrink-0 overflow-y-auto lg:block lg:w-64 xl:w-72">
-            <div className="rounded-2xl bg-white shadow-md ring-1 ring-gray-100">
-              <div className="border-b border-gray-100 px-4 py-3 sm:px-5 sm:py-4">
-                <h2 className="text-xs font-bold text-gray-900 sm:text-sm">Statistik Round {selRound}</h2>
-                <p className="text-[10px] text-gray-500 sm:text-xs">{pbName || "PB"} vs {selectedSparing?.sparingOpponent || "—"}</p>
-              </div>
-
-              {/* Win bar */}
-              <div className="px-4 py-3 sm:px-5 sm:py-4">
-                <div className="mb-2 flex items-center justify-between text-[10px] sm:text-xs">
-                  <span className="font-semibold text-green-600">{pbName || "PB Kita"}</span>
-                  <span className="text-gray-400">{stats.kitaWins}/{stats.selesai}</span>
-                  <span className="font-semibold text-blue-600">{selectedSparing?.sparingOpponent || "Lawan"}</span>
-                </div>
-                <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100 sm:h-4">
-                  <div
-                    className="rounded-l-full bg-green-500 transition-all duration-500"
-                    style={{ width: `${stats.selesai > 0 ? (stats.kitaWins / stats.selesai) * 100 : 50}%` }}
-                  />
-                  <div
-                    className="rounded-r-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${stats.selesai > 0 ? (stats.lawanWins / stats.selesai) * 100 : 50}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 px-4 pb-4 sm:px-5 sm:pb-5">
-                {/* Total matches */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                  <span className="text-[10px] text-gray-600 sm:text-xs">Total Pertandingan</span>
-                  <span className="text-xs font-bold text-gray-900 sm:text-sm">{stats.total}</span>
-                </div>
-
-                {/* PB Kita block */}
-                <div className="rounded-lg bg-green-50 px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <Trophy className="h-3 w-3 text-green-600 sm:h-4 sm:w-4" fill="currentColor" />
-                    <span className="text-[10px] font-bold text-green-700 sm:text-xs">{pbName || "PB Kita"}</span>
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-[10px] text-green-600 sm:text-xs">Menang</span>
-                    <span className="text-xs font-black tabular-nums text-green-700 sm:text-sm">{stats.kitaWins}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-green-600 sm:text-xs">Total Poin</span>
-                    <span className="text-xs font-black tabular-nums text-green-700 sm:text-sm">{stats.kitaPoints}</span>
-                  </div>
-                </div>
-
-                {/* Lawan block */}
-                <div className="rounded-lg bg-blue-50 px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <Trophy className="h-3 w-3 text-blue-600 sm:h-4 sm:w-4" fill="currentColor" />
-                    <span className="text-[10px] font-bold text-blue-700 sm:text-xs">{selectedSparing?.sparingOpponent || "Lawan"}</span>
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-[10px] text-blue-600 sm:text-xs">Menang</span>
-                    <span className="text-xs font-black tabular-nums text-blue-700 sm:text-sm">{stats.lawanWins}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-blue-600 sm:text-xs">Total Poin</span>
-                    <span className="text-xs font-black tabular-nums text-blue-700 sm:text-sm">{stats.lawanPoints}</span>
-                  </div>
-                </div>
-
-                {/* Sisa */}
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-600 sm:text-xs">Sisa Pertandingan</span>
-                    <span className="text-xs font-bold text-gray-900 sm:text-sm">{stats.sisa > 0 ? stats.sisa : "—"}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
