@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
-import type { ApiKasMutasi, ApiKasBiaya } from "@/lib/api-types";
+import type { ApiKasMutasi, ApiKasBiaya, ApiSchedule } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, ArrowUpRight, ArrowDownRight, Search, Wallet, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useToast } from "@/components/toast";
@@ -10,12 +10,13 @@ import { useToast } from "@/components/toast";
 export default function KasMutasiPage() {
   const { items: mutasis, add, update, remove, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
   const { items: biayas, loaded: biayasLoaded } = useApi<ApiKasBiaya>("kas-biaya");
+  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
 
   const [filter, setFilter] = useState<"all" | "masuk" | "keluar">("all");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0] });
+  const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0], scheduleId: "" });
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
@@ -36,13 +37,13 @@ export default function KasMutasiPage() {
 
   function openAdd() {
     setEditId(null);
-    setForm({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0] });
+    setForm({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0], scheduleId: "" });
     setShowForm(true);
   }
 
   function openEdit(m: ApiKasMutasi) {
     setEditId(m.id);
-    setForm({ type: m.type, biayaId: m.biayaId || "", description: m.description, amount: String(m.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.'), tanggal: m.tanggal.split("T")[0] });
+    setForm({ type: m.type, biayaId: m.biayaId || "", description: m.description, amount: String(m.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.'), tanggal: m.tanggal.split("T")[0], scheduleId: m.scheduleId || "" });
     setShowForm(true);
   }
 
@@ -53,7 +54,7 @@ export default function KasMutasiPage() {
     try {
       const payload: Record<string, unknown> = {
         type: form.type, description: form.description.trim(), amount: parseInt(form.amount.replace(/\D/g, '')), tanggal: form.tanggal,
-        biayaId: form.biayaId || null,
+        biayaId: form.biayaId || null, scheduleId: form.scheduleId || null,
       };
       if (editId) await update(editId, payload);
       else await add(payload);
@@ -67,7 +68,7 @@ export default function KasMutasiPage() {
   }
 
 
-  if (!mutasisLoaded || !biayasLoaded) return <LoadingSpinner />;
+  if (!mutasisLoaded || !biayasLoaded || !schedulesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -189,6 +190,15 @@ export default function KasMutasiPage() {
                   <option value="">— Pilih Kategori —</option>
                   {biayas.filter((b) => b.isActive && b.type === form.type).map((b) => (
                     <option key={b.id} value={b.id}>{b.name}{b.amount ? ` (Rp ${b.amount.toLocaleString("id-ID")})` : ""}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jadwal (opsional, untuk Laba Rugi)</label>
+                <select value={form.scheduleId} onChange={(e) => setForm({ ...form, scheduleId: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                  <option value="">— Pilih Jadwal —</option>
+                  {schedules.filter((s) => s.status !== "cancelled").sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((s) => (
+                    <option key={s.id} value={s.id}>{s.title} — {new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</option>
                   ))}
                 </select>
               </div>

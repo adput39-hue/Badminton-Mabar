@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         tanggal: body.tanggal ? new Date(body.tanggal) : new Date(),
         reference: body.reference || null,
         memberId: body.memberId || null,
+        scheduleId: body.scheduleId || null,
         createdBy: body.createdBy || null,
       },
     });

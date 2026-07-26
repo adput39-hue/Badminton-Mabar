@@ -114,6 +114,7 @@ model Schedule {
   attendances     Attendance[]
   matches         Match[]
   labaRugi        LabaRugi?
+  kasMutasis      KasMutasi[]
 
   @@index([pbId])
   @@index([date])
@@ -217,6 +218,7 @@ model KasMutasi {
   tanggal     DateTime  @default(now())
   reference   String?
   memberId    String?   @map("member_id")
+  scheduleId  String?   @map("schedule_id")
   createdBy   String?   @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -224,6 +226,7 @@ model KasMutasi {
 
   pb          Pb        @relation(fields: [pbId], references: [id], onDelete: Cascade)
   biaya       KasBiaya? @relation(fields: [biayaId], references: [id], onDelete: SetNull)
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
 
   @@index([pbId])
   @@index([tanggal])

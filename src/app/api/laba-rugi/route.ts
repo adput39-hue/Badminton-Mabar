@@ -43,17 +43,44 @@ export async function POST(request: Request) {
     } catch {}
     const totalIncome = htm * paidMembers.length;
 
+    // Auto-calculate costs from kas_mutasi linked to this schedule
+    const mutations = await prisma.kasMutasi.findMany({
+      where: { scheduleId, void: 0 },
+      include: { biaya: true },
+    });
+
+    let autoCockCost = 0;
+    let autoCourtCost = 0;
+    let autoCockBiayaId: string | null = null;
+    let autoCourtBiayaId: string | null = null;
+
+    for (const m of mutations) {
+      if (m.biaya?.type === "cock") {
+        autoCockCost += m.amount;
+        autoCockBiayaId = m.biayaId;
+      } else if (m.biaya?.type === "court") {
+        autoCourtCost += m.amount;
+        autoCourtBiayaId = m.biayaId;
+      }
+    }
+
     const existing = await prisma.labaRugi.findUnique({ where: { scheduleId } });
-    const profitLoss = totalIncome - (existing?.cockCost || 0) - (existing?.courtCost || 0);
+
+    // Use auto from mutations if available, otherwise keep existing/manual
+    const cockCost = autoCockCost > 0 ? autoCockCost : (existing?.cockCost || 0);
+    const courtCost = autoCourtCost > 0 ? autoCourtCost : (existing?.courtCost || 0);
+    const cockBiayaId = autoCockBiayaId || existing?.cockBiayaId || null;
+    const courtBiayaId = autoCourtBiayaId || existing?.courtBiayaId || null;
+    const profitLoss = totalIncome - cockCost - courtCost;
 
     const data = {
       scheduleId,
       pbId,
       totalIncome,
-      cockCost: existing?.cockCost || 0,
-      courtCost: existing?.courtCost || 0,
-      cockBiayaId: existing?.cockBiayaId || null,
-      courtBiayaId: existing?.courtBiayaId || null,
+      cockCost,
+      courtCost,
+      cockBiayaId,
+      courtBiayaId,
       profitLoss,
     };
 
