@@ -93,6 +93,15 @@ export default function BayarHtmPage() {
     });
   }
 
+  function checkAllUnpaid(scheduleId: string) {
+    const s = htmSchedules.find((x) => x.id === scheduleId);
+    if (!s) return;
+    const current = paidState[scheduleId] || getPaidMembers(s);
+    const peserta = getParticipantMembers(scheduleId);
+    const allIds = [...new Set([...current, ...peserta.map((m) => m.id)])];
+    setPaidState((prev) => ({ ...prev, [scheduleId]: allIds }));
+  }
+
   async function savePaid(scheduleId: string) {
     setSavingScheduleId(scheduleId);
     try {
@@ -248,7 +257,12 @@ export default function BayarHtmPage() {
                     <div className="mb-3 flex items-center gap-2">
                       <input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Cari pemain..." className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                     </div>
-                    <h4 className="mb-3 text-sm font-semibold text-gray-700">Daftar Pemain</h4>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-700">Daftar Pemain</h4>
+                      {!isLocked && (
+                        <button onClick={() => checkAllUnpaid(s.id)} className="text-xs font-medium text-[var(--color-primary)] hover:underline">Centang Semua</button>
+                      )}
+                    </div>
                     {peserta.length === 0 ? (
                       <p className="py-4 text-center text-sm text-gray-400">Belum ada peserta terdaftar</p>
                     ) : (
