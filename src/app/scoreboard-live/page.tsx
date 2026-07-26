@@ -115,7 +115,7 @@ export default function ScoreboardLivePage() {
   useEffect(() => {
     if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
   }, [schedulesLoaded, membersLoaded, matchesLoaded]);
-  const dataReady = firstDataLoaded || (schedulesLoaded && membersLoaded && matchesLoaded);
+  const dataReady = firstDataLoaded;
 
   if (!selSparingId) {
     return (

@@ -124,7 +124,7 @@ export default function ScoreboardPage() {
   useEffect(() => {
     if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
   }, [schedulesLoaded, membersLoaded, matchesLoaded]);
-  const dataReady = firstDataLoaded || (schedulesLoaded && membersLoaded && matchesLoaded);
+  const dataReady = firstDataLoaded;
 
   if (!selSparingId) {
     return (
