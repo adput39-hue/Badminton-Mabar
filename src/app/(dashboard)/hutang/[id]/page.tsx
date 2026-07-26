@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getClientPbId } from "@/lib/tenant";
 import { ArrowLeft, Check, Save, Mars, Venus } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/components/toast";
 
 interface HutangEntry {
   type: "saldo_awal" | "htm" | "bayar";
@@ -30,6 +31,7 @@ export default function HutangDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const fetchDetail = useCallback(async () => {
     const pbId = getClientPbId();
@@ -71,8 +73,13 @@ export default function HutangDetailPage() {
       if (res.ok) {
         setSelected(new Set());
         await fetchDetail();
+        toast("success", "Pembayaran berhasil");
+      } else {
+        toast("error", "Gagal melakukan pembayaran");
       }
-    } catch {}
+    } catch {
+      toast("error", "Gagal melakukan pembayaran");
+    }
     setSaving(false);
   }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getClientPbId } from "@/lib/tenant";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 const TABLE_MAP: Record<string, string> = {
   schedules: "schedules",
@@ -75,14 +75,15 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
 
   const realtimeTable = TABLE_MAP[resource];
   useEffect(() => {
-    if (!realtimeTable || !supabase) return;
-    const channel = supabase
+    const sb = getSupabase();
+    if (!realtimeTable || !sb) return;
+    const channel = sb
       .channel(`${resource}-realtime`)
       .on("postgres_changes", { event: "*", schema: "public", table: realtimeTable }, () => {
         refresh();
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { sb.removeChannel(channel); };
   }, [resource, realtimeTable, refresh]);
 
   const add = useCallback(

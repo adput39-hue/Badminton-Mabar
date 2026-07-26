@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiUserLevel } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Shield, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 const allMenus = [
   { key: "dashboard", label: "Dashboard" },
@@ -35,7 +36,8 @@ export default function UserLevelsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", slug: "", description: "", color: "var(--color-primary)", menus: [] as string[] });
-  const [error, setError] = useState("");
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
 
   function generateSlug(name: string) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "level";
@@ -59,34 +61,35 @@ export default function UserLevelsPage() {
   function openAdd() {
     setEditId(null);
     setForm({ name: "", slug: "", description: "", color: "var(--color-primary)", menus: ["dashboard"] });
-    setError("");
     setShowForm(true);
   }
 
   function openEdit(l: ApiUserLevel) {
     setEditId(l.id);
     setForm({ name: l.name, slug: l.slug, description: l.description || "", color: l.color || "var(--color-primary)", menus: l.menus || [] });
-    setError("");
     setShowForm(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    if (!form.name.trim() || !form.slug.trim()) { setError("Nama dan slug harus diisi"); return; }
-    const payload = {
-      name: form.name.trim(),
-      slug: form.slug.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_"),
-      description: form.description || null,
-      color: form.color,
-      menus: form.menus,
-    };
+    if (!form.name.trim() || !form.slug.trim()) { toast("error", "Nama dan slug harus diisi"); return; }
+    setSaving(true);
     try {
+      const payload = {
+        name: form.name.trim(),
+        slug: form.slug.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_"),
+        description: form.description || null,
+        color: form.color,
+        menus: form.menus,
+      };
       if (editId) await updateLevel(editId, payload);
       else await addLevel(payload);
       setShowForm(false);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan level");
+      toast("success", "Level berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan level");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -164,8 +167,7 @@ export default function UserLevelsPage() {
               <h2 className="text-lg font-bold text-gray-900">{editId ? "Edit Level" : "Tambah Level Baru"}</h2>
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
-            {error && <div className="border-b border-gray-100 px-6 py-3 text-sm text-red-600 bg-red-50">{error}</div>}
-            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+<form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -234,8 +236,8 @@ export default function UserLevelsPage() {
               </div>
 
               <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4 bg-gray-50">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="button" disabled={saving} onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>

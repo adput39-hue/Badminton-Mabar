@@ -3,8 +3,9 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiKasMutasi, ApiKasBiaya } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, ArrowUpRight, ArrowDownRight, Search, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ArrowUpRight, ArrowDownRight, Search, Wallet, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 export default function KasMutasiPage() {
   const { items: mutasis, add, update, remove, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
@@ -15,6 +16,8 @@ export default function KasMutasiPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0] });
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
 
   const active = useMemo(() => mutasis.filter((m) => m.void !== 1), [mutasis]);
 
@@ -46,13 +49,21 @@ export default function KasMutasiPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.description.trim() || !form.amount) return;
-    const payload: Record<string, unknown> = {
-      type: form.type, description: form.description.trim(), amount: parseInt(form.amount.replace(/\D/g, '')), tanggal: form.tanggal,
-      biayaId: form.biayaId || null,
-    };
-    if (editId) await update(editId, payload);
-    else await add(payload);
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        type: form.type, description: form.description.trim(), amount: parseInt(form.amount.replace(/\D/g, '')), tanggal: form.tanggal,
+        biayaId: form.biayaId || null,
+      };
+      if (editId) await update(editId, payload);
+      else await add(payload);
+      setShowForm(false);
+      toast("success", "Kas mutasi berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan kas mutasi");
+    } finally {
+      setSaving(false);
+    }
   }
 
 
@@ -196,8 +207,8 @@ export default function KasMutasiPage() {
                 }} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="50000" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="button" disabled={saving} onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>

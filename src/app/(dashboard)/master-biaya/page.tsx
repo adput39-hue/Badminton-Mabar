@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiKasBiaya } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Tag, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Tag, Search, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 export default function MasterBiayaPage() {
   const { items: biayas, add, update, remove, loaded: biayasLoaded } = useApi<ApiKasBiaya>("kas-biaya");
@@ -12,6 +13,8 @@ export default function MasterBiayaPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", type: "keluar", amount: "", description: "" });
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
 
   const filtered = biayas.filter((b) => {
     if (!search) return true;
@@ -30,11 +33,19 @@ export default function MasterBiayaPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
-    const payload: Record<string, unknown> = { name: form.name.trim(), type: form.type, description: form.description || null };
-    if (form.amount) payload.amount = parseInt(form.amount);
-    if (editId) await update(editId, payload);
-    else await add(payload);
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = { name: form.name.trim(), type: form.type, description: form.description || null };
+      if (form.amount) payload.amount = parseInt(form.amount);
+      if (editId) await update(editId, payload);
+      else await add(payload);
+      setShowForm(false);
+      toast("success", "Biaya berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan biaya");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleActive(b: ApiKasBiaya) { await update(b.id, { isActive: !b.isActive }); }
@@ -149,8 +160,8 @@ export default function MasterBiayaPage() {
                 <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Deskripsi biaya" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="button" disabled={saving} onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>

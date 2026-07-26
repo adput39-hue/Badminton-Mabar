@@ -3,9 +3,10 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi, ApiMatch } from "@/lib/api-types";
-import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock } from "lucide-react";
+import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock, Loader2 } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 function getPaidMembers(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -39,6 +40,7 @@ function toggleHtmLocked(schedule: ApiSchedule): string {
 }
 
 export default function BayarHtmPage() {
+  const { toast } = useToast();
   const { items: schedules, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
   const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
@@ -49,6 +51,7 @@ export default function BayarHtmPage() {
   const [paidState, setPaidState] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
+  const [savingScheduleId, setSavingScheduleId] = useState<string | null>(null);
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -91,50 +94,58 @@ export default function BayarHtmPage() {
   }
 
   async function savePaid(scheduleId: string) {
-    const s = htmSchedules.find((x) => x.id === scheduleId);
-    if (!s) return;
-    const paidIds = paidState[scheduleId] || getPaidMembers(s);
-    const oldPaidIds = getPaidMembers(s);
-    const newNotes = setPaidMembers(s, paidIds);
-    await updateSchedule(scheduleId, { notes: newNotes });
+    setSavingScheduleId(scheduleId);
+    try {
+      const s = htmSchedules.find((x) => x.id === scheduleId);
+      if (!s) return;
+      const paidIds = paidState[scheduleId] || getPaidMembers(s);
+      const oldPaidIds = getPaidMembers(s);
+      const newNotes = setPaidMembers(s, paidIds);
+      await updateSchedule(scheduleId, { notes: newNotes });
 
-    const pbId = getClientPbId();
-    const existingMutasis = mutasis.filter((m) => m.reference === scheduleId && m.description?.startsWith("Bayar HTM"));
+      const pbId = getClientPbId();
+      const existingMutasis = mutasis.filter((m) => m.reference === scheduleId && m.description?.startsWith("Bayar HTM"));
 
-    for (const memberId of paidIds) {
-      const member = members.find((m) => m.id === memberId);
-      const cock = getPlayerCockCost(scheduleId, memberId);
-      const totalAmount = (s.htm || 0) + cock.cost;
-      const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
-      const existing = existingMutasis.find((m) => m.memberId === memberId);
-      if (existing) {
-        await fetch("/api/kas-mutasi/" + existing.id, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-          body: JSON.stringify({ amount: totalAmount, description: desc, void: 0 }),
-        });
-      } else {
-        await fetch("/api/kas-mutasi", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-          body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
-        });
+      for (const memberId of paidIds) {
+        const member = members.find((m) => m.id === memberId);
+        const cock = getPlayerCockCost(scheduleId, memberId);
+        const totalAmount = (s.htm || 0) + cock.cost;
+        const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
+        const existing = existingMutasis.find((m) => m.memberId === memberId);
+        if (existing) {
+          await fetch("/api/kas-mutasi/" + existing.id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+            body: JSON.stringify({ amount: totalAmount, description: desc, void: 0 }),
+          });
+        } else {
+          await fetch("/api/kas-mutasi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+            body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
+          });
+        }
       }
-    }
 
-    const removedIds = oldPaidIds.filter((id) => !paidIds.includes(id));
-    for (const memberId of removedIds) {
-      const existing = existingMutasis.find((m) => m.memberId === memberId);
-      if (existing) {
-        await fetch("/api/kas-mutasi/" + existing.id, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-          body: JSON.stringify({ void: 1 }),
-        });
+      const removedIds = oldPaidIds.filter((id) => !paidIds.includes(id));
+      for (const memberId of removedIds) {
+        const existing = existingMutasis.find((m) => m.memberId === memberId);
+        if (existing) {
+          await fetch("/api/kas-mutasi/" + existing.id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+            body: JSON.stringify({ void: 1 }),
+          });
+        }
       }
-    }
 
-    setExpandId(null);
+      setExpandId(null);
+      toast("success", "Data HTM berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan data HTM");
+    } finally {
+      setSavingScheduleId(null);
+    }
   }
 
   function openExpand(scheduleId: string) {
@@ -269,8 +280,8 @@ export default function BayarHtmPage() {
                       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                         <p className="text-sm text-gray-500">{pesertaPaid.length} / {peserta.length} sudah bayar</p>
                         <div className="flex gap-2">
-                          <button onClick={() => setExpandId(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-                          <button onClick={() => savePaid(s.id)} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]"><Save className="h-3.5 w-3.5" /> Simpan</button>
+                          <button onClick={() => setExpandId(null)} disabled={savingScheduleId === s.id} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                          <button onClick={() => savePaid(s.id)} disabled={savingScheduleId === s.id} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{savingScheduleId === s.id ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="h-3.5 w-3.5" /> Simpan</>}</button>
                         </div>
                       </div>
                     )}

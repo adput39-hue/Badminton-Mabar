@@ -3,9 +3,10 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch as MatchItem, ApiSchedule as ScheduleItem, ApiMember as MemberItem, ApiAttendance as AttendanceItem, ApiMatchHistory as HistoryItem } from "@/lib/api-types";
-import { Plus, X, Swords, Trophy, Medal, Clock, Radio, Timer, Star } from "lucide-react";
+import { Plus, X, Swords, Trophy, Medal, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", liveBadge: "bg-green-500 text-white" },
@@ -41,7 +42,6 @@ export default function MatchesPage() {
 
   async function handleCreateMatch(data: { scheduleId: string; courtNumber: number; round: number; team1: [string, string]; team2: [string, string]; totalGames: number }) {
     await addMatch({ scheduleId: data.scheduleId, courtNumber: data.courtNumber, round: data.round, team1Player1Id: data.team1[0], team1Player2Id: data.team1[1], team2Player1Id: data.team2[0], team2Player2Id: data.team2[1], totalGames: data.totalGames });
-    setShowForm(false);
   }
 
   async function handleScore(matchId: string, score1: number, score2: number, score1g2?: number, score2g2?: number) {
@@ -201,7 +201,7 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
           {team2Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>
       </div>
-      {showScore && <ScoreInput s1={s1} s2={s2} s1g2={s1g2} s2g2={s2g2} onS1={setS1} onS2={setS2} onS1g2={setS1g2} onS2g2={setS2g2} isTwoGames={isTwoGames} canSave={canSave} onSubmit={() => onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined)} />}
+      {showScore && <ScoreInput s1={s1} s2={s2} s1g2={s1g2} s2g2={s2g2} onS1={setS1} onS2={setS2} onS1g2={setS1g2} onS2g2={setS2g2} isTwoGames={isTwoGames} canSave={canSave} onSubmit={async () => { await onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} />}
     </div>
   );
 }
@@ -209,8 +209,23 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
 function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames, canSave, onSubmit }: {
   s1: string; s2: string; s1g2: string; s2g2: string;
   onS1: (v: string) => void; onS2: (v: string) => void; onS1g2: (v: string) => void; onS2g2: (v: string) => void;
-  isTwoGames: boolean; canSave: boolean; onSubmit: () => void;
+  isTwoGames: boolean; canSave: boolean; onSubmit: () => Promise<void>;
 }) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit() {
+    setSaving(true);
+    try {
+      await onSubmit();
+      toast("success", "Skor berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan skor");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="mt-4 space-y-2 rounded-xl bg-[var(--color-primary-light)] p-4">
       <div className="flex items-center justify-center gap-3">
@@ -226,7 +241,7 @@ function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames
         </div>
       )}
       <div className="flex justify-center">
-        <button disabled={!canSave} onClick={onSubmit} className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">Simpan</button>
+        <button disabled={!canSave || saving} onClick={handleSubmit} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : "Simpan"}</button>
       </div>
     </div>
   );
@@ -234,14 +249,28 @@ function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames
 
 function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
   schedules: ScheduleItem[]; getAttendees: (s: string) => MemberItem[];
-  onSubmit: (d: { scheduleId: string; courtNumber: number; round: number; team1: [string, string]; team2: [string, string]; totalGames: number }) => void; onClose: () => void;
+  onSubmit: (d: { scheduleId: string; courtNumber: number; round: number; team1: [string, string]; team2: [string, string]; totalGames: number }) => Promise<void>; onClose: () => void;
 }) {
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
   const [scheduleId, setScheduleId] = useState(""); const [court, setCourt] = useState(1); const [round, setRound] = useState(1);
   const [totalGames, setTotalGames] = useState(1);
   const [team1, setTeam1] = useState<[string | null, string | null]>([null, null]); const [team2, setTeam2] = useState<[string | null, string | null]>([null, null]);
   const attendees = scheduleId ? getAttendees(scheduleId) : []; const selected = [team1[0], team1[1], team2[0], team2[1]].filter(Boolean) as string[];
 
-  function handleSubmit(e: React.FormEvent) { e.preventDefault(); if (scheduleId && team1[0] && team1[1] && team2[0] && team2[1]) onSubmit({ scheduleId, courtNumber: court, round, team1: [team1[0]!, team1[1]!], team2: [team2[0]!, team2[1]!], totalGames }); }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!scheduleId || !team1[0] || !team1[1] || !team2[0] || !team2[1]) return;
+    setSaving(true);
+    try {
+      await onSubmit({ scheduleId, courtNumber: court, round, team1: [team1[0]!, team1[1]!], team2: [team2[0]!, team2[1]!], totalGames });
+      onClose();
+    } catch {
+      toast("error", "Gagal menyimpan skor");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
@@ -301,7 +330,7 @@ function MatchForm({ schedules, getAttendees, onSubmit, onClose }: {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
-            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">Buat</button>
+            <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1] || saving} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : "Buat"}</button>
           </div>
         </form>
       </div>

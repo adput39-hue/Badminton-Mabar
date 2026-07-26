@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMember } from "@/lib/api-types";
 import Link from "next/link";
-import { BookOpen, Search, Pencil, X, Save, Mars, Venus } from "lucide-react";
+import { BookOpen, Search, Pencil, X, Save, Mars, Venus, Loader2 } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 interface HutangRekap {
   memberId: string;
@@ -24,6 +25,8 @@ export default function HutangPage() {
   const [loading, setLoading] = useState(true);
   const [editSaldo, setEditSaldo] = useState<string | null>(null);
   const [saldoValue, setSaldoValue] = useState("");
+  const [savingSaldo, setSavingSaldo] = useState(false);
+  const { toast } = useToast();
   const { update: updateMember, loaded: membersLoaded } = useApi<ApiMember>("members");
 
   const fetchData = useCallback(async () => {
@@ -40,10 +43,18 @@ export default function HutangPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function saveSaldoAwal(memberId: string) {
-    const amount = parseInt(saldoValue) || 0;
-    await updateMember(memberId, { saldoAwalHutang: amount });
-    setData((prev) => prev.map((d) => d.memberId === memberId ? { ...d, saldoAwal: amount, totalDebt: amount + d.totalUnpaidHtm } : d));
-    setEditSaldo(null);
+    setSavingSaldo(true);
+    try {
+      const amount = parseInt(saldoValue) || 0;
+      await updateMember(memberId, { saldoAwalHutang: amount });
+      setData((prev) => prev.map((d) => d.memberId === memberId ? { ...d, saldoAwal: amount, totalDebt: amount + d.totalUnpaidHtm } : d));
+      setEditSaldo(null);
+      toast("success", "Saldo awal berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan saldo awal");
+    } finally {
+      setSavingSaldo(false);
+    }
   }
 
   const filtered = data.filter((d) => {
@@ -117,7 +128,7 @@ export default function HutangPage() {
                     {editSaldo === d.memberId ? (
                       <div className="inline-flex items-center gap-1">
                         <input type="number" value={saldoValue} onChange={(e) => setSaldoValue(e.target.value)} className="w-24 rounded-lg border border-gray-200 px-2 py-1 text-right text-sm" />
-                        <button onClick={() => saveSaldoAwal(d.memberId)} className="rounded-lg p-1 text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]"><Save className="h-3.5 w-3.5" /></button>
+                        <button disabled={savingSaldo} onClick={() => saveSaldoAwal(d.memberId)} className="rounded-lg p-1 text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50">{savingSaldo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}</button>
                         <button onClick={() => setEditSaldo(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100"><X className="h-3.5 w-3.5" /></button>
                       </div>
                     ) : d.saldoAwal > 0 ? (

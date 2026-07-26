@@ -3,8 +3,9 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiUser, ApiUserLevel } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Search, UserCheck, Shield, Mail, Phone as PhoneIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, UserCheck, Shield, Mail, Phone as PhoneIcon, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { useToast } from "@/components/toast";
 
 export default function UsersPage() {
   const { items: users, add: addUser, update: updateUser, remove: removeUser, loaded: usersLoaded } = useApi<ApiUser>("users");
@@ -14,41 +15,43 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ fullName: "", email: "", phone: "", password: "", role: "admin_pb", levelId: "" as string });
-  const [error, setError] = useState("");
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
 
   const filtered = users.filter((u) => !search.trim() || u.fullName.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
 
   function openAdd() {
     setEditId(null);
     setForm({ fullName: "", email: "", phone: "", password: "", role: "admin_pb", levelId: "" });
-    setError("");
     setShowForm(true);
   }
 
   function openEdit(u: ApiUser) {
     setEditId(u.id);
     setForm({ fullName: u.fullName, email: u.email, phone: u.phone || "", password: "", role: u.role, levelId: u.levelId || "" });
-    setError("");
     setShowForm(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    if (!form.fullName.trim() || !form.email.trim()) { setError("Nama dan email harus diisi"); return; }
-    if (!editId && !form.password) { setError("Password harus diisi untuk user baru"); return; }
-    const payload: Record<string, unknown> = {
-      fullName: form.fullName.trim(), email: form.email.trim(),
-      phone: form.phone || null, role: form.role,
-      levelId: form.levelId || null,
-    };
-    if (form.password) payload.password = form.password;
+    if (!form.fullName.trim() || !form.email.trim()) { toast("error", "Nama dan email harus diisi"); return; }
+    if (!editId && !form.password) { toast("error", "Password harus diisi untuk user baru"); return; }
+    setSaving(true);
     try {
+      const payload: Record<string, unknown> = {
+        fullName: form.fullName.trim(), email: form.email.trim(),
+        phone: form.phone || null, role: form.role,
+        levelId: form.levelId || null,
+      };
+      if (form.password) payload.password = form.password;
       if (editId) await updateUser(editId, payload);
       else await addUser(payload);
       setShowForm(false);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan user");
+      toast("success", "User berhasil disimpan");
+    } catch {
+      toast("error", "Gagal menyimpan user");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -155,8 +158,7 @@ export default function UsersPage() {
               <h2 className="text-lg font-bold text-gray-900">{editId ? "Edit User" : "Tambah User"}</h2>
               <button onClick={() => setShowForm(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
-            {error && <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
-            <form onSubmit={handleSubmit} className="space-y-4">
+<form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nama Lengkap</label>
                 <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Nama user" />
@@ -191,8 +193,8 @@ export default function UsersPage() {
                 </select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">Batal</button>
-                <button type="submit" className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">{editId ? "Simpan" : "Tambah"}</button>
+                <button type="button" disabled={saving} onClick={() => setShowForm(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : (editId ? "Simpan" : "Tambah")}</button>
               </div>
             </form>
           </div>
