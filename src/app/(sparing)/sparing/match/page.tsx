@@ -31,6 +31,10 @@ export default function SparingMatchPage() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [pbName, setPbName] = useState("");
+  const [firstDataLoaded, setFirstDataLoaded] = useState(false);
+  useEffect(() => {
+    if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
+  }, [schedulesLoaded, membersLoaded, matchesLoaded]);
 
   useEffect(() => {
     try {
@@ -237,7 +241,7 @@ export default function SparingMatchPage() {
     setActiveMatch(null);
   }
 
-  if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
+  if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
 
   // --- VIEW 1: Pilih Sparing ---
   if (!selSparingId) {

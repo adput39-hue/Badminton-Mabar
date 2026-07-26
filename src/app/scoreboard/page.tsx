@@ -119,6 +119,13 @@ export default function ScoreboardPage() {
     return `Race to ${r} Poin`;
   }
 
+  // Halaman tetap tampil, loading hanya di area konten
+  const [firstDataLoaded, setFirstDataLoaded] = useState(false);
+  useEffect(() => {
+    if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
+  }, [schedulesLoaded, membersLoaded, matchesLoaded]);
+  const dataReady = firstDataLoaded || (schedulesLoaded && membersLoaded && matchesLoaded);
+
   if (!selSparingId) {
     return (
       <div className="relative min-h-screen bg-[var(--color-bg)]">
@@ -136,6 +143,16 @@ export default function ScoreboardPage() {
           </div>
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+          {!dataReady ? (
+            <div className="flex items-center justify-center py-20">
+              <LoadingSpinner />
+            </div>
+          ) : sparings.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+              <Swords className="mx-auto h-10 w-10 text-gray-300" />
+              <p className="mt-3 text-sm text-gray-500">Belum ada sparing</p>
+            </div>
+          ) : (
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {sparings.map((s, i) => {
               const sColor = courtColors[i % courtColors.length];
@@ -164,18 +181,13 @@ export default function ScoreboardPage() {
                   </div>
                 </button>
               );
-            })}
-          </div>
-          {sparings.length === 0 && (
-            <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
-              <Swords className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-3 text-sm text-gray-500">Belum ada sparing</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+             })}
+           </div>
+           )}
+         </div>
+       </div>
+     );
+   }
 
   if (selCourt === null) {
     const savedSettingsLocal = savedSettings;
@@ -255,8 +267,6 @@ export default function ScoreboardPage() {
       </div>
     );
   }
-
-  if (!schedulesLoaded || !membersLoaded || !matchesLoaded) return <LoadingSpinner />;
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
