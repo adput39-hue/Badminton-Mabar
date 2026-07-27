@@ -27,8 +27,52 @@ model Pb {
   kasBiayas      KasBiaya[]
   kasMutasis     KasMutasi[]
   labaRugis      LabaRugi[]
+  tournaments    Tournament[]
 
   @@map("pb")
+}
+
+model Tournament {
+  id        String   @id @default(uuid())
+  pbId      String   @map("pb_id")
+  name      String
+  status    String   @default("planned")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  pb        Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
+  teams     Team[]
+  schedules Schedule[]
+
+  @@index([pbId])
+  @@map("tournaments")
+}
+
+model Team {
+  id           String   @id @default(uuid())
+  tournamentId String   @map("tournament_id")
+  name         String
+  color        String   @default("#0d9488")
+  createdAt    DateTime @default(now()) @map("created_at")
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  players      TeamPlayer[]
+  homeSchedules Schedule[] @relation("team1")
+  awaySchedules Schedule[] @relation("team2")
+
+  @@index([tournamentId])
+  @@map("teams")
+}
+
+model TeamPlayer {
+  id       String @id @default(uuid())
+  teamId   String @map("team_id")
+  memberId String @map("member_id")
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, memberId])
+  @@index([teamId])
+  @@index([memberId])
+  @@map("team_players")
 }
 
 model UserLevel {
@@ -85,6 +129,7 @@ model Member {
   team1P2Matches  Match[] @relation("match_team1_player2")
   team2P1Matches  Match[] @relation("match_team2_player1")
   team2P2Matches  Match[] @relation("match_team2_player2")
+  teamPlayers      TeamPlayer[]
 
   @@index([pbId])
   @@index([class])
@@ -104,6 +149,9 @@ model Schedule {
   htm            Int?
   cockPrice      Int?    @default(0) @map("cock_price")
   sparingOpponent String?  @map("sparing_opponent")
+  tournamentId   String?  @map("tournament_id")
+  team1Id        String?  @map("team1_id")
+  team2Id        String?  @map("team2_id")
   notes           String?
   status          String       @default("planned")
   createdBy       String?      @map("created_by")
@@ -115,6 +163,9 @@ model Schedule {
   matches         Match[]
   labaRugi        LabaRugi?
   kasMutasis      KasMutasi[]
+  tournament      Tournament?  @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  team1           Team?        @relation("team1", fields: [team1Id], references: [id], onDelete: SetNull)
+  team2           Team?        @relation("team2", fields: [team2Id], references: [id], onDelete: SetNull)
 
   @@index([pbId])
   @@index([date])

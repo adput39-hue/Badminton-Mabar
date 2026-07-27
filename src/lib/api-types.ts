@@ -9,7 +9,9 @@ export interface ApiMember {
 export interface ApiSchedule {
   id: string; pbId: string; title: string; date: string;
   startTime: string | null; endTime: string | null; location: string | null;
-  maxParticipants: number; htm: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null; notes: string | null; status: string;
+  maxParticipants: number; htm: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null;
+  tournamentId: string | null; team1Id: string | null; team2Id: string | null;
+  notes: string | null; status: string;
   createdBy: string | null; createdAt: string; updatedAt: string;
 }
 
@@ -88,4 +90,30 @@ export interface ApiLabaRugi {
   schedule?: ApiSchedule;
   cockBiaya?: ApiKasBiaya | null;
   courtBiaya?: ApiKasBiaya | null;
+}
+
+export interface ApiTournament {
+  id: string; pbId: string; name: string; status: string;
+  createdAt: string; updatedAt: string;
+  teams?: ApiTeam[]; schedules?: ApiTournamentSchedule[];
+  _count?: { schedules: number };
+}
+
+export interface ApiTournamentSchedule {
+  id: string; pbId: string; title: string; date: string;
+  team1Id: string | null; team2Id: string | null;
+  status: string; notes: string | null;
+  matches?: ApiMatch[];
+  team1?: ApiTeam | null; team2?: ApiTeam | null;
+  createdAt: string; updatedAt: string;
+}
+
+export interface ApiTeam {
+  id: string; tournamentId: string; name: string; color: string;
+  createdAt: string;
+  players?: ApiTeamPlayer[];
+}
+
+export interface ApiTeamPlayer {
+  id: string; teamId: string; memberId: string;
 }
