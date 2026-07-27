@@ -186,7 +186,7 @@ export default function SparingPage() {
     try {
       for (const att of sparingAtts) await removeAtt(att.id);
       for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
-      const opponentIds = getOpponentMemberIds(selectedSparing);
+      const opponentIds = selectedSparing ? getOpponentMemberIds(selectedSparing) : [];
       const extra = selectedSparing ? JSON.parse(selectedSparing.notes || "{}") : {};
       await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, opponentMemberIds: opponentIds, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
       toast("success", "Pengaturan sparing berhasil disimpan");
