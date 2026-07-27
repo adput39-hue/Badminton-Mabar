@@ -60,6 +60,7 @@ export default function SparingPage() {
   const [editOppClass, setEditOppClass] = useState("");
   const [newOppName, setNewOppName] = useState("");
   const [newOppClass, setNewOppClass] = useState("");
+  const [pendingOpponents, setPendingOpponents] = useState<{ name: string; class: string }[]>([]);
   const [showAddOur, setShowAddOur] = useState(false);
   const [showAddOpp, setShowAddOpp] = useState(false);
   const [tab, setTab] = useState<"pengaturan" | "draft">("pengaturan");
@@ -68,6 +69,9 @@ export default function SparingPage() {
   const [draftOpp1, setDraftOpp1] = useState("");
   const [draftOpp2, setDraftOpp2] = useState("");
   const [draftGames, setDraftGames] = useState("1-30");
+  const [pendingNewMatches, setPendingNewMatches] = useState<{ round: number; team1Player1Id: string; team1Player2Id: string; team2Player1Id: string; team2Player2Id: string; totalGames: number; notes: string }[]>([]);
+  const [pendingCourt, setPendingCourt] = useState<Record<string, number | null>>({});
+  const [savingDraft, setSavingDraft] = useState(false);
   const [editMatchId, setEditMatchId] = useState<string | null>(null);
   const [editMatchOur1, setEditMatchOur1] = useState("");
   const [editMatchOur2, setEditMatchOur2] = useState("");
@@ -86,7 +90,14 @@ export default function SparingPage() {
   const [lokasi, setLokasi] = useState("");
   const [htm, setHtm] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [firstDataLoaded, setFirstDataLoaded] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (schedulesLoaded && membersLoaded && matchesLoaded && attendancesLoaded && !firstDataLoaded) {
+      setFirstDataLoaded(true);
+    }
+  }, [schedulesLoaded, membersLoaded, matchesLoaded, attendancesLoaded, firstDataLoaded]);
 
   const modeLabel: Record<string, string> = { "1-30": "1 Game 30 Poin", "1-42": "1 Game 42 Poin", "2-21": "2 Game 21 Poin" };
 
@@ -158,6 +169,8 @@ export default function SparingPage() {
 
   useEffect(() => {
     if (!selSparingId) return;
+    setPendingNewMatches([]);
+    setPendingCourt({});
     const sched = sparings.find((s) => s.id === selSparingId);
     const atts = attendances.filter((a) => a.scheduleId === selSparingId);
     const ids = atts.filter((a) => a.status === "hadir").map((a) => a.memberId);
@@ -189,9 +202,14 @@ export default function SparingPage() {
     try {
       for (const att of sparingAtts) await removeAtt(att.id);
       for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
-      const opponentIds = selectedSparing ? getOpponentMemberIds(selectedSparing) : [];
+      let opponentIds = selectedSparing ? getOpponentMemberIds(selectedSparing) : [];
+      for (const p of pendingOpponents) {
+        const m = await addMember({ name: p.name, class: p.class, type: "2" });
+        opponentIds = [...opponentIds, m.id];
+      }
       const extra = selectedSparing ? JSON.parse(selectedSparing.notes || "{}") : {};
       await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, opponentMemberIds: opponentIds, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
+      setPendingOpponents([]);
       toast("success", "Pengaturan sparing berhasil disimpan");
       setShowAddOur(false);
     } catch (err) {
@@ -247,21 +265,40 @@ export default function SparingPage() {
     if (editLapIdx === i) { setEditLapIdx(null); setLapName(""); setShowAddLapangan(false); }
   }
 
-  async function createDraftMatch() {
+  function createDraftMatch() {
     if (!selSparingId || !draftOur1 || !draftOur2 || !draftOpp1 || !draftOpp2) return;
-    const p1 = members.find((m) => m.id === draftOur1);
-    const p2 = members.find((m) => m.id === draftOur2);
-    const p3 = members.find((m) => m.id === draftOpp1);
-    const p4 = members.find((m) => m.id === draftOpp2);
-    if (!p1 || !p2 || !p3 || !p4) return;
+    if (!members.find((m) => m.id === draftOur1) || !members.find((m) => m.id === draftOur2) ||
+        !members.find((m) => m.id === draftOpp1) || !members.find((m) => m.id === draftOpp2)) return;
     const totalGames = draftGames.startsWith("2") ? 2 : 1;
-    await addMatch({
-      scheduleId: selSparingId, totalGames, round: selectedRound,
-      team1Player1Id: p1.id, team1Player2Id: p2.id, team2Player1Id: p3.id, team2Player2Id: p4.id,
-      courtNumber: null, scoreTeam1: null, scoreTeam2: null,
-      scoreTeam1Game2: null, scoreTeam2Game2: null, winnerTeam: null, status: "planned", notes: draftGames,
-    });
+    setPendingNewMatches((prev) => [...prev, { round: selectedRound, team1Player1Id: draftOur1, team1Player2Id: draftOur2, team2Player1Id: draftOpp1, team2Player2Id: draftOpp2, totalGames, notes: draftGames }]);
     setDraftOur1(""); setDraftOur2(""); setDraftOpp1(""); setDraftOpp2(""); setDraftGames("1-30");
+  }
+
+  async function saveDraft() {
+    if (!selSparingId) return;
+    if (savingDraft) return;
+    setSavingDraft(true);
+    try {
+      for (const m of pendingNewMatches) {
+        await addMatch({
+          scheduleId: selSparingId, totalGames: m.totalGames, round: m.round,
+          team1Player1Id: m.team1Player1Id, team1Player2Id: m.team1Player2Id,
+          team2Player1Id: m.team2Player1Id, team2Player2Id: m.team2Player2Id,
+          courtNumber: null, scoreTeam1: null, scoreTeam2: null,
+          scoreTeam1Game2: null, scoreTeam2Game2: null, winnerTeam: null, status: "planned", notes: m.notes,
+        });
+      }
+      for (const [matchId, court] of Object.entries(pendingCourt)) {
+        await updateMatch(matchId, { courtNumber: court });
+      }
+      setPendingNewMatches([]);
+      setPendingCourt({});
+      toast("success", "Draft berhasil disimpan");
+    } catch (err) {
+      toast("error", "Gagal: " + (err as Error).message);
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   function startEditMatch(m: ApiMatch) {
@@ -288,13 +325,9 @@ export default function SparingPage() {
     setEditOppId(null); setEditOppName(""); setEditOppClass("");
   }
 
-  async function addNewOpponent() {
-    if (!newOppName.trim() || !newOppClass || !selSparingId) return;
-    const m = await addMember({ name: newOppName.trim(), class: newOppClass, type: "2" });
-    if (selectedSparing) {
-      const current = getOpponentMemberIds(selectedSparing);
-      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...JSON.parse(selectedSparing.notes || "{}"), opponentMemberIds: [...current, m.id] }) });
-    }
+  function addNewOpponent() {
+    if (!newOppName.trim() || !newOppClass) return;
+    setPendingOpponents((prev) => [...prev, { name: newOppName.trim(), class: newOppClass }]);
     setNewOppName(""); setNewOppClass(""); setShowAddOpp(false);
   }
 
@@ -310,6 +343,9 @@ export default function SparingPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      {!firstDataLoaded ? (
+        <div className="flex items-center justify-center py-20"><LoadingSpinner /></div>
+      ) : (<>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{pbName || "Sparing"}</h1>
@@ -434,8 +470,8 @@ export default function SparingPage() {
               </div>
             ) : (
               !showAddLapangan && <p className="text-xs text-gray-400">Belum ada lapangan. Tambah lapangan untuk assign pertandingan.</p>
-            )}
-          </div>
+      )}
+    </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Our Members */}
@@ -485,7 +521,7 @@ export default function SparingPage() {
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3">Pemain {selectedSparing.sparingOpponent}</h3>
               <div className="mb-3 space-y-1">
-                {externalMembers.filter((m) => getOpponentMemberIds(selectedSparing).includes(m.id)).sort(byClass).map((m) => (
+                {[...externalMembers.filter((m) => getOpponentMemberIds(selectedSparing).includes(m.id))].sort(byClass).map((m) => (
                   <div key={m.id} className="rounded-lg border border-gray-100 px-3 py-2 text-sm">
                     {editOppId === m.id ? (
                       <div className="flex gap-2">
@@ -508,6 +544,14 @@ export default function SparingPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                ))}
+                {pendingOpponents.map((p, i) => (
+                  <div key={`pending_${i}`} className="rounded-lg border border-dashed border-yellow-300 px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span>{p.name} <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadge[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span></span>
+                      <button onClick={() => setPendingOpponents((prev) => prev.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500"><XCircle className="h-3.5 w-3.5" /></button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -617,13 +661,13 @@ export default function SparingPage() {
                         <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">{m.totalGames} game</span>
                         {lapanganList.length > 0 && (
                           <>
-                          <select value={m.courtNumber || ""} onChange={async (e) => { const v = e.target.value; if (v) { await updateMatch(m.id, { courtNumber: Number(v) }); } else { await updateMatch(m.id, { courtNumber: null }); } }}
+                          <select value={pendingCourt[m.id] !== undefined ? (pendingCourt[m.id] || "") : (m.courtNumber || "")} onChange={(e) => { const v = e.target.value; setPendingCourt((prev) => ({ ...prev, [m.id]: v ? Number(v) : null })); }}
                             className="rounded border border-gray-200 px-2 py-1 text-[10px] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                             <option value="">Lapangan</option>
                             {lapanganList.map((c, ci) => <option key={ci} value={ci+1}>{c.name}</option>)}
                           </select>
-                          {m.courtNumber && (
-                            <button onClick={async () => { await updateMatch(m.id, { courtNumber: null }); }} className="text-red-400 hover:text-red-600" title="Lepas dari lapangan"><XCircle className="h-3.5 w-3.5" /></button>
+                          {(pendingCourt[m.id] !== undefined ? pendingCourt[m.id] : m.courtNumber) && (
+                            <button onClick={() => setPendingCourt((prev) => ({ ...prev, [m.id]: null }))} className="text-red-400 hover:text-red-600" title="Lepas dari lapangan"><XCircle className="h-3.5 w-3.5" /></button>
                           )}
                           </>
                         )}
@@ -632,6 +676,34 @@ export default function SparingPage() {
                       </div>
                     </div>
                     )
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pending new matches */}
+            {pendingNewMatches.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-yellow-200 text-xs font-bold text-yellow-700">⏳</div>
+                  <h3 className="text-sm font-bold text-gray-700">Menunggu Disimpan ({pendingNewMatches.length})</h3>
+                </div>
+                <div className="space-y-2">
+                  {pendingNewMatches.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-dashed border-yellow-300 px-4 py-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-100 text-xs font-bold text-yellow-700">{i + 1}</span>
+                        <div>
+                          <span className="font-semibold text-gray-800">{getName(m.team1Player1Id)} & {getName(m.team1Player2Id)}</span>
+                          <span className="mx-2 text-gray-300">vs</span>
+                          <span className="font-semibold text-gray-800">{getName(m.team2Player1Id) || "—"} & {getName(m.team2Player2Id || "") || "—"}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">Round {m.round}</span>
+                        <button onClick={() => setPendingNewMatches((prev) => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><XCircle className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -690,7 +762,9 @@ export default function SparingPage() {
               <div className="mt-4 flex items-center justify-end gap-3">
                 <span className="text-xs text-gray-500">Mode: {modeLabel[draftGames]}</span>
                 <button onClick={createDraftMatch} disabled={!draftOur1 || !draftOur2 || !draftOpp1 || !draftOpp2}
-                  className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pertandingan</button>
+                  className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"><Plus className="h-3.5 w-3.5 inline" /> Tambah</button>
+                <button onClick={saveDraft} disabled={savingDraft || (pendingNewMatches.length === 0 && Object.keys(pendingCourt).length === 0)}
+                  className="rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{savingDraft ? "Menyimpan..." : "Simpan Draft"}</button>
               </div>
             </div>
           </div>
@@ -759,6 +833,7 @@ export default function SparingPage() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }
