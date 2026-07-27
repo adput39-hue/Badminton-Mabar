@@ -154,15 +154,18 @@ export default function SparingPage() {
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
   const sparingAtts = useMemo(() => attendances.filter((a) => a.scheduleId === selSparingId), [attendances, selSparingId]);
-  const initialSelectedIds = useMemo(() => sparingAtts.filter((a) => a.status === "hadir").map((a) => a.memberId), [sparingAtts]);
   const [selectedOurIds, setSelectedOurIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setSelectedOurIds(initialSelectedIds);
+    if (!selSparingId) return;
+    const sched = sparings.find((s) => s.id === selSparingId);
+    const atts = attendances.filter((a) => a.scheduleId === selSparingId);
+    const ids = atts.filter((a) => a.status === "hadir").map((a) => a.memberId);
+    setSelectedOurIds(ids);
     setShowAddOur(false);
-    if (selectedSparing?.notes) {
+    if (sched?.notes) {
       try {
-        const saved = JSON.parse(selectedSparing.notes);
+        const saved = JSON.parse(sched.notes);
         if (saved.draftGames) setDraftGames(saved.draftGames);
         if (saved.matchesPerRound) setMatchesPerRound(saved.matchesPerRound);
         if (saved.totalRounds) setTotalRoundsSetting(saved.totalRounds);
@@ -171,9 +174,9 @@ export default function SparingPage() {
         if (saved.htm !== undefined) setHtm(saved.htm);
       } catch {}
     } else {
-      setHtm(selectedSparing?.htm ?? 0);
+      setHtm(sched?.htm ?? 0);
     }
-  }, [initialSelectedIds, selectedSparing]);
+  }, [selSparingId]);
 
   function toggleOurMember(memberId: string) {
     setSelectedOurIds((prev) => prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]);
