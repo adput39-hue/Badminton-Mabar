@@ -186,9 +186,9 @@ export default function SparingPage() {
     try {
       for (const att of sparingAtts) await removeAtt(att.id);
       for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
-      const sched = schedules.find((s) => s.id === selSparingId);
-      const extra = sched ? JSON.parse(sched.notes || "{}") : {};
-      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
+      const opponentIds = getOpponentMemberIds(selectedSparing);
+      const extra = selectedSparing ? JSON.parse(selectedSparing.notes || "{}") : {};
+      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, opponentMemberIds: opponentIds, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null });
       toast("success", "Pengaturan sparing berhasil disimpan");
       setShowAddOur(false);
     } catch (err) {
@@ -288,10 +288,9 @@ export default function SparingPage() {
   async function addNewOpponent() {
     if (!newOppName.trim() || !newOppClass || !selSparingId) return;
     const m = await addMember({ name: newOppName.trim(), class: newOppClass, type: "2" });
-    const sched = schedules.find((s) => s.id === selSparingId);
-    if (sched) {
-      const current = getOpponentMemberIds(sched);
-      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...JSON.parse(sched.notes || "{}"), opponentMemberIds: [...current, m.id] }) });
+    if (selectedSparing) {
+      const current = getOpponentMemberIds(selectedSparing);
+      await updateSchedule(selSparingId, { notes: JSON.stringify({ ...JSON.parse(selectedSparing.notes || "{}"), opponentMemberIds: [...current, m.id] }) });
     }
     setNewOppName(""); setNewOppClass(""); setShowAddOpp(false);
   }
