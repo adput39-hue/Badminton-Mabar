@@ -53,6 +53,7 @@ export default function ScoreboardLivePage() {
             if (!live) return m;
             return {
               ...m,
+              courtNumber: (live.courtNumber as number) ?? m.courtNumber,
               scoreTeam1: (live.scoreTeam1 as number) ?? m.scoreTeam1,
               scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
               scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
