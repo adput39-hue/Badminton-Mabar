@@ -155,6 +155,10 @@ export default function MabarPage() {
     }
   }
 
+  async function handleFinish(matchId: string) {
+    await updateMatch(matchId, { status: "completed", winnerTeam: null });
+  }
+
   const notInvited = members.filter((m) => !invitedIds.includes(m.id) && m.isActive !== false);
   const filteredSearch = searchQ ? notInvited.filter((m) => m.name.toLowerCase().includes(searchQ.toLowerCase())) : notInvited;
 
@@ -321,7 +325,7 @@ export default function MabarPage() {
                       {cMatches.length === 0 ? (
                         <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
                       ) : (
-                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2) => handleScore(m.id, s1, s2, cc, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)
+                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2) => handleScore(m.id, s1, s2, cc, s1g2, s2g2)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} />)
                       )}
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -378,8 +382,8 @@ export default function MabarPage() {
   );
 }
 
-function MatchCard({ match, getName, onScore, onDelete }: {
-  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
+function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
+  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void; onFinish: () => void;
 }) {
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
@@ -403,9 +407,16 @@ function MatchCard({ match, getName, onScore, onDelete }: {
           <span className="text-xs text-gray-400">R{match.round}</span>
           <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">{modeLabel[gameMode]}</span>
         </div>
-        {match.status === "scheduled" && <button onClick={() => setShowScore(!showScore)} className="rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-medium hover:bg-gray-50">Input Skor</button>}
+        {match.status === "scheduled" && (
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowScore(!showScore)} className="rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-medium hover:bg-gray-50">Input Skor</button>
+            <button onClick={onFinish} className="rounded-lg bg-green-100 px-2.5 py-1 text-[10px] font-medium text-green-700 hover:bg-green-200">Selesai</button>
+          </div>
+        )}
         {match.status === "completed" && (
-          <span className="text-xs font-bold text-[var(--color-primary)]">{match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}</span>
+          <span className="text-xs font-bold text-[var(--color-primary)]">
+            {match.winnerTeam !== null ? `${match.scoreTeam1}-${match.scoreTeam2}${isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}` : "Selesai"}
+          </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-center text-sm">
