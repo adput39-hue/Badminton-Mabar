@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useApi } from "@/lib/api-store";
+import { useControlData } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
   Swords, ChevronLeft, Radio, Minus, Trophy,
@@ -19,9 +19,24 @@ const courtColors = [
 ];
 
 export default function ScoreboardLivePage() {
-  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
-  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { schedules, members, tournaments, loaded } = useControlData(60000);
+  const [matches, setMatches] = useState<ApiMatch[]>([]);
+  const matchesLoadedRef = useRef(false);
+  useEffect(() => {
+    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    fetch("/api/matches", { headers: { "x-pb-id": pbId } })
+      .then((r) => r.json())
+      .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
+      .catch(() => { matchesLoadedRef.current = true; });
+    const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
+    es.onmessage = () => {
+      fetch("/api/matches", { headers: { "x-pb-id": pbId } })
+        .then((r) => r.json())
+        .then((data) => setMatches(data))
+        .catch(() => {});
+    };
+    return () => es.close();
+  }, []);
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
@@ -29,7 +44,6 @@ export default function ScoreboardLivePage() {
   const [selRound, setSelRound] = useState(1);
   const [pbName, setPbName] = useState("");
   const [tournamentDetail, setTournamentDetail] = useState<ApiTournament | null>(null);
-  const { items: tournaments, loaded: tournamentsLoaded } = useApi<ApiTournament>("tournaments");
 
   useEffect(() => {
     try {
@@ -116,11 +130,7 @@ export default function ScoreboardLivePage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
-  const [firstDataLoaded, setFirstDataLoaded] = useState(false);
-  useEffect(() => {
-    if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
-  }, [schedulesLoaded, membersLoaded, matchesLoaded]);
-  const dataReady = firstDataLoaded;
+  const dataReady = loaded && matchesLoadedRef.current;
 
   useEffect(() => {
     if (!selTournamentId) { setTournamentDetail(null); return; }

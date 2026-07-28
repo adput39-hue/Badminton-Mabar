@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useApi } from "@/lib/api-store";
+import { useControlData } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
@@ -18,9 +18,24 @@ const courtColors = [
 ];
 
 export default function ScoreboardPage() {
-  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
-  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { schedules, members, loaded } = useControlData(60000);
+  const [matches, setMatches] = useState<ApiMatch[]>([]);
+  const matchesLoadedRef = useRef(false);
+  useEffect(() => {
+    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    fetch("/api/matches", { headers: { "x-pb-id": pbId } })
+      .then((r) => r.json())
+      .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
+      .catch(() => { matchesLoadedRef.current = true; });
+    const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
+    es.onmessage = () => {
+      fetch("/api/matches", { headers: { "x-pb-id": pbId } })
+        .then((r) => r.json())
+        .then((data) => setMatches(data))
+        .catch(() => {});
+    };
+    return () => es.close();
+  }, []);
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
@@ -119,12 +134,7 @@ export default function ScoreboardPage() {
     return `Race to ${r} Poin`;
   }
 
-  // Halaman tetap tampil, loading hanya di area konten
-  const [firstDataLoaded, setFirstDataLoaded] = useState(false);
-  useEffect(() => {
-    if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
-  }, [schedulesLoaded, membersLoaded, matchesLoaded]);
-  const dataReady = firstDataLoaded;
+  const dataReady = loaded && matchesLoadedRef.current;
 
   if (!selSparingId) {
     return (

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useApi } from "@/lib/api-store";
+import { useControlData } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -17,11 +17,22 @@ const courtColors = [
 ];
 
 export default function SparingMatchPage() {
-  const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
-  const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
-  const { items: matches, refresh: refreshMatches, update: updateMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
-  const { items: tournaments } = useApi<ApiTournament>("tournaments");
-  const { items: teams } = useApi<ApiTeam>("teams");
+  const { schedules, members, matches: controlMatches, tournaments, teams, loaded, refresh: refreshControl } = useControlData();
+  const schedulesLoaded = loaded, membersLoaded = loaded, matchesLoaded = loaded;
+  const [matches, setMatches] = useState<ApiMatch[]>([]);
+  useEffect(() => { setMatches(controlMatches); }, [controlMatches]);
+  async function updateMatch(id: string, data: Record<string, unknown>) {
+    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    const res = await fetch(`/api/matches/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-pb-id": pbId },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text().catch(() => "API error"));
+    const updated = await res.json() as ApiMatch;
+    setMatches((prev) => prev.map((m) => m.id === id ? updated : m));
+    return updated;
+  }
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
@@ -147,22 +158,20 @@ export default function SparingMatchPage() {
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
-  async function updateMatchViaApi(id: string, data: Record<string, unknown>) {
+  function setMatchOptimistic(id: string, data: Record<string, unknown>) {
     const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
-    const res = await fetch(`/api/matches/${id}`, {
+    fetch(`/api/matches/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-pb-id": pbId },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text().catch(() => "API error"));
-    return res.json() as Promise<ApiMatch>;
   }
 
   async function assignMatch(matchId: string, courtNum: number) {
     await updateMatch(matchId, { courtNumber: courtNum });
   }
 
-  async function addScore(team: 1 | 2) {
+  function addScore(team: 1 | 2) {
     if (!activeMatch) return;
     if (!startedAt) setStartedAt(Date.now());
     const s1 = activeMatch.scoreTeam1 || 0;
@@ -177,17 +186,15 @@ export default function SparingMatchPage() {
       if (!g1Done) {
         const ns1 = team === 1 ? s1 + 1 : s1;
         const ns2 = team === 2 ? s2 + 1 : s2;
-        const next = { ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 };
-        await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
-        setActiveMatch(next);
+        setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
+        setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       } else {
         const ns1 = team === 1 ? g2s1 + 1 : g2s1;
         const ns2 = team === 2 ? g2s2 + 1 : g2s2;
-        const next = { ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 };
-        await updateMatchViaApi(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
-        setActiveMatch(next);
+        setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         if (ns1 >= 21 || ns2 >= 21) {
-          await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+          setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
         }
       }
@@ -195,16 +202,16 @@ export default function SparingMatchPage() {
       const maxScore = modeLabel === "1-42" ? 42 : 30;
       const ns1 = team === 1 ? s1 + 1 : s1;
       const ns2 = team === 2 ? s2 + 1 : s2;
-      await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
+      setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       if (ns1 >= maxScore || ns2 >= maxScore) {
-        await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+        setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         setActiveMatch(null);
       }
     }
   }
 
-  async function subtractScore(team: 1 | 2) {
+  function subtractScore(team: 1 | 2) {
     if (!activeMatch) return;
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
@@ -218,33 +225,34 @@ export default function SparingMatchPage() {
       if (!g1Done) {
         const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
         const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-        await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
+        setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       } else {
         const ns1 = team === 1 ? Math.max(0, g2s1 - 1) : g2s1;
         const ns2 = team === 2 ? Math.max(0, g2s2 - 1) : g2s2;
-        await updateMatchViaApi(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+        setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
       }
     } else {
       const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
       const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-      await updateMatchViaApi(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
+      setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
     }
   }
 
-  async function swapTeams() {
+  function swapTeams() {
     if (!activeMatch) return;
     const s = activeMatch;
-    await updateMatchViaApi(s.id, {
+    const next = {
+      ...s,
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
       scoreTeam1Game2: s.scoreTeam2Game2, scoreTeam2Game2: s.scoreTeam1Game2,
-    });
-    setActiveMatch({
-      ...s,
+    };
+    setActiveMatch(next);
+    setMatchOptimistic(s.id, {
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
@@ -270,9 +278,9 @@ export default function SparingMatchPage() {
     } else {
       winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
     }
-    await updateMatchViaApi(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
     setShowConfirmFinish(false);
     setActiveMatch(null);
+    setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
   }
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;

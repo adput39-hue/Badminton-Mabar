@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getClientPbId } from "@/lib/tenant";
 import { getSupabase } from "@/lib/supabase";
 
@@ -38,7 +38,7 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export function useApi<T extends { id: string }>(resource: string, query = "") {
+export function useApi<T extends { id: string }>(resource: string, query = "", refreshMs = 15000) {
   const [items, setItems] = useState<T[]>([]);
   const [loaded, setLoaded] = useState(false);
   const url = `/api/${resource}${query}`;
@@ -58,19 +58,20 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
 
   useEffect(() => {
     fetchData();
-    const poll = setInterval(fetchData, 15_000);
+    if (refreshMs <= 0) return;
+    const poll = setInterval(fetchData, refreshMs);
     let lastFetch = Date.now();
     let rafId: number;
     function rafLoop() {
       const now = Date.now();
-      if (now - lastFetch >= 15_000) { lastFetch = now; fetchData(); }
+      if (now - lastFetch >= refreshMs) { lastFetch = now; fetchData(); }
       rafId = requestAnimationFrame(rafLoop);
     }
     rafId = requestAnimationFrame(rafLoop);
     const onVisible = () => { if (document.visibilityState === "visible") fetchData(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => { clearInterval(poll); cancelAnimationFrame(rafId); document.removeEventListener("visibilitychange", onVisible); };
-  }, [fetchData]);
+  }, [fetchData, refreshMs]);
 
   const refresh = useCallback(async () => {
     setLoaded(false);
@@ -143,4 +144,40 @@ export function useApi<T extends { id: string }>(resource: string, query = "") {
   );
 
   return { items, loaded, refresh, add, update, remove, getById, getWhere };
+}
+
+export interface ControlData {
+  schedules: import("./api-types").ApiSchedule[];
+  members: import("./api-types").ApiMember[];
+  matches: import("./api-types").ApiMatch[];
+  tournaments: import("./api-types").ApiTournament[];
+  teams: import("./api-types").ApiTeam[];
+}
+
+export function useControlData(refreshMs = 15000) {
+  const [data, setData] = useState<ControlData>({ schedules: [], members: [], matches: [], tournaments: [], teams: [] });
+  const [loaded, setLoaded] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const result = await apiFetch<ControlData>("/api/control-data");
+      setData(result);
+      return result;
+    } catch (err) {
+      console.error(err);
+      return null;
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    if (refreshMs <= 0) return;
+    timerRef.current = setInterval(fetchData, refreshMs);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [fetchData, refreshMs]);
+
+  return { ...data, loaded, refresh: fetchData };
 }
