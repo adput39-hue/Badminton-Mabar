@@ -1,7 +1,7 @@
 "use client";
 
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getFirestore, doc, setDoc, onSnapshot, collection, Unsubscribe, Timestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, Unsubscribe, Timestamp } from "firebase/firestore";
 
 const FIREBASE_CONFIG = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -37,6 +37,15 @@ export function writeLiveScore(matchId: string, data: {
   const db = getFirestore(a);
   const docRef = doc(db, "live", matchId);
   setDoc(docRef, { ...data, updatedAt: Timestamp.now() }, { merge: true });
+}
+
+export async function readLiveScore(matchId: string): Promise<Record<string, unknown> | null> {
+  if (!isFirebaseConfigured()) return null;
+  const a = getApp();
+  if (!a) return null;
+  const db = getFirestore(a);
+  const snap = await getDoc(doc(db, "live", matchId));
+  return snap.exists() ? snap.data() : null;
 }
 
 export function listenAllLiveScores(callback: (scores: Record<string, Record<string, unknown>>) => void): Unsubscribe | null {

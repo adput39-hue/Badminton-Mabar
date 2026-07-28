@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
-import { writeLiveScore } from "@/lib/firebase";
+import { writeLiveScore, readLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
@@ -576,7 +576,7 @@ export default function SparingMatchPage() {
                 return (
                   <div key={m.id}
                     className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${isCompleted ? "border-gray-200" : "border-gray-200 hover:shadow-md"} ${!isCompleted ? "cursor-pointer hover:border-[var(--color-primary)]" : ""}`}
-                    onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); }}>
+                    onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); readLiveScore(m.id).then((live) => { if (live) setActiveMatch((prev) => prev ? { ...prev, scoreTeam1: (live.scoreTeam1 as number) ?? prev.scoreTeam1, scoreTeam2: (live.scoreTeam2 as number) ?? prev.scoreTeam2, scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? prev.scoreTeam1Game2, scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? prev.scoreTeam2Game2, status: (live.status as string) || prev.status, winnerTeam: (live.winnerTeam as number) ?? prev.winnerTeam, courtNumber: (live.courtNumber as number) ?? prev.courtNumber, } : null); }).catch(() => {}); }}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${matchColor.bg}`}>
