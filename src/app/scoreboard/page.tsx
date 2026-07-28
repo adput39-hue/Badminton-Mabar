@@ -33,7 +33,6 @@ export default function ScoreboardPage() {
         .catch(() => { matchesLoadedRef.current = true; });
     }
     fetchMatches();
-    const refreshTimer = setInterval(fetchMatches, 30000);
     if (isFirebaseConfigured()) {
       const seen = new Set<string>();
       const unsub = listenAllLiveScores((scores) => {
@@ -63,11 +62,11 @@ export default function ScoreboardPage() {
           return merged;
         });
       });
-      return () => { clearInterval(refreshTimer); if (unsub) unsub(); };
+      return () => { if (unsub) unsub(); };
     }
     const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
     es.onmessage = fetchMatches;
-    return () => { clearInterval(refreshTimer); es.close(); };
+    return () => { es.close(); };
   }, []);
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
