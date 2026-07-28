@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
+import { writeLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
@@ -167,6 +168,7 @@ export default function SparingMatchPage() {
       headers: { "Content-Type": "application/json", "x-pb-id": pbId },
       body: JSON.stringify(data),
     });
+    writeLiveScore(id, data as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
   }
 
   async function assignMatch(matchId: string, courtNum: number) {

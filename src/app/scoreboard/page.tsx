@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
+import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -29,6 +30,24 @@ export default function ScoreboardPage() {
       .then((r) => r.json())
       .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
       .catch(() => { matchesLoadedRef.current = true; });
+    if (isFirebaseConfigured()) {
+      const unsub = listenAllLiveScores((scores) => {
+        setMatches((prev) => prev.map((m) => {
+          const live = scores[m.id];
+          if (!live) return m;
+          return {
+            ...m,
+            scoreTeam1: (live.scoreTeam1 as number) ?? m.scoreTeam1,
+            scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
+            scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
+            scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
+            status: (live.status as string) || m.status,
+            winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
+          };
+        }));
+      });
+      return () => { if (unsub) unsub(); };
+    }
     const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
     es.onmessage = () => {
       fetch("/api/matches", { headers: { "x-pb-id": pbId } })
