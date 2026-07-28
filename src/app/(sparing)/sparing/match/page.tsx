@@ -326,7 +326,7 @@ export default function SparingMatchPage() {
     setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
     const endedIso = new Date().toISOString();
     try {
-      await fetch(`/api/matches/${activeMatch.id}`, {
+      const res = await fetch(`/api/matches/${activeMatch.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-pb-id": JSON.parse(localStorage.getItem("user") || "{}").pbId || "" },
         body: JSON.stringify({
@@ -336,6 +336,10 @@ export default function SparingMatchPage() {
           status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
         }),
       });
+      if (res.ok) {
+        const updated = await res.json() as ApiMatch;
+        setMatches((prev) => prev.map((m) => m.id === activeMatch!.id ? updated : m));
+      }
     } catch {}
     setShowConfirmFinish(false);
     setActiveMatch(null);
