@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
@@ -17,6 +18,7 @@ const courtColors = [
 ];
 
 export default function SparingMatchPage() {
+  useWakeLock();
   const { schedules, members, matches: controlMatches, tournaments, teams, loaded, refresh: refreshControl } = useControlData();
   const schedulesLoaded = loaded, membersLoaded = loaded, matchesLoaded = loaded;
   const [matches, setMatches] = useState<ApiMatch[]>([]);

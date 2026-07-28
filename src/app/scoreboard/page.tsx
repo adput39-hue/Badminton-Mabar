@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
@@ -18,6 +19,7 @@ const courtColors = [
 ];
 
 export default function ScoreboardPage() {
+  useWakeLock();
   const { schedules, members, loaded } = useControlData(60000);
   const [matches, setMatches] = useState<ApiMatch[]>([]);
   const matchesLoadedRef = useRef(false);

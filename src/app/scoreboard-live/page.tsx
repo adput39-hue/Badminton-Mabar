@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
   Swords, ChevronLeft, Radio, Minus, Trophy,
@@ -19,6 +20,7 @@ const courtColors = [
 ];
 
 export default function ScoreboardLivePage() {
+  useWakeLock();
   const { schedules, members, tournaments, loaded } = useControlData(60000);
   const [matches, setMatches] = useState<ApiMatch[]>([]);
   const matchesLoadedRef = useRef(false);
