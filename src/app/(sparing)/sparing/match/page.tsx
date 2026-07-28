@@ -180,7 +180,10 @@ export default function SparingMatchPage() {
 
   function addScore(team: 1 | 2) {
     if (!activeMatch) return;
-    if (!startedAt) setStartedAt(Date.now());
+    if (!startedAt) {
+      setStartedAt(Date.now());
+      saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0 });
+    }
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
     const isTwoGame = modeLabel.startsWith("2-21");
