@@ -43,6 +43,7 @@ export default function SparingMatchPage() {
   const [selRound, setSelRound] = useState(1);
   const [selAssignMatch, setSelAssignMatch] = useState("");
   const [activeMatch, setActiveMatch] = useState<ApiMatch | null>(null);
+  const [loadingMatch, setLoadingMatch] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cockCount, setCockCount] = useState("1");
@@ -77,6 +78,12 @@ export default function SparingMatchPage() {
         } catch {}
       }
       if (!startedAtRef.current) startedAtRef.current = activeMatch.updatedAt;
+    } else {
+      const now = Date.now();
+      setStartedAt(now);
+      const startIso = new Date(now).toISOString();
+      startedAtRef.current = startIso;
+      saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, notes: getTimeNotes({ startedAt: startIso }) });
     }
   }, [activeMatch?.id]);
 
@@ -210,12 +217,6 @@ export default function SparingMatchPage() {
 
   function addScore(team: 1 | 2) {
     if (!activeMatch) return;
-    if (!startedAt) {
-      setStartedAt(Date.now());
-      const startIso = new Date().toISOString();
-      startedAtRef.current = startIso;
-      saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, notes: getTimeNotes({ startedAt: startIso }) });
-    }
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
     const isTwoGame = modeLabel.startsWith("2-21");
@@ -366,6 +367,7 @@ export default function SparingMatchPage() {
 
   // --- VIEW 2: Layar Skor Aktif ---
   if (activeMatch) {
+    if (loadingMatch) return <LoadingSpinner />;
     const isTwoGame = modeLabel.startsWith("2-21");
     const maxScore = modeLabel === "1-42" ? 42 : 30;
     const s1 = activeMatch.scoreTeam1 || 0;
@@ -589,7 +591,7 @@ export default function SparingMatchPage() {
                 return (
                   <div key={m.id}
                     className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${isCompleted ? "border-gray-200" : "border-gray-200 hover:shadow-md"} ${!isCompleted ? "cursor-pointer hover:border-[var(--color-primary)]" : ""}`}
-                    onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); readLiveScore(m.id).then((live) => { if (live) setActiveMatch((prev) => prev ? { ...prev, scoreTeam1: (live.scoreTeam1 as number) ?? prev.scoreTeam1, scoreTeam2: (live.scoreTeam2 as number) ?? prev.scoreTeam2, scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? prev.scoreTeam1Game2, scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? prev.scoreTeam2Game2, status: (live.status as string) || prev.status, winnerTeam: (live.winnerTeam as number) ?? prev.winnerTeam, courtNumber: (live.courtNumber as number) ?? prev.courtNumber, } : null); }).catch(() => {}); }}>
+                    onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); setLoadingMatch(true); readLiveScore(m.id).then((live) => { if (live) setActiveMatch((prev) => prev ? { ...prev, scoreTeam1: (live.scoreTeam1 as number) ?? prev.scoreTeam1, scoreTeam2: (live.scoreTeam2 as number) ?? prev.scoreTeam2, scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? prev.scoreTeam1Game2, scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? prev.scoreTeam2Game2, status: (live.status as string) || prev.status, winnerTeam: (live.winnerTeam as number) ?? prev.winnerTeam, courtNumber: (live.courtNumber as number) ?? prev.courtNumber, } : null); }).catch(() => {}).finally(() => { setLoadingMatch(false); }); }}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${matchColor.bg}`}>
