@@ -6,7 +6,7 @@ import { useControlData } from "@/lib/api-store";
 import { writeLiveScore, readLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
-import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
+import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
@@ -44,6 +44,7 @@ export default function SparingMatchPage() {
   const [selAssignMatch, setSelAssignMatch] = useState("");
   const [activeMatch, setActiveMatch] = useState<ApiMatch | null>(null);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [cockCount, setCockCount] = useState("1");
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const startedAtRef = useRef<string | null>(null);
@@ -305,6 +306,7 @@ export default function SparingMatchPage() {
 
   async function finishMatch() {
     if (!activeMatch) return;
+    setSaving(true);
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
     const isTwoGame = modeLabel.startsWith("2-21");
@@ -321,16 +323,23 @@ export default function SparingMatchPage() {
     } else {
       winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
     }
-    setShowConfirmFinish(false);
-    setActiveMatch(null);
     setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
     const endedIso = new Date().toISOString();
-    saveToSupabase(activeMatch.id, {
-      scoreTeam1: activeMatch.scoreTeam1, scoreTeam2: activeMatch.scoreTeam2,
-      scoreTeam1Game2: activeMatch.scoreTeam1Game2, scoreTeam2Game2: activeMatch.scoreTeam2Game2,
-      notes: getTimeNotes({ endedAt: endedIso }),
-      status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
-    });
+    try {
+      await fetch(`/api/matches/${activeMatch.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-pb-id": JSON.parse(localStorage.getItem("user") || "{}").pbId || "" },
+        body: JSON.stringify({
+          scoreTeam1: activeMatch.scoreTeam1, scoreTeam2: activeMatch.scoreTeam2,
+          scoreTeam1Game2: activeMatch.scoreTeam1Game2, scoreTeam2Game2: activeMatch.scoreTeam2Game2,
+          notes: getTimeNotes({ endedAt: endedIso }),
+          status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
+        }),
+      });
+    } catch {}
+    setShowConfirmFinish(false);
+    setActiveMatch(null);
+    setSaving(false);
   }
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
@@ -446,7 +455,7 @@ export default function SparingMatchPage() {
                   </div>
                   <div className="flex gap-3 justify-end">
                     <button onClick={() => setShowConfirmFinish(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
-                    <button onClick={finishMatch} className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]">Yakin, Selesai</button>
+                    <button disabled={saving} onClick={finishMatch} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : "Yakin, Selesai"}</button>
                   </div>
                 </div>
               </div>
