@@ -23,6 +23,7 @@ export function isFirebaseConfigured() {
 }
 
 export function writeLiveScore(matchId: string, data: {
+  courtNumber?: number | null;
   scoreTeam1?: number | null;
   scoreTeam2?: number | null;
   scoreTeam1Game2?: number | null;

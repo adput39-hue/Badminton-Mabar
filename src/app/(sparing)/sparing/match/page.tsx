@@ -178,7 +178,10 @@ export default function SparingMatchPage() {
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
   function setMatchOptimistic(id: string, data: Record<string, unknown>) {
-    writeLiveScore(id, data as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
+    writeLiveScore(id, {
+      courtNumber: activeMatch?.courtNumber ?? null,
+      ...data,
+    } as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
   }
 
   function saveToSupabase(id: string, data: Record<string, unknown>) {
