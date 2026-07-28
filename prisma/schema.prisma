@@ -33,12 +33,16 @@ model Pb {
 }
 
 model Tournament {
-  id        String   @id @default(uuid())
-  pbId      String   @map("pb_id")
-  name      String
-  status    String   @default("planned")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  pbId             String   @map("pb_id")
+  name             String
+  status           String   @default("planned")
+  totalMatchGoal   Int?     @map("total_match_goal")
+  maxMatchPerTeam  Int?     @map("max_match_per_team")
+  gameFormat       String?  @default("1x30") @map("game_format")
+  courts           String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
   pb        Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
   teams     Team[]
   schedules Schedule[]
@@ -52,6 +56,7 @@ model Team {
   tournamentId String   @map("tournament_id")
   name         String
   color        String   @default("#0d9488")
+  icon         String?
   createdAt    DateTime @default(now()) @map("created_at")
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   players      TeamPlayer[]

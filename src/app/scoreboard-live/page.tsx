@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
-import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
+import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
-  Swords, ChevronLeft, Radio, Minus,
+  Swords, ChevronLeft, Radio, Minus, Trophy,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -24,8 +24,12 @@ export default function ScoreboardLivePage() {
   const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
+  const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"sparing" | "turnamen">("sparing");
   const [selRound, setSelRound] = useState(1);
   const [pbName, setPbName] = useState("");
+  const [tournamentDetail, setTournamentDetail] = useState<ApiTournament | null>(null);
+  const { items: tournaments, loaded: tournamentsLoaded } = useApi<ApiTournament>("tournaments");
 
   useEffect(() => {
     try {
@@ -99,13 +103,14 @@ export default function ScoreboardLivePage() {
     return { kitaWins, lawanWins };
   }, [roundStatsMap, totalRounds]);
 
-  const viewRef = useRef({ selSparingId });
-  useEffect(() => { viewRef.current = { selSparingId }; });
+  const viewRef = useRef({ selSparingId, selTournamentId });
+  useEffect(() => { viewRef.current = { selSparingId, selTournamentId }; });
 
   useEffect(() => {
     const handlePop = () => {
       const v = viewRef.current;
       if (v.selSparingId) { setSelSparingId(null); }
+      if (v.selTournamentId) { setSelTournamentId(null); }
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -117,7 +122,41 @@ export default function ScoreboardLivePage() {
   }, [schedulesLoaded, membersLoaded, matchesLoaded]);
   const dataReady = firstDataLoaded;
 
-  if (!selSparingId) {
+  useEffect(() => {
+    if (!selTournamentId) { setTournamentDetail(null); return; }
+    fetch(`/api/tournaments/${selTournamentId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => setTournamentDetail(d));
+  }, [selTournamentId]);
+
+  const tournamentScheds = useMemo(() => (tournamentDetail?.schedules || []).filter((s): s is typeof s & { team1Id: string; team2Id: string } => !!s.team1Id && !!s.team2Id), [tournamentDetail]);
+  const tournamentTeams = useMemo(() => tournamentDetail?.teams || [], [tournamentDetail]);
+  const tourneyMatches = useMemo(() => matches.filter((m) => tournamentScheds.some((s) => s.id === m.scheduleId)), [matches, tournamentScheds]);
+
+  function getTeamName(teamId: string) { return tournamentTeams.find((t) => t.id === teamId)?.name || "—"; }
+  function getTeamColor(teamId: string) { return tournamentTeams.find((t) => t.id === teamId)?.color || "#0d9488"; }
+
+  const standings = useMemo(() => {
+    const map = new Map<string, { team: { id: string; name: string; color: string; icon?: string | null }; played: number; won: number; lost: number; points: number }>();
+    for (const t of tournamentTeams) {
+      map.set(t.id, { team: { id: t.id, name: t.name, color: t.color, icon: t.icon }, played: 0, won: 0, lost: 0, points: 0 });
+    }
+    for (const s of tournamentScheds) {
+      const schedMatches = tourneyMatches.filter((m) => m.scheduleId === s.id);
+      for (const m of schedMatches) {
+        if (m.winnerTeam == null) continue;
+        const t1 = map.get(s.team1Id);
+        const t2 = map.get(s.team2Id);
+        if (!t1 || !t2) continue;
+        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += 1; t2.points -= 1; }
+        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += 1; t1.points -= 1; }
+        t1.played++; t2.played++;
+      }
+    }
+    return [...map.values()].sort((a, b) => b.points - a.points || b.won - a.won);
+  }, [tournamentTeams, tournamentScheds, tourneyMatches]);
+
+  if (!selSparingId && !selTournamentId) {
     return (
       <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
@@ -130,7 +169,7 @@ export default function ScoreboardLivePage() {
               <ChevronLeft className="h-4 w-4" /> Kembali
             </Link>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Scoreboard Live</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing untuk live scoreboard</p>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen</p>
           </div>
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
@@ -138,42 +177,191 @@ export default function ScoreboardLivePage() {
             <div className="flex items-center justify-center py-20">
               <LoadingSpinner />
             </div>
-          ) : sparings.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
-              <Swords className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-3 text-sm text-gray-500">Belum ada sparing</p>
+          ) : (<>
+            {/* Sparing */}
+            <h2 className="mb-3 text-sm font-bold text-gray-700">Sparing</h2>
+            {sparings.length === 0 ? (
+              <p className="mb-6 text-xs text-gray-400">Belum ada sparing</p>
+            ) : (
+            <div className="mb-8 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {sparings.map((s, i) => {
+                const sColor = courtColors[i % courtColors.length];
+                return (
+                  <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); }}
+                    className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
+                        <span className="text-base font-bold text-white sm:text-lg">{s.sparingOpponent?.replace(/^PB\s*/i, "").slice(0, 2).toUpperCase() || "PB"}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-gray-900 sm:text-base">{pbName || "PB"} vs {s.sparingOpponent || "—"}</h3>
+                        <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
+                      <span className="text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</span>
+                      <ChevronLeft className="h-4 w-4 -rotate-180 text-gray-400 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-            {sparings.map((s, i) => {
-              const sColor = courtColors[i % courtColors.length];
-              return (
-                <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); }}
+            )}
+
+            {/* Turnamen */}
+            <h2 className="mb-3 text-sm font-bold text-gray-700">Turnamen</h2>
+            {tournaments.length === 0 ? (
+              <p className="text-xs text-gray-400">Belum ada turnamen</p>
+            ) : (
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {tournaments.map((t) => (
+                <button key={t.id} onClick={() => { history.pushState(null, ""); setSelTournamentId(t.id); }}
                   className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
                   <div className="flex items-start gap-3 sm:gap-4">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
-                      <span className="text-base font-bold text-white sm:text-lg">{s.sparingOpponent?.replace(/^PB\s*/i, "").slice(0, 2).toUpperCase() || "PB"}</span>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-500 sm:h-14 sm:w-14">
+                      <span className="text-base font-bold text-white sm:text-lg">{t.name.slice(0, 2).toUpperCase()}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{pbName || "PB"} vs {s.sparingOpponent || "—"}</h3>
-                      <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{t.name}</h3>
+                      <p className="mt-0.5 text-xs text-gray-500">{t.teams?.length || 0} tim · {t.status}</p>
                     </div>
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
-                    <span className="text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</span>
+                    <span className="text-xs text-gray-400">{t._count?.schedules || 0} sesi</span>
                     <ChevronLeft className="h-4 w-4 -rotate-180 text-gray-400 transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </button>
-              );
-            })}
-          </div>
-          )}
+              ))}
+            </div>
+            )}
+          </>)}
         </div>
       </div>
     );
   }
 
 
+
+  if (selTournamentId) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
+          </div>
+          <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
+            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
+              <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+            </button>
+            <h1 className="mt-2 text-lg font-bold text-white sm:text-xl">{tournamentDetail?.name || "Turnamen"}</h1>
+            <p className="text-xs text-white/60">{tournamentTeams.length} tim · {tournamentScheds.length} sesi</p>
+          </div>
+        </div>
+        <div className="mx-auto grid w-full max-w-[1440px] flex-1 grid-cols-1 gap-4 overflow-auto p-3 lg:grid-cols-[1fr_320px] lg:p-4">
+          {/* Matches */}
+          <div className="space-y-3">
+            {tournamentScheds.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-gray-300">
+                <Minus className="h-14 w-14" />
+                <p className="mt-2 text-sm text-gray-400">Belum ada sesi pertandingan</p>
+              </div>
+            ) : (
+              tournamentScheds.map((s) => {
+                const schedMatches = tourneyMatches.filter((m) => m.scheduleId === s.id);
+                const completed = schedMatches.filter((m) => m.winnerTeam != null).length;
+                return (
+                  <div key={s.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">VS</span>
+                        <span>{getTeamName(s.team1Id)}</span>
+                        <span className="text-xs text-gray-400">vs</span>
+                        <span>{getTeamName(s.team2Id)}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{completed}/{schedMatches.length} ganda</span>
+                    </div>
+                    {schedMatches.length === 0 ? (
+                      <p className="py-4 text-center text-xs text-gray-400">Belum ada ganda</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {schedMatches.map((m) => {
+                          const isCompleted = m.winnerTeam != null;
+                          const t1s = m.scoreTeam1 || 0;
+                          const t2s = m.scoreTeam2 || 0;
+                          const isLive = !isCompleted && (t1s + t2s > 0);
+                          return (
+                            <div key={m.id} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${isLive ? "border-green-300 bg-green-50" : "border-gray-100"}`}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-700"}`}>{getName(m.team1Player1Id)}</span>
+                                <span className="text-gray-300">&</span>
+                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-700"}`}>{getName(m.team1Player2Id)}</span>
+                              </div>
+                              <div className="mx-3 flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-sm font-bold">
+                                <span className={isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-800"}>{t1s}</span>
+                                <span className="text-gray-300">:</span>
+                                <span className={isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-800"}>{t2s}</span>
+                              </div>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-700"}`}>{getName(m.team2Player1Id)}</span>
+                                <span className="text-gray-300">&</span>
+                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-700"}`}>{getName(m.team2Player2Id)}</span>
+                              </div>
+                              {isLive && <span className="ml-2 flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700"><span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />LIVE</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Standings sidebar */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-bold text-gray-700">Klasemen</h2>
+            {standings.length === 0 ? (
+              <p className="py-6 text-center text-xs text-gray-400">Belum ada data</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-gray-500">
+                      <th className="pb-2 pr-2">#</th>
+                      <th className="pb-2 pr-2">Tim</th>
+                      <th className="pb-2 pr-2 text-center">M</th>
+                      <th className="pb-2 pr-2 text-center">W</th>
+                      <th className="pb-2 pr-2 text-center">L</th>
+                      <th className="pb-2 text-center font-bold">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {standings.map((s, i) => (
+                      <tr key={s.team.id} className="border-b border-gray-50">
+                        <td className="py-2 pr-2 text-gray-400">{i + 1}</td>
+                        <td className="py-2 pr-2 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            {s.team.icon ? <img src={s.team.icon} alt="" className="h-4 w-4 rounded object-cover" /> : <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.team.color }} />}
+                            {s.team.name}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2 text-center">{s.played}</td>
+                        <td className="py-2 pr-2 text-center text-green-600">{s.won}</td>
+                        <td className="py-2 pr-2 text-center text-red-500">{s.lost}</td>
+                        <td className="py-2 text-center font-bold text-lg">{s.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">

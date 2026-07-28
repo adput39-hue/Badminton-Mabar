@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const pbId = request.headers.get("x-pb-id") || body.pbId || "default";
     const tournament = await prisma.tournament.create({
-      data: { pbId, name: body.name, status: body.status || "planned" },
+      data: { pbId, name: body.name, status: body.status || "planned", totalMatchGoal: body.totalMatchGoal ?? null, maxMatchPerTeam: body.maxMatchPerTeam ?? null, gameFormat: body.gameFormat ?? "1x30", courts: body.courts ?? null },
     });
     return NextResponse.json(tournament, { status: 201 });
   } catch (error) {

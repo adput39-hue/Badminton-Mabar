@@ -187,6 +187,11 @@ export default function SparingPage() {
         if (saved.htm !== undefined) setHtm(saved.htm);
       } catch {}
     } else {
+      setDraftGames("1-30");
+      setMatchesPerRound(10);
+      setTotalRoundsSetting(1);
+      setLapanganList([]);
+      setLokasi("");
       setHtm(sched?.htm ?? 0);
     }
   }, [selSparingId]);

@@ -12,6 +12,8 @@ export default function TurnamenPage() {
   const { items: tournaments, add: addTournament, loaded } = useApi<ApiTournament>("tournaments");
   const [showCreate, setShowCreate] = useState(false);
   const [formName, setFormName] = useState("");
+  const [formTotalMatchGoal, setFormTotalMatchGoal] = useState("");
+  const [formMaxMatchPerTeam, setFormMaxMatchPerTeam] = useState("");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -19,9 +21,11 @@ export default function TurnamenPage() {
     if (!formName.trim()) return;
     setSaving(true);
     try {
-      await addTournament({ name: formName.trim() });
+      await addTournament({ name: formName.trim(), totalMatchGoal: formTotalMatchGoal ? Number(formTotalMatchGoal) : null, maxMatchPerTeam: formMaxMatchPerTeam ? Number(formMaxMatchPerTeam) : null });
       setShowCreate(false);
       setFormName("");
+      setFormTotalMatchGoal("");
+      setFormMaxMatchPerTeam("");
       toast("success", "Turnamen berhasil dibuat");
     } catch (err) {
       toast("error", "Gagal: " + (err as Error).message);
@@ -71,12 +75,24 @@ export default function TurnamenPage() {
               <h2 className="text-lg font-bold text-gray-900">Turnamen Baru</h2>
               <button onClick={() => setShowCreate(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
-            <div className="space-y-4 p-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Turnamen</label>
-                <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Contoh: Liga Internal 2026"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
-              </div>
+              <div className="space-y-4 p-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Turnamen</label>
+                  <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Contoh: Liga Internal 2026"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Total Pertandingan</label>
+                    <input type="number" min="1" value={formTotalMatchGoal} onChange={(e) => setFormTotalMatchGoal(e.target.value)} placeholder="Misal: 20"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Max per Tim</label>
+                    <input type="number" min="1" value={formMaxMatchPerTeam} onChange={(e) => setFormMaxMatchPerTeam(e.target.value)} placeholder="Misal: 5"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  </div>
+                </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
                 <button onClick={handleCreate} disabled={!formName.trim() || saving} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan"}</button>

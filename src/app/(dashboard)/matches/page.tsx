@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
-import type { ApiMatch as MatchItem, ApiSchedule as ScheduleItem, ApiMember as MemberItem, ApiAttendance as AttendanceItem, ApiMatchHistory as HistoryItem } from "@/lib/api-types";
+import type { ApiMatch as MatchItem, ApiSchedule as ScheduleItem, ApiMember as MemberItem, ApiAttendance as AttendanceItem, ApiMatchHistory as HistoryItem, ApiTeam as TeamItem } from "@/lib/api-types";
 import { Plus, X, Swords, Trophy, Medal, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -22,6 +22,7 @@ export default function MatchesPage() {
   const { items: members, loaded: membersLoaded } = useApi<MemberItem>("members");
   const { items: attendances, loaded: attendancesLoaded } = useApi<AttendanceItem>("attendances");
   const { items: history, add: addHistory, loaded: historyLoaded } = useApi<HistoryItem>("match-history");
+  const { items: teams } = useApi<TeamItem>("teams");
   const [showForm, setShowForm] = useState(false);
 
   const stats = useMemo(() => {
@@ -35,6 +36,7 @@ export default function MatchesPage() {
   }, [history]);
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
+  function getTeamByPlayerId(playerId: string) { return teams.find((t) => t.players?.some((p) => p.memberId === playerId)); }
   function getAttendees(scheduleId: string) {
     const ids = attendances.filter((a) => a.scheduleId === scheduleId && a.status === "hadir").map((a) => a.memberId);
     return members.filter((m) => ids.includes(m.id));
@@ -99,8 +101,8 @@ export default function MatchesPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
-            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} onScore={(s1, s2, s1g2, s2g2) => handleScore(m.id, s1, s2, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)}
-            {completed.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} onScore={() => {}} onDelete={() => removeMatch(m.id)} />)}
+            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} getTeamByPlayerId={getTeamByPlayerId} onScore={(s1, s2, s1g2, s2g2) => handleScore(m.id, s1, s2, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)}
+            {completed.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} getTeamByPlayerId={getTeamByPlayerId} onScore={() => {}} onDelete={() => removeMatch(m.id)} />)}
           </div>
           <div className="space-y-4">
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -134,9 +136,12 @@ export default function MatchesPage() {
   );
 }
 
-function MatchCard({ match, schedule, getName, onScore, onDelete }: {
-  match: MatchItem; schedule?: ScheduleItem; getName: (id: string) => string; onScore: (s1: number, s2: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
+function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDelete }: {
+  match: MatchItem; schedule?: ScheduleItem; getName: (id: string) => string; getTeamByPlayerId: (id: string) => TeamItem | undefined; onScore: (s1: number, s2: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
 }) {
+  const isTournament = !!schedule?.tournamentId;
+  const team1 = isTournament ? getTeamByPlayerId(match.team1Player1Id) : undefined;
+  const team2 = isTournament ? getTeamByPlayerId(match.team2Player1Id) : undefined;
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
   const [s1g2, setS1g2] = useState(match.scoreTeam1Game2 !== null ? String(match.scoreTeam1Game2) : "");
@@ -164,6 +169,7 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
               <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                 <Clock className="h-3 w-3" />
                 <span>L.{match.courtNumber || "—"} · R.{match.round}</span>
+                {isTournament && <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">Turnamen</span>}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -189,14 +195,26 @@ function MatchCard({ match, schedule, getName, onScore, onDelete }: {
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         <div className={`rounded-xl border-2 p-4 text-center transition-all ${team1Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-sm" : "border-gray-100"}`}>
+          {isTournament && team1 ? (
+            <div className="mb-1.5 flex items-center justify-center gap-1.5">
+              {team1.icon ? <img src={team1.icon} alt="" className="h-5 w-5 rounded object-cover" /> : <div className="h-3 w-3 rounded-full" style={{ backgroundColor: team1.color }} />}
+              <span className="text-xs font-bold text-gray-700">{team1.name}</span>
+            </div>
+          ) : null}
           <p className="text-sm font-bold text-gray-900">{getName(match.team1Player1Id)}</p>
-          <p className="text-xs text-gray-400">berpasangan dengan</p>
+          {isTournament ? <p className="text-xs text-gray-400">&</p> : <p className="text-xs text-gray-400">berpasangan dengan</p>}
           <p className="text-sm font-bold text-gray-900">{getName(match.team1Player2Id)}</p>
           {team1Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>
         <div className={`rounded-xl border-2 p-4 text-center transition-all ${team2Won ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-sm" : "border-gray-100"}`}>
+          {isTournament && team2 ? (
+            <div className="mb-1.5 flex items-center justify-center gap-1.5">
+              {team2.icon ? <img src={team2.icon} alt="" className="h-5 w-5 rounded object-cover" /> : <div className="h-3 w-3 rounded-full" style={{ backgroundColor: team2.color }} />}
+              <span className="text-xs font-bold text-gray-700">{team2.name}</span>
+            </div>
+          ) : null}
           <p className="text-sm font-bold text-gray-900">{getName(match.team2Player1Id)}</p>
-          <p className="text-xs text-gray-400">berpasangan dengan</p>
+          {isTournament ? <p className="text-xs text-gray-400">&</p> : <p className="text-xs text-gray-400">berpasangan dengan</p>}
           <p className="text-sm font-bold text-gray-900">{getName(match.team2Player2Id)}</p>
           {team2Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>

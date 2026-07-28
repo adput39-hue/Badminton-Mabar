@@ -94,6 +94,8 @@ export interface ApiLabaRugi {
 
 export interface ApiTournament {
   id: string; pbId: string; name: string; status: string;
+  totalMatchGoal?: number | null; maxMatchPerTeam?: number | null;
+  gameFormat?: string | null; courts?: string | null;
   createdAt: string; updatedAt: string;
   teams?: ApiTeam[]; schedules?: ApiTournamentSchedule[];
   _count?: { schedules: number };
@@ -109,7 +111,7 @@ export interface ApiTournamentSchedule {
 }
 
 export interface ApiTeam {
-  id: string; tournamentId: string; name: string; color: string;
+  id: string; tournamentId: string; name: string; color: string; icon?: string | null;
   createdAt: string;
   players?: ApiTeamPlayer[];
 }

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
-import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
+import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -20,8 +20,11 @@ export default function SparingMatchPage() {
   const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
   const { items: matches, refresh: refreshMatches, update: updateMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: tournaments } = useApi<ApiTournament>("tournaments");
+  const { items: teams } = useApi<ApiTeam>("teams");
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
+  const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
   const [selRound, setSelRound] = useState(1);
   const [selAssignMatch, setSelAssignMatch] = useState("");
@@ -53,8 +56,8 @@ export default function SparingMatchPage() {
   }, [startedAt]);
 
   // Track current view for browser back button
-  const viewRef = useRef({ selSparingId, selCourt, activeMatch });
-  useEffect(() => { viewRef.current = { selSparingId, selCourt, activeMatch }; });
+  const viewRef = useRef({ selSparingId, selTournamentId, selCourt, activeMatch });
+  useEffect(() => { viewRef.current = { selSparingId, selTournamentId, selCourt, activeMatch }; });
 
   useEffect(() => {
     const handlePop = () => {
@@ -62,6 +65,7 @@ export default function SparingMatchPage() {
       if (v.activeMatch) { setActiveMatch(null); return; }
       if (v.selCourt !== null) { setSelCourt(null); return; }
       if (v.selSparingId) { setSelSparingId(null); return; }
+      if (v.selTournamentId) { setSelTournamentId(null); return; }
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -80,24 +84,54 @@ export default function SparingMatchPage() {
     }
   }, [activeMatch]);
 
+  // Sparing schedules (sparingOpponent set)
   const sparings = useMemo(() =>
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
+  // Tournament groupings
+  const tournamentSchedIds = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of schedules) {
+      if (s.tournamentId) {
+        const arr = map.get(s.tournamentId) || [];
+        arr.push(s.id);
+        map.set(s.tournamentId, arr);
+      }
+    }
+    return map;
+  }, [schedules]);
+
+  const tournamentSchedules = useMemo(() =>
+    schedules.filter((s) => s.tournamentId),
+  [schedules]);
+
   const selectedSparing = sparings.find((s) => s.id === selSparingId);
+  const selectedTournament = tournaments.find((t) => t.id === selTournamentId);
 
   const savedSettings = useMemo(() => {
     if (!selectedSparing?.notes) return null;
     try { return JSON.parse(selectedSparing.notes); } catch { return null; }
   }, [selectedSparing]);
 
-  const courts: { name: string; startTime: string; endTime: string }[] = savedSettings?.courts || [];
-  const modeLabel = savedSettings?.draftGames || "1-30";
-  const totalRounds = savedSettings?.totalRounds || 1;
+  const isTournamentMode = !!selTournamentId;
+  const tournamentSchedIdsList = selTournamentId ? (tournamentSchedIds.get(selTournamentId) || []) : [];
 
-  const sparingMatches = useMemo(() =>
-    matches.filter((m) => m.scheduleId === selSparingId),
-  [matches, selSparingId]);
+  const courts: { name: string; startTime: string; endTime: string }[] = isTournamentMode
+    ? (selectedTournament?.courts ? JSON.parse(selectedTournament.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : [])
+    : savedSettings?.courts || (selectedSparing?.courts ? JSON.parse(selectedSparing.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []);
+
+  const formatLabels: Record<string, string> = { "1x30": "1-30", "1x42": "1-42", "2x21": "2-21" };
+  const modeLabel = isTournamentMode
+    ? (formatLabels[selectedTournament?.gameFormat || "1x30"] || "1-30")
+    : savedSettings?.draftGames || "1-30";
+
+  const totalRounds = isTournamentMode ? 1 : savedSettings?.totalRounds || 1;
+
+  const sparingMatches = useMemo(() => {
+    if (isTournamentMode) return matches.filter((m) => tournamentSchedIdsList.includes(m.scheduleId));
+    return matches.filter((m) => m.scheduleId === selSparingId);
+  }, [matches, selSparingId, isTournamentMode, tournamentSchedIdsList]);
 
   const courtMatches = useMemo(() =>
     selCourt !== null ? sparingMatches.filter((m) => m.courtNumber === selCourt && m.round === selRound) : [],
@@ -243,8 +277,30 @@ export default function SparingMatchPage() {
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
 
-  // --- VIEW 1: Pilih Sparing ---
-  if (!selSparingId) {
+  // Build tournament card items (one per tournament)
+  const tournamentCards = useMemo(() => {
+    const seen = new Set<string>();
+    const cards: { tournamentId: string; name: string; schedIds: string[]; totalMatches: number; hasLive: boolean }[] = [];
+    for (const s of schedules) {
+      if (s.tournamentId && !seen.has(s.tournamentId)) {
+        seen.add(s.tournamentId);
+        const t = tournaments.find((x) => x.id === s.tournamentId);
+        const schedIds = tournamentSchedIds.get(s.tournamentId) || [];
+        const tMatches = matches.filter((m) => schedIds.includes(m.scheduleId));
+        cards.push({
+          tournamentId: s.tournamentId,
+          name: t?.name || s.title,
+          schedIds,
+          totalMatches: tMatches.length,
+          hasLive: tMatches.some((m) => m.status !== "completed" && m.courtNumber),
+        });
+      }
+    }
+    return cards;
+  }, [schedules, tournaments, tournamentSchedIds, matches]);
+
+  // --- VIEW 1: Pilih Sparing atau Turnamen ---
+  if (!selSparingId && !selTournamentId) {
     return (
       <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
@@ -255,10 +311,47 @@ export default function SparingMatchPage() {
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
             <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25"><ChevronLeft className="h-4 w-4" /> Kembali</Link>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Controler</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing untuk mulai mengontrol pertandingan</p>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen untuk mengontrol pertandingan</p>
           </div>
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+          {tournamentCards.length > 0 && (
+            <>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Turnamen</h2>
+              <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+                {tournamentCards.map((tc, i) => {
+                  const color = courtColors[i % courtColors.length];
+                  return (
+                    <button key={tc.tournamentId} onClick={() => { history.pushState(null, ""); setSelTournamentId(tc.tournamentId); }}
+                      className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                      {tc.hasLive && (
+                        <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
+                          <Star className="h-4 w-4 text-white" fill="white" />
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
+                          <Trophy className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold text-gray-900 sm:text-base">{tc.name}</h3>
+                          <p className="mt-0.5 text-xs text-gray-500">{tc.schedIds.length} sesi pertandingan</p>
+                          {tc.hasLive ? (
+                            <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
+                              <Radio className="h-2.5 w-2.5" /> LIVE
+                            </span>
+                          ) : (
+                            <span className="mt-2 text-xs text-gray-400">{tc.totalMatches} pertandingan</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Sparing</h2>
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {sparings.map((s, i) => {
               const cMatches = matches.filter((m) => m.scheduleId === s.id);
@@ -291,7 +384,7 @@ export default function SparingMatchPage() {
                 </button>
               );
             })}
-            {sparings.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing</p>}
+            {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau turnamen</p>}
           </div>
         </div>
       </div>
@@ -470,9 +563,9 @@ export default function SparingMatchPage() {
                 <CourtIcon size={28} color="white" className="sm:size-8" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white sm:text-2xl">{courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}</h1>
+                <h1 className="text-xl font-bold text-white sm:text-2xl">{courts[selCourt - 1]?.name ? (courts[selCourt - 1].name.startsWith("Lap") ? courts[selCourt - 1].name : `Lap. ${courts[selCourt - 1].name}`) : `Lapangan ${selCourt}`}</h1>
                 <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                  {courts[selCourt - 1] && (
+                  {courts[selCourt - 1]?.startTime && (
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" /> {courts[selCourt - 1].startTime.slice(0,5)} - {courts[selCourt - 1].endTime.slice(0,5)}
                     </span>
@@ -592,19 +685,23 @@ export default function SparingMatchPage() {
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold text-white sm:text-2xl">Control Match</h1>
               <p className="mt-1 text-sm font-medium text-white/80">
-                {selectedSparing?.sparingOpponent 
-                  ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
-                  : "Pilih sparing"}
+                {isTournamentMode
+                  ? selectedTournament?.name || "Turnamen"
+                  : selectedSparing?.sparingOpponent
+                    ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
+                    : "Pilih"}
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-white/70">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">
                   {modeLabel.includes("2-21") ? "2 Game 21" : modeLabel.includes("42") ? "1 Game 42" : "1 Game 30"}
                 </span>
-                {savedSettings?.lokasi && (
+                {isTournamentMode ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">Turnamen</span>
+                ) : savedSettings?.lokasi ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">
                     {savedSettings.lokasi}
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
             {unassignedMatches.length > 0 && (
@@ -622,7 +719,7 @@ export default function SparingMatchPage() {
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm">
             <Swords className="mx-auto h-10 w-10 text-gray-300" />
             <p className="mt-3 text-sm text-gray-500">Belum ada lapangan</p>
-            <p className="text-xs text-gray-400">Atur lapangan di menu Sparing → Pengaturan</p>
+            <p className="text-xs text-gray-400">{isTournamentMode ? "Atur lapangan di menu Pengaturan Turnamen" : "Atur lapangan di menu Sparing → Pengaturan"}</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -647,10 +744,10 @@ export default function SparingMatchPage() {
                       <CourtIcon size={28} color="white" className="sm:size-8" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{court.name}</h3>
+                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{court.name.startsWith("Lap") ? court.name : `Lap. ${court.name}`}</h3>
                       <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
                         <Clock className="h-3 w-3" />
-                        <span>{court.startTime.slice(0,5)} - {court.endTime.slice(0,5)}</span>
+                        <span>{court.startTime ? `${court.startTime.slice(0,5)} - ${court.endTime.slice(0,5)}` : ""}</span>
                       </div>
                       {hasLive ? (
                         <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>

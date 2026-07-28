@@ -1,11 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(request: Request) {
+  const pbId = request.headers.get("x-pb-id");
+  if (!pbId) return NextResponse.json({ error: "x-pb-id required" }, { status: 400 });
+  const teams = await prisma.team.findMany({
+    where: { tournament: { pbId } },
+    include: { players: true },
+    orderBy: { name: "asc" },
+  });
+  return NextResponse.json(teams);
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    if (body.memberIds?.length) {
+      const existing = await prisma.teamPlayer.findMany({
+        where: { memberId: { in: body.memberIds }, team: { tournamentId: body.tournamentId } },
+        include: { team: { select: { name: true } } },
+      });
+      if (existing.length) {
+        const names = existing.map((e) => `${e.memberId} (sudah di tim ${e.team.name})`);
+        return NextResponse.json({ error: `Pemain sudah terdaftar di tim lain: ${names.join(", ")}` }, { status: 409 });
+      }
+    }
+
     const team = await prisma.team.create({
-      data: { tournamentId: body.tournamentId, name: body.name, color: body.color || "#0d9488" },
+      data: { tournamentId: body.tournamentId, name: body.name, color: body.color || "#0d9488", icon: body.icon || null },
       include: { players: true },
     });
     if (body.memberIds?.length) {

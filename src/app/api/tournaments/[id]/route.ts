@@ -19,7 +19,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const pbId = request.headers.get("x-pb-id");
     const tournament = await prisma.tournament.findFirst({ where: { id, ...(pbId ? { pbId } : {}) } });
     if (!tournament) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const updated = await prisma.tournament.update({ where: { id }, data: { name: body.name, status: body.status } });
+    const data: Record<string, unknown> = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.status !== undefined) data.status = body.status;
+    if (body.totalMatchGoal !== undefined) data.totalMatchGoal = body.totalMatchGoal;
+    if (body.maxMatchPerTeam !== undefined) data.maxMatchPerTeam = body.maxMatchPerTeam;
+    if (body.gameFormat !== undefined) data.gameFormat = body.gameFormat;
+    if (body.courts !== undefined) data.courts = body.courts;
+    const updated = await prisma.tournament.update({ where: { id }, data });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("PUT /api/tournaments/[id] error:", error);

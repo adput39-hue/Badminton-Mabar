@@ -5,7 +5,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await request.json();
-    const team = await prisma.team.update({ where: { id }, data: { name: body.name, color: body.color }, include: { players: true } });
+    const team = await prisma.team.update({ where: { id }, data: { name: body.name, color: body.color, icon: body.icon ?? undefined }, include: { players: true } });
     if (body.memberIds) {
       await prisma.teamPlayer.deleteMany({ where: { teamId: id } });
       if (body.memberIds.length) {
