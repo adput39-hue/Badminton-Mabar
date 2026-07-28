@@ -4,7 +4,10 @@ import { broadcast } from "@/lib/sse-events";
 
 export async function GET(request: Request) {
   const pbId = request.headers.get("x-pb-id");
-  const where = pbId ? { pbId } : {};
+  const url = new URL(request.url);
+  const ids = url.searchParams.get("ids");
+  const where: Record<string, unknown> = pbId ? { pbId } : {};
+  if (ids) where.id = { in: ids.split(",") };
   const matches = await prisma.match.findMany({ where, orderBy: { createdAt: "desc" } });
   return NextResponse.json(matches);
 }

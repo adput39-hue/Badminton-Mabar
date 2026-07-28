@@ -27,36 +27,49 @@ export default function ScoreboardLivePage() {
   const matchesLoadedRef = useRef(false);
   useEffect(() => {
     const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
-    fetch("/api/matches", { headers: { "x-pb-id": pbId } })
-      .then((r) => r.json())
-      .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
-      .catch(() => { matchesLoadedRef.current = true; });
-    if (isFirebaseConfigured()) {
-      const unsub = listenAllLiveScores((scores) => {
-        setMatches((prev) => prev.map((m) => {
-          const live = scores[m.id];
-          if (!live) return m;
-          return {
-            ...m,
-            scoreTeam1: (live.scoreTeam1 as number) ?? m.scoreTeam1,
-            scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
-            scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
-            scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
-            status: (live.status as string) || m.status,
-            winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
-          };
-        }));
-      });
-      return () => { if (unsub) unsub(); };
-    }
-    const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
-    es.onmessage = () => {
+    function fetchMatches() {
       fetch("/api/matches", { headers: { "x-pb-id": pbId } })
         .then((r) => r.json())
-        .then((data) => setMatches(data))
-        .catch(() => {});
-    };
-    return () => es.close();
+        .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
+        .catch(() => { matchesLoadedRef.current = true; });
+    }
+    fetchMatches();
+    const refreshTimer = setInterval(fetchMatches, 30000);
+    if (isFirebaseConfigured()) {
+      const seen = new Set<string>();
+      const unsub = listenAllLiveScores((scores) => {
+        setMatches((prev) => {
+          const seenIds = new Set(prev.map((m) => m.id));
+          const newIds = Object.keys(scores).filter((id) => !seenIds.has(id));
+          if (newIds.length > 0 && !seen.has(newIds[0])) {
+            newIds.forEach((id) => seen.add(id));
+            const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+            fetch(`/api/matches?ids=${newIds.join(",")}`, { headers: { "x-pb-id": pbId } })
+              .then((r) => { if (r.ok) return r.json(); throw new Error(); })
+              .then((newMatches) => { setMatches((p) => [...p, ...newMatches]); })
+              .catch(() => {});
+          }
+          const merged = prev.map((m) => {
+            const live = scores[m.id];
+            if (!live) return m;
+            return {
+              ...m,
+              scoreTeam1: (live.scoreTeam1 as number) ?? m.scoreTeam1,
+              scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
+              scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
+              scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
+              status: (live.status as string) || m.status,
+              winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
+            };
+          });
+          return merged;
+        });
+      });
+      return () => { clearInterval(refreshTimer); if (unsub) unsub(); };
+    }
+    const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
+    es.onmessage = fetchMatches;
+    return () => { clearInterval(refreshTimer); es.close(); };
   }, []);
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
