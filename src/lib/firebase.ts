@@ -1,12 +1,10 @@
 "use client";
 
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getDatabase, ref, set, onValue, off, DatabaseReference, Unsubscribe } from "firebase/database";
-import type { ApiMatch } from "./api-types";
+import { getFirestore, doc, setDoc, onSnapshot, collection, Unsubscribe, Timestamp } from "firebase/firestore";
 
 const FIREBASE_CONFIG = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 };
@@ -21,7 +19,7 @@ function getApp() {
 }
 
 export function isFirebaseConfigured() {
-  return !!FIREBASE_CONFIG.apiKey && !!FIREBASE_CONFIG.databaseURL;
+  return !!FIREBASE_CONFIG.apiKey && !!FIREBASE_CONFIG.projectId;
 }
 
 export function writeLiveScore(matchId: string, data: {
@@ -35,32 +33,22 @@ export function writeLiveScore(matchId: string, data: {
   if (!isFirebaseConfigured()) return;
   const a = getApp();
   if (!a) return;
-  const db = getDatabase(a);
-  const dbRef = ref(db, `live/${matchId}`);
-  set(dbRef, data);
-}
-
-export function listenLiveScore(matchId: string, callback: (data: Record<string, unknown> | null) => void): Unsubscribe | null {
-  if (!isFirebaseConfigured()) return null;
-  const a = getApp();
-  if (!a) return null;
-  const db = getDatabase(a);
-  const dbRef = ref(db, `live/${matchId}`);
-  onValue(dbRef, (snapshot) => {
-    callback(snapshot.val());
-  });
-  return () => off(dbRef);
+  const db = getFirestore(a);
+  const docRef = doc(db, "live", matchId);
+  setDoc(docRef, { ...data, updatedAt: Timestamp.now() }, { merge: true });
 }
 
 export function listenAllLiveScores(callback: (scores: Record<string, Record<string, unknown>>) => void): Unsubscribe | null {
   if (!isFirebaseConfigured()) return null;
   const a = getApp();
   if (!a) return null;
-  const db = getDatabase(a);
-  const dbRef = ref(db, "live");
-  onValue(dbRef, (snapshot) => {
-    const val = snapshot.val();
-    callback(val || {});
+  const db = getFirestore(a);
+  const colRef = collection(db, "live");
+  return onSnapshot(colRef, (snapshot) => {
+    const scores: Record<string, Record<string, unknown>> = {};
+    snapshot.forEach((doc) => {
+      scores[doc.id] = doc.data();
+    });
+    callback(scores);
   });
-  return () => off(dbRef);
 }
