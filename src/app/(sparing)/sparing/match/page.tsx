@@ -162,13 +162,16 @@ export default function SparingMatchPage() {
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
   function setMatchOptimistic(id: string, data: Record<string, unknown>) {
+    writeLiveScore(id, data as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
+  }
+
+  function saveToSupabase(id: string, data: Record<string, unknown>) {
     const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
     fetch(`/api/matches/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-pb-id": pbId },
       body: JSON.stringify(data),
     });
-    writeLiveScore(id, data as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
   }
 
   async function assignMatch(matchId: string, courtNum: number) {
@@ -199,6 +202,7 @@ export default function SparingMatchPage() {
         setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         if (ns1 >= 21 || ns2 >= 21) {
           setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+          saveToSupabase(activeMatch.id, { scoreTeam1: s1, scoreTeam2: s2, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
         }
       }
@@ -210,6 +214,7 @@ export default function SparingMatchPage() {
       setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
       if (ns1 >= maxScore || ns2 >= maxScore) {
         setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+        saveToSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2, status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         setActiveMatch(null);
       }
     }
@@ -285,6 +290,11 @@ export default function SparingMatchPage() {
     setShowConfirmFinish(false);
     setActiveMatch(null);
     setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
+    saveToSupabase(activeMatch.id, {
+      scoreTeam1: activeMatch.scoreTeam1, scoreTeam2: activeMatch.scoreTeam2,
+      scoreTeam1Game2: activeMatch.scoreTeam1Game2, scoreTeam2Game2: activeMatch.scoreTeam2Game2,
+      status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
+    });
   }
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
