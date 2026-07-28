@@ -46,6 +46,7 @@ export default function SparingMatchPage() {
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [cockCount, setCockCount] = useState("1");
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const startedAtRef = useRef<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [pbName, setPbName] = useState("");
   const [firstDataLoaded, setFirstDataLoaded] = useState(false);
@@ -68,6 +69,13 @@ export default function SparingMatchPage() {
     if (!activeMatch) { setStartedAt(null); return; }
     if (activeMatch.scoreTeam1 !== null || activeMatch.scoreTeam2 !== null) {
       setStartedAt(new Date(activeMatch.updatedAt).getTime());
+      if (activeMatch.notes) {
+        try {
+          const n = JSON.parse(activeMatch.notes);
+          if (n.startedAt) startedAtRef.current = n.startedAt;
+        } catch {}
+      }
+      if (!startedAtRef.current) startedAtRef.current = activeMatch.updatedAt;
     }
   }, [activeMatch?.id]);
 
@@ -182,6 +190,16 @@ export default function SparingMatchPage() {
     });
   }
 
+  function getTimeNotes(extra: Record<string, string>) {
+    const existing = activeMatch?.notes;
+    let obj: Record<string, string> = {};
+    if (existing) {
+      try { obj = JSON.parse(existing); } catch { obj = { text: existing }; }
+    }
+    if (startedAtRef.current && !extra.startedAt) obj.startedAt = startedAtRef.current;
+    return JSON.stringify({ ...obj, ...extra });
+  }
+
   async function assignMatch(matchId: string, courtNum: number) {
     await updateMatch(matchId, { courtNumber: courtNum });
   }
@@ -190,7 +208,9 @@ export default function SparingMatchPage() {
     if (!activeMatch) return;
     if (!startedAt) {
       setStartedAt(Date.now());
-      saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0 });
+      const startIso = new Date().toISOString();
+      startedAtRef.current = startIso;
+      saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, notes: getTimeNotes({ startedAt: startIso }) });
     }
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
@@ -213,7 +233,7 @@ export default function SparingMatchPage() {
         setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         if (ns1 >= 21 || ns2 >= 21) {
           setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
-          saveToSupabase(activeMatch.id, { scoreTeam1: s1, scoreTeam2: s2, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
+          saveToSupabase(activeMatch.id, { scoreTeam1: s1, scoreTeam2: s2, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, notes: getTimeNotes({ endedAt: new Date().toISOString() }), status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
         }
       }
@@ -301,9 +321,11 @@ export default function SparingMatchPage() {
     setShowConfirmFinish(false);
     setActiveMatch(null);
     setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
+    const endedIso = new Date().toISOString();
     saveToSupabase(activeMatch.id, {
       scoreTeam1: activeMatch.scoreTeam1, scoreTeam2: activeMatch.scoreTeam2,
       scoreTeam1Game2: activeMatch.scoreTeam1Game2, scoreTeam2Game2: activeMatch.scoreTeam2Game2,
+      notes: getTimeNotes({ endedAt: endedIso }),
       status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
     });
   }
