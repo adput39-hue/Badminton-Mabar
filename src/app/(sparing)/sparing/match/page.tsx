@@ -277,117 +277,19 @@ export default function SparingMatchPage() {
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
 
-  // Build tournament card items (one per tournament)
-  const tournamentCards = useMemo(() => {
-    const seen = new Set<string>();
-    const cards: { tournamentId: string; name: string; schedIds: string[]; totalMatches: number; hasLive: boolean }[] = [];
-    for (const s of schedules) {
-      if (s.tournamentId && !seen.has(s.tournamentId)) {
-        seen.add(s.tournamentId);
-        const t = tournaments.find((x) => x.id === s.tournamentId);
-        const schedIds = tournamentSchedIds.get(s.tournamentId) || [];
-        const tMatches = matches.filter((m) => schedIds.includes(m.scheduleId));
-        cards.push({
-          tournamentId: s.tournamentId,
-          name: t?.name || s.title,
-          schedIds,
-          totalMatches: tMatches.length,
-          hasLive: tMatches.some((m) => m.status !== "completed" && m.courtNumber),
-        });
-      }
-    }
-    return cards;
-  }, [schedules, tournaments, tournamentSchedIds, matches]);
-
   // --- VIEW 1: Pilih Sparing atau Turnamen ---
   if (!selSparingId && !selTournamentId) {
     return (
-      <div className="relative min-h-screen bg-[var(--color-bg)]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
-          </div>
-          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25"><ChevronLeft className="h-4 w-4" /> Kembali</Link>
-            <h1 className="text-xl font-bold text-white sm:text-2xl">Controler</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen untuk mengontrol pertandingan</p>
-          </div>
-        </div>
-        <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
-          {tournamentCards.length > 0 && (
-            <>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Turnamen</h2>
-              <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-                {tournamentCards.map((tc, i) => {
-                  const color = courtColors[i % courtColors.length];
-                  return (
-                    <button key={tc.tournamentId} onClick={() => { history.pushState(null, ""); setSelTournamentId(tc.tournamentId); }}
-                      className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
-                      {tc.hasLive && (
-                        <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
-                          <Star className="h-4 w-4 text-white" fill="white" />
-                        </div>
-                      )}
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
-                          <Trophy className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-bold text-gray-900 sm:text-base">{tc.name}</h3>
-                          <p className="mt-0.5 text-xs text-gray-500">{tc.schedIds.length} sesi pertandingan</p>
-                          {tc.hasLive ? (
-                            <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
-                              <Radio className="h-2.5 w-2.5" /> LIVE
-                            </span>
-                          ) : (
-                            <span className="mt-2 text-xs text-gray-400">{tc.totalMatches} pertandingan</span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Sparing</h2>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-            {sparings.map((s, i) => {
-              const cMatches = matches.filter((m) => m.scheduleId === s.id);
-              const hasLive = cMatches.some((m) => m.status !== "completed" && m.courtNumber);
-              const color = courtColors[i % courtColors.length];
-              return (
-                <button key={s.id} onClick={() => { history.pushState(null, ""); setSelSparingId(s.id); }}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
-                  {hasLive && (
-                    <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
-                      <Star className="h-4 w-4 text-white" fill="white" />
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
-                      <CourtIcon size={28} color="white" className="sm:size-8" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{pbName || "Sparing"} vs {s.sparingOpponent}</h3>
-                      <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
-                      {hasLive ? (
-                        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
-                          <Radio className="h-2.5 w-2.5" /> LIVE
-                        </span>
-                      ) : (
-                        <span className="mt-2 text-xs text-gray-400">{cMatches.length} pertandingan</span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-            {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau turnamen</p>}
-          </div>
-        </div>
-      </div>
+      <SelectionView
+        schedules={schedules}
+        tournaments={tournaments}
+        matches={matches}
+        tournamentSchedIds={tournamentSchedIds}
+        sparings={sparings}
+        pbName={pbName}
+        onSelectSparing={(id) => { history.pushState(null, ""); setSelSparingId(id); }}
+        onSelectTournament={(id) => { history.pushState(null, ""); setSelTournamentId(id); }}
+      />
     );
   }
 
@@ -795,4 +697,121 @@ export default function SparingMatchPage() {
     </div>
   );
 }
+
+function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sparings, pbName, onSelectSparing, onSelectTournament }: {
+  schedules: ApiSchedule[]; tournaments: ApiTournament[]; matches: ApiMatch[];
+  tournamentSchedIds: Map<string, string[]>; sparings: ApiSchedule[];
+  pbName: string; onSelectSparing: (id: string) => void; onSelectTournament: (id: string) => void;
+}) {
+  const tournamentCards = useMemo(() => {
+    const seen = new Set<string>();
+    const cards: { tournamentId: string; name: string; schedIds: string[]; totalMatches: number; hasLive: boolean }[] = [];
+    for (const s of schedules) {
+      if (s.tournamentId && !seen.has(s.tournamentId)) {
+        seen.add(s.tournamentId);
+        const t = tournaments.find((x) => x.id === s.tournamentId);
+        const schedIds = tournamentSchedIds.get(s.tournamentId) || [];
+        const tMatches = matches.filter((m) => schedIds.includes(m.scheduleId));
+        cards.push({
+          tournamentId: s.tournamentId,
+          name: t?.name || s.title,
+          schedIds,
+          totalMatches: tMatches.length,
+          hasLive: tMatches.some((m) => m.status !== "completed" && m.courtNumber),
+        });
+      }
+    }
+    return cards;
+  }, [schedules, tournaments, tournamentSchedIds, matches]);
+
+  return (
+    <div className="relative min-h-screen bg-[var(--color-bg)]">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25"><ChevronLeft className="h-4 w-4" /> Kembali</Link>
+          <h1 className="text-xl font-bold text-white sm:text-2xl">Controler</h1>
+          <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen untuk mengontrol pertandingan</p>
+        </div>
+      </div>
+      <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+        {tournamentCards.length > 0 && (
+          <>
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Turnamen</h2>
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {tournamentCards.map((tc, i) => {
+                const color = courtColors[i % courtColors.length];
+                return (
+                  <button key={tc.tournamentId} onClick={() => onSelectTournament(tc.tournamentId)}
+                    className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                    {tc.hasLive && (
+                      <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
+                        <Star className="h-4 w-4 text-white" fill="white" />
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
+                        <Trophy className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-gray-900 sm:text-base">{tc.name}</h3>
+                        <p className="mt-0.5 text-xs text-gray-500">{tc.schedIds.length} sesi pertandingan</p>
+                        {tc.hasLive ? (
+                          <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
+                            <Radio className="h-2.5 w-2.5" /> LIVE
+                          </span>
+                        ) : (
+                          <span className="mt-2 text-xs text-gray-400">{tc.totalMatches} pertandingan</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Sparing</h2>
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          {sparings.map((s, i) => {
+            const cMatches = matches.filter((m) => m.scheduleId === s.id);
+            const hasLive = cMatches.some((m) => m.status !== "completed" && m.courtNumber);
+            const color = courtColors[i % courtColors.length];
+            return (
+              <button key={s.id} onClick={() => onSelectSparing(s.id)}
+                className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                {hasLive && (
+                  <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
+                    <Star className="h-4 w-4 text-white" fill="white" />
+                  </div>
+                )}
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
+                    <CourtIcon size={28} color="white" className="sm:size-8" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 sm:text-base">{pbName || "Sparing"} vs {s.sparingOpponent}</h3>
+                    <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    {hasLive ? (
+                      <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
+                        <Radio className="h-2.5 w-2.5" /> LIVE
+                      </span>
+                    ) : (
+                      <span className="mt-2 text-xs text-gray-400">{cMatches.length} pertandingan</span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+          {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau turnamen</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
