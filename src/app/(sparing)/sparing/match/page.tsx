@@ -63,6 +63,14 @@ export default function SparingMatchPage() {
     } catch {}
   }, []);
 
+  // restore startedAt after refresh if match already started
+  useEffect(() => {
+    if (!activeMatch) { setStartedAt(null); return; }
+    if (activeMatch.scoreTeam1 !== null || activeMatch.scoreTeam2 !== null) {
+      setStartedAt(new Date(activeMatch.updatedAt).getTime());
+    }
+  }, [activeMatch?.id]);
+
   useEffect(() => {
     if (!startedAt) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
