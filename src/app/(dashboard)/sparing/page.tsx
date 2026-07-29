@@ -431,13 +431,13 @@ export default function SparingPage() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500">Per Round</label>
-              <input type="number" min={1} value={matchesPerRound} onChange={(e) => setMatchesPerRound(Math.max(1, Number(e.target.value)))}
+              <label className="text-xs font-medium text-gray-500">Jumlah Match</label>
+              <input type="number" min={0} placeholder="0" value={matchesPerRound === 0 ? "" : matchesPerRound} onChange={(e) => setMatchesPerRound(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                 className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500">Jumlah Round</label>
-              <input type="number" min={1} value={totalRoundsSetting} onChange={(e) => setTotalRoundsSetting(Math.max(1, Number(e.target.value)))}
+              <input type="number" min={0} placeholder="0" value={totalRoundsSetting === 0 ? "" : totalRoundsSetting} onChange={(e) => setTotalRoundsSetting(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                 className="w-14 rounded-xl border border-gray-200 px-3 py-2 text-sm text-center shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
           </div>
