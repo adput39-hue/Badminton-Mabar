@@ -14,7 +14,7 @@ const allNavItems = [
   { href: "/schedules", label: "Jadwal", icon: Calendar, menuKey: "schedules" },
   { href: "/mabar", label: "Mabar", icon: Heart, menuKey: "mabar" },
   { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
-  { href: "/turnamen", label: "Turnamen", icon: Trophy, menuKey: "turnamen" },
+  { href: "/league", label: "League", icon: Trophy, menuKey: "turnamen" },
   { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },
   { href: "/sparing/match", label: "Match", icon: Swords, menuKey: "sparing" },
   { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },

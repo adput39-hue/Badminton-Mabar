@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
 import { writeLiveScore, readLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
@@ -87,6 +86,7 @@ export default function SparingMatchPage() {
       const startIso = new Date(now).toISOString();
       startedAtRef.current = startIso;
       saveToSupabase(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, notes: getTimeNotes({ startedAt: startIso }) });
+      writeLiveScore(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, courtNumber: activeMatch.courtNumber ?? null });
     }
   }, [activeMatch?.id]);
 
@@ -239,7 +239,7 @@ export default function SparingMatchPage() {
         const ns2 = team === 2 ? g2s2 + 1 : g2s2;
         setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
-        if (ns1 >= 21 || ns2 >= 21) {
+        if ((ns1 >= 21 || ns2 >= 21) && Math.abs(ns1 - ns2) >= 2) {
           setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           saveToSupabase(activeMatch.id, { scoreTeam1: s1, scoreTeam2: s2, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, notes: getTimeNotes({ endedAt: new Date().toISOString() }), status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
           setActiveMatch(null);
@@ -251,7 +251,7 @@ export default function SparingMatchPage() {
       const ns2 = team === 2 ? s2 + 1 : s2;
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
       setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
-      if (ns1 >= maxScore || ns2 >= maxScore) {
+      if ((ns1 >= maxScore || ns2 >= maxScore) && Math.abs(ns1 - ns2) >= 2) {
         setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         saveToSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2, status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
         setActiveMatch(null);
@@ -352,7 +352,7 @@ export default function SparingMatchPage() {
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
 
-  // --- VIEW 1: Pilih Sparing atau Turnamen ---
+  // --- VIEW 1: Pilih Sparing atau League ---
   if (!selSparingId && !selTournamentId) {
     return (
       <>
@@ -392,10 +392,7 @@ export default function SparingMatchPage() {
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
-          <div className="relative mx-auto flex max-w-lg items-center justify-between px-4">
-            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </button>
+          <div className="relative mx-auto flex max-w-lg items-center justify-end px-4">
             <div className="flex items-center gap-2 text-sm text-white/80">
               <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur-sm">L{activeMatch.courtNumber}</span>
               <span className="text-white/40">·</span>
@@ -492,7 +489,6 @@ export default function SparingMatchPage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <button onClick={() => window.history.back()} className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25"><ChevronLeft className="h-4 w-4" /> Kembali</button>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Belum Assign</h1>
             <p className="mt-1 text-sm font-medium text-white/70">{unassignedMatches.length} pertandingan belum memiliki lapangan</p>
           </div>
@@ -543,9 +539,6 @@ export default function SparingMatchPage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <button onClick={() => window.history.back()} className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </button>
             <div className="flex items-center gap-4">
               <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm sm:h-14 sm:w-14`}>
                 <CourtIcon size={28} color="white" className="sm:size-8" />
@@ -669,15 +662,12 @@ export default function SparingMatchPage() {
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <button onClick={() => window.history.back()} className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-            <ChevronLeft className="h-4 w-4" /> Kembali
-          </button>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold text-white sm:text-2xl">Control Match</h1>
               <p className="mt-1 text-sm font-medium text-white/80">
                 {isTournamentMode
-                  ? selectedTournament?.name || "Turnamen"
+                  ? selectedTournament?.name || "League"
                   : selectedSparing?.sparingOpponent
                     ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
                     : "Pilih"}
@@ -687,7 +677,7 @@ export default function SparingMatchPage() {
                   {modeLabel.includes("2-21") ? "2 Game 21" : modeLabel.includes("42") ? "1 Game 42" : "1 Game 30"}
                 </span>
                 {isTournamentMode ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">Turnamen</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">League</span>
                 ) : savedSettings?.lokasi ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">
                     {savedSettings.lokasi}
@@ -710,7 +700,7 @@ export default function SparingMatchPage() {
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm">
             <Swords className="mx-auto h-10 w-10 text-gray-300" />
             <p className="mt-3 text-sm text-gray-500">Belum ada lapangan</p>
-            <p className="text-xs text-gray-400">{isTournamentMode ? "Atur lapangan di menu Pengaturan Turnamen" : "Atur lapangan di menu Sparing → Pengaturan"}</p>
+            <p className="text-xs text-gray-400">{isTournamentMode ? "Atur lapangan di menu Pengaturan League" : "Atur lapangan di menu Sparing → Pengaturan"}</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -836,15 +826,14 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25"><ChevronLeft className="h-4 w-4" /> Kembali</Link>
           <h1 className="text-xl font-bold text-white sm:text-2xl">Controler</h1>
-          <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen untuk mengontrol pertandingan</p>
+          <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau league untuk mengontrol pertandingan</p>
         </div>
       </div>
       <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
         {tournamentCards.length > 0 && (
           <>
-            <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Turnamen</h2>
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">League</h2>
             <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {tournamentCards.map((tc, i) => {
                 const color = courtColors[i % courtColors.length];
@@ -911,7 +900,7 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
               </button>
             );
           })}
-          {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau turnamen</p>}
+          {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau league</p>}
         </div>
       </div>
     </div>

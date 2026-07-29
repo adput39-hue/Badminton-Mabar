@@ -9,9 +9,9 @@ import { Trophy, Plus, Trash2, ChevronLeft, Swords } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
-function getName(id: string, members: ApiMember[]) { return members.find((m) => m.id === id)?.name || "—"; }
+function getName(id: string, members: ApiMember[]) { return members.find((m) => m.id === id)?.name || "G��"; }
 
-export default function TurnamenDetailPage() {
+export default function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [tournament, setTournament] = useState<ApiTournament | null>(null);
   const { items: members } = useApi<ApiMember>("members");
@@ -96,7 +96,7 @@ export default function TurnamenDetailPage() {
     return map;
   }, [allTourneyMatches, teams]);
 
-  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || "—"; }
+  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || "G��"; }
   function getTeamColor(teamId: string) { return teams.find((t) => t.id === teamId)?.color || "#0d9488"; }
 
   function renderScheduleItem(s: ApiSchedule & { team1Id: string; team2Id: string }, i: number) {
@@ -252,12 +252,12 @@ export default function TurnamenDetailPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center py-20"><LoadingSpinner /></div>;
-  if (!tournament) return <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center"><p className="text-sm text-gray-500">Turnamen tidak ditemukan</p></div>;
+  if (!tournament) return <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center"><p className="text-sm text-gray-500">League tidak ditemukan</p></div>;
 
   const colors = ["#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6","#ec4899","#14b8a6"];
   const internalMembers = members.filter((m) => m.type === "1" || !m.type);
-  const formatLabels: Record<string, string> = { "1x30": "1×30", "1x42": "1×42", "2x21": "2×21" };
-  const draftFormatLabel = formatLabels[tournament.gameFormat || "1x30"] || "1×30";
+  const formatLabels: Record<string, string> = { "1x30": "1+�30", "1x42": "1+�42", "2x21": "2+�21" };
+  const draftFormatLabel = formatLabels[tournament.gameFormat || "1x30"] || "1+�30";
   const courtList: { name: string }[] = tournament.courts ? JSON.parse(tournament.courts) : [];
 
   return (
@@ -265,7 +265,7 @@ export default function TurnamenDetailPage() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href="/turnamen" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><ChevronLeft className="h-5 w-5" /></Link>
+          <Link href="/league" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><ChevronLeft className="h-5 w-5" /></Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{tournament.name}</h1>
             <p className="text-sm text-gray-500">{teams.length} tim, {schedules.length} sesi</p>
@@ -278,7 +278,7 @@ export default function TurnamenDetailPage() {
           </button>
           <button onClick={regenerateStatus}
             className={`rounded-xl px-4 py-2 text-sm font-semibold shadow-sm ${tournament.status === "planned" ? "bg-green-500 text-white hover:bg-green-600" : tournament.status === "active" ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"}`}>
-            {tournament.status === "planned" ? "Mulai Turnamen" : tournament.status === "active" ? "Selesaikan" : "Planned"}
+            {tournament.status === "planned" ? "Mulai League" : tournament.status === "active" ? "Selesaikan" : "Planned"}
           </button>
         </div>
       </div>
@@ -341,7 +341,7 @@ export default function TurnamenDetailPage() {
                           <button key={c} type="button" onClick={() => { setTeamColor(c); }}
                             className="h-7 w-7 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1"
                             style={{ backgroundColor: c }}>
-                            {teamColor === c && <span className="flex items-center justify-center text-xs text-white">✓</span>}
+                            {teamColor === c && <span className="flex items-center justify-center text-xs text-white">G��</span>}
                           </button>
                         ))}
                       </div>
@@ -386,7 +386,7 @@ export default function TurnamenDetailPage() {
                         return m ? (
                           <span key={mid} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]">
                             {m.name}
-                            <span className={`rounded px-1 py-0 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "—"}</span>
+                            <span className={`rounded px-1 py-0 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "G��"}</span>
                             <button onClick={() => setTeamMemberIds((prev) => prev.filter((x) => x !== mid))} className="hover:text-red-500 ml-0.5">&times;</button>
                           </span>
                         ) : null;
@@ -403,7 +403,7 @@ export default function TurnamenDetailPage() {
                             <label key={m.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50">
                               <input type="checkbox" checked={teamMemberIds.includes(m.id)} onChange={() => { setTeamMemberIds((prev) => prev.includes(m.id) ? prev.filter((x) => x !== m.id) : [...prev, m.id]); setSearchQuery(""); }}
                                 className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-                              {m.name} <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "—"}</span>
+                              {m.name} <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "G��"}</span>
                             </label>
                           );
                         })
@@ -497,7 +497,7 @@ export default function TurnamenDetailPage() {
                 <label className="mb-2 block text-xs font-medium text-gray-500">Tim A</label>
                 <select value={draftTeam1} onChange={(e) => { setDraftTeam1(e.target.value); setDraftTeam1P1(""); setDraftTeam1P2(""); }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="">—</option>
+                  <option value="">G��</option>
                   {teams.filter((t) => t.id !== draftTeam2).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 {draftTeam1 && (
@@ -526,7 +526,7 @@ export default function TurnamenDetailPage() {
                 <label className="mb-2 block text-xs font-medium text-gray-500">Tim B</label>
                 <select value={draftTeam2} onChange={(e) => { setDraftTeam2(e.target.value); setDraftTeam2P1(""); setDraftTeam2P2(""); }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="">—</option>
+                  <option value="">G��</option>
                   {teams.filter((t) => t.id !== draftTeam1).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 {draftTeam2 && (
@@ -574,7 +574,7 @@ export default function TurnamenDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-gray-900">Pengaturan Turnamen</h2>
+              <h2 className="text-lg font-bold text-gray-900">Pengaturan League</h2>
               <button onClick={() => setShowSettings(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">&times;</button>
             </div>
             <div className="space-y-4 p-6">
@@ -594,9 +594,9 @@ export default function TurnamenDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Format Game</label>
                 <select value={settingsFormat} onChange={(e) => setSettingsFormat(e.target.value)}
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="1x30">1×30</option>
-                  <option value="1x42">1×42</option>
-                  <option value="2x21">2×21</option>
+                  <option value="1x30">1+�30</option>
+                  <option value="1x42">1+�42</option>
+                  <option value="2x21">2+�21</option>
                 </select>
               </div>
               <div>

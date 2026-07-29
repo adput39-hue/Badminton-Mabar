@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
 import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
@@ -209,11 +208,8 @@ export default function ScoreboardLivePage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </Link>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Scoreboard Live</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau turnamen</p>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau league</p>
           </div>
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
@@ -252,10 +248,10 @@ export default function ScoreboardLivePage() {
             </div>
             )}
 
-            {/* Turnamen */}
-            <h2 className="mb-3 text-sm font-bold text-gray-700">Turnamen</h2>
+            {/* League */}
+            <h2 className="mb-3 text-sm font-bold text-gray-700">League</h2>
             {tournaments.length === 0 ? (
-              <p className="text-xs text-gray-400">Belum ada turnamen</p>
+              <p className="text-xs text-gray-400">Belum ada league</p>
             ) : (
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {tournaments.map((t) => (
@@ -295,10 +291,7 @@ export default function ScoreboardLivePage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
-            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
-              <ChevronLeft className="h-3.5 w-3.5" /> Kembali
-            </button>
-            <h1 className="mt-2 text-lg font-bold text-white sm:text-xl">{tournamentDetail?.name || "Turnamen"}</h1>
+            <h1 className="mt-2 text-lg font-bold text-white sm:text-xl">{tournamentDetail?.name || "League"}</h1>
             <p className="text-xs text-white/60">{tournamentTeams.length} tim · {tournamentScheds.length} sesi</p>
           </div>
         </div>
@@ -416,9 +409,6 @@ export default function ScoreboardLivePage() {
         </div>
         <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
           <div className="flex items-center justify-between">
-            <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
-              <ChevronLeft className="h-3.5 w-3.5" /> Kembali
-            </button>
             <div className="flex items-center gap-2">
               <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
                 {pbName || "PB"} vs {selectedSparing?.sparingOpponent || "—"}

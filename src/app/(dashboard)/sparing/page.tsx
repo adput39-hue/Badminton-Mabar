@@ -73,6 +73,7 @@ export default function SparingPage() {
   const [pendingCourt, setPendingCourt] = useState<Record<string, number | null>>({});
   const [savingDraft, setSavingDraft] = useState(false);
   const [editMatchId, setEditMatchId] = useState<string | null>(null);
+  const [editPendingIdx, setEditPendingIdx] = useState<number | null>(null);
   const [editMatchOur1, setEditMatchOur1] = useState("");
   const [editMatchOur2, setEditMatchOur2] = useState("");
   const [editMatchOpp1, setEditMatchOpp1] = useState("");
@@ -324,6 +325,22 @@ export default function SparingPage() {
     setEditMatchId(null);
   }
 
+  function startEditPending(i: number) {
+    const m = pendingNewMatches[i];
+    if (!m) return;
+    setEditPendingIdx(i);
+    setEditMatchOur1(m.team1Player1Id); setEditMatchOur2(m.team1Player2Id);
+    setEditMatchOpp1(m.team2Player1Id); setEditMatchOpp2(m.team2Player2Id);
+    setEditMatchMode(m.notes || "1-30");
+  }
+
+  function saveEditPending(i: number) {
+    if (!editMatchOur1 || !editMatchOur2 || !editMatchOpp1 || !editMatchOpp2) return;
+    const totalGames = editMatchMode.startsWith("2") ? 2 : 1;
+    setPendingNewMatches((prev) => prev.map((m, j) => j === i ? { ...m, team1Player1Id: editMatchOur1, team1Player2Id: editMatchOur2, team2Player1Id: editMatchOpp1, team2Player2Id: editMatchOpp2, totalGames, notes: editMatchMode } : m));
+    setEditPendingIdx(null);
+  }
+
   async function saveOppEdit(id: string) {
     if (!editOppName.trim() || !editOppClass) return;
     await updateMember(id, { name: editOppName.trim(), class: editOppClass });
@@ -572,16 +589,18 @@ export default function SparingPage() {
               </div>
               {/* Add new opponent player */}
               {showAddOpp ? (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <input value={newOppName} onChange={(e) => setNewOppName(e.target.value)} placeholder="Nama pemain baru"
-                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
-                  <select value={newOppClass} onChange={(e) => setNewOppClass(e.target.value)}
-                    className="rounded-xl border border-gray-200 px-2 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                    <option value="">—</option>
-                    {["A","B","C","D","E","F"].map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <button onClick={addNewOpponent} disabled={!newOppName.trim() || !newOppClass} className="rounded-xl bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50"><Plus className="h-4 w-4" /></button>
-                  <button onClick={() => { setShowAddOpp(false); setNewOppName(""); setNewOppClass(""); }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><X className="h-4 w-4" /></button>
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:flex-1 sm:w-auto" />
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <select value={newOppClass} onChange={(e) => setNewOppClass(e.target.value)}
+                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                      <option value="">—</option>
+                      {["A","B","C","D","E","F"].map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <button onClick={addNewOpponent} disabled={!newOppName.trim() || !newOppClass} className="rounded-xl bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50"><Plus className="h-4 w-4" /></button>
+                    <button onClick={() => { setShowAddOpp(false); setNewOppName(""); setNewOppClass(""); }} className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><X className="h-4 w-4" /></button>
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setShowAddOpp(true)} className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-500 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"><Plus className="h-3.5 w-3.5 inline" /> Tambah Pemain</button>
@@ -623,31 +642,31 @@ export default function SparingPage() {
                 <div className="space-y-2">
                   {roundMatches.map((m, i) => (
                     editMatchId === m.id ? (
-                      <div key={m.id} className="rounded-lg border border-[var(--color-primary)] px-4 py-3 text-sm">
-                        <div className="grid gap-2 md:grid-cols-2 mb-2">
-                          <div className="flex gap-1">
-                            <select value={editMatchOur1} onChange={(e) => setEditMatchOur1(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                              <option value="">Kita 1</option>
-                              {ourAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                            <select value={editMatchOur2} onChange={(e) => setEditMatchOur2(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                              <option value="">Kita 2</option>
-                              {ourAvailable.filter((p) => p.id !== editMatchOur1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                          </div>
-                          <div className="flex gap-1">
-                            <select value={editMatchOpp1} onChange={(e) => setEditMatchOpp1(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                              <option value="">Lawan 1</option>
-                              {oppAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                            <select value={editMatchOpp2} onChange={(e) => setEditMatchOpp2(e.target.value)}
-                              className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                              <option value="">Lawan 2</option>
-                              {oppAvailable.filter((p) => p.id !== editMatchOpp1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
+                    <div key={m.id} className="rounded-lg border border-[var(--color-primary)] px-4 py-3 text-sm">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-2 mb-2">
+                        <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:gap-1">
+                          <select value={editMatchOur1} onChange={(e) => setEditMatchOur1(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Kita 1</option>
+                            {ourAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={editMatchOur2} onChange={(e) => setEditMatchOur2(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Kita 2</option>
+                            {ourAvailable.filter((p) => p.id !== editMatchOur1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:gap-1">
+                          <select value={editMatchOpp1} onChange={(e) => setEditMatchOpp1(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Lawan 1</option>
+                            {oppAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={editMatchOpp2} onChange={(e) => setEditMatchOpp2(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Lawan 2</option>
+                            {oppAvailable.filter((p) => p.id !== editMatchOpp1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
                           </div>
                         </div>
                         <div className="flex items-center justify-end gap-2">
@@ -686,8 +705,8 @@ export default function SparingPage() {
                           )}
                           </>
                         )}
-                        <button onClick={() => startEditMatch(m)} className="text-gray-400 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => removeMatch(m.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                        {!m.courtNumber && <button onClick={() => startEditMatch(m)} className="text-gray-400 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>}
+                        {!m.courtNumber && <button onClick={() => removeMatch(m.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>}
                       </div>
                     </div>
                     )
@@ -705,6 +724,41 @@ export default function SparingPage() {
                 </div>
                 <div className="space-y-2">
                   {pendingNewMatches.map((m, i) => (
+                    editPendingIdx === i ? (
+                    <div key={i} className="rounded-lg border border-[var(--color-primary)] px-4 py-3 text-sm">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:gap-2 mb-2">
+                        <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:gap-1">
+                          <select value={editMatchOur1} onChange={(e) => setEditMatchOur1(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Kita 1</option>
+                            {ourAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={editMatchOur2} onChange={(e) => setEditMatchOur2(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Kita 2</option>
+                            {ourAvailable.filter((p) => p.id !== editMatchOur1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:gap-1">
+                          <select value={editMatchOpp1} onChange={(e) => setEditMatchOpp1(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Lawan 1</option>
+                            {oppAvailable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={editMatchOpp2} onChange={(e) => setEditMatchOpp2(e.target.value)}
+                            className="w-full rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                            <option value="">Lawan 2</option>
+                            {oppAvailable.filter((p) => p.id !== editMatchOpp1).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => saveEditPending(i)} disabled={!editMatchOur1 || !editMatchOur2 || !editMatchOpp1 || !editMatchOpp2}
+                            className="rounded bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Simpan</button>
+                          <button onClick={() => setEditPendingIdx(null)} className="rounded border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50">Batal</button>
+                        </div>
+                      </div>
+                    ) : (
                     <div key={i} className="flex flex-col gap-3 rounded-lg border border-dashed border-yellow-300 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex min-w-0 items-start gap-3 sm:items-center">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-yellow-100 text-xs font-bold text-yellow-700">{i + 1}</span>
@@ -716,9 +770,11 @@ export default function SparingPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2 pl-10 sm:shrink-0 sm:pl-0">
                         <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">Round {m.round}</span>
+                        <button onClick={() => startEditPending(i)} className="text-gray-400 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setPendingNewMatches((prev) => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><XCircle className="h-3.5 w-3.5" /></button>
                       </div>
                     </div>
+                    )
                   ))}
                 </div>
               </div>
@@ -732,46 +788,46 @@ export default function SparingPage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Our Team */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-2">Pemain Kita</label>
-                  <div className="flex gap-2">
-                    <select value={draftOur1} onChange={(e) => setDraftOur1(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                      <option value="">—</option>
-                      {ourAvailable.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
-                      ))}
-                    </select>
-                    <select value={draftOur2} onChange={(e) => setDraftOur2(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                      <option value="">—</option>
-                      {ourAvailable.filter((m) => m.id !== draftOur1).map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
-                      ))}
-                    </select>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Pemain Kita</label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+                      <select value={draftOur1} onChange={(e) => setDraftOur1(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                        <option value="">—</option>
+                        {ourAvailable.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
+                        ))}
+                      </select>
+                      <select value={draftOur2} onChange={(e) => setDraftOur2(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                        <option value="">—</option>
+                        {ourAvailable.filter((m) => m.id !== draftOur1).map((m) => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                {/* Opponent Team */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-2">Pemain {selectedSparing.sparingOpponent}</label>
-                  <div className="flex gap-2">
-                    <select value={draftOpp1} onChange={(e) => setDraftOpp1(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                      <option value="">—</option>
-                      {oppAvailable.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
-                      ))}
-                    </select>
-                    <select value={draftOpp2} onChange={(e) => setDraftOpp2(e.target.value)}
-                      className="w-1/2 rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                      <option value="">—</option>
-                      {oppAvailable.filter((m) => m.id !== draftOpp1).map((m) => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
-                      ))}
-                    </select>
+                  {/* Opponent Team */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Pemain {selectedSparing.sparingOpponent}</label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+                      <select value={draftOpp1} onChange={(e) => setDraftOpp1(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                        <option value="">—</option>
+                        {oppAvailable.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
+                        ))}
+                      </select>
+                      <select value={draftOpp2} onChange={(e) => setDraftOpp2(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 sm:w-1/2">
+                        <option value="">—</option>
+                        {oppAvailable.filter((m) => m.id !== draftOpp1).map((m) => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.class})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
               </div>
 
               <div className="mt-4 flex items-center justify-end gap-3">

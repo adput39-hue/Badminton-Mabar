@@ -8,7 +8,7 @@ import { Trophy, Plus, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
-export default function TurnamenPage() {
+export default function LeaguePage() {
   const { items: tournaments, add: addTournament, loaded } = useApi<ApiTournament>("tournaments");
   const [showCreate, setShowCreate] = useState(false);
   const [formName, setFormName] = useState("");
@@ -26,7 +26,7 @@ export default function TurnamenPage() {
       setFormName("");
       setFormTotalMatchGoal("");
       setFormMaxMatchPerTeam("");
-      toast("success", "Turnamen berhasil dibuat");
+      toast("success", "League berhasil dibuat");
     } catch (err) {
       toast("error", "Gagal: " + (err as Error).message);
     } finally {
@@ -40,21 +40,21 @@ export default function TurnamenPage() {
     <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Turnamen</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{tournaments.length} turnamen</p>
+          <h1 className="text-2xl font-bold text-gray-900">League</h1>
+          <p className="mt-0.5 text-sm text-gray-500">{tournaments.length} league</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]"><Plus className="h-4 w-4" /> Turnamen Baru</button>
+        <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]"><Plus className="h-4 w-4" /> League Baru</button>
       </div>
 
       {tournaments.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
           <Trophy className="mx-auto h-10 w-10 text-gray-300" />
-          <p className="mt-3 text-sm text-gray-500">Belum ada turnamen</p>
+          <p className="mt-3 text-sm text-gray-500">Belum ada league</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {tournaments.map((t) => (
-            <Link key={t.id} href={`/turnamen/${t.id}`}
+            <Link key={t.id} href={`/league/${t.id}`}
               className="rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                 <Trophy className="h-4 w-4 text-yellow-500" /> {t.name}
@@ -72,12 +72,12 @@ export default function TurnamenPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-gray-900">Turnamen Baru</h2>
+              <h2 className="text-lg font-bold text-gray-900">League Baru</h2>
               <button onClick={() => setShowCreate(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
               <div className="space-y-4 p-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Turnamen</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama League</label>
                   <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Contoh: Liga Internal 2026"
                     className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
                 </div>

@@ -169,7 +169,7 @@ function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDel
               <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                 <Clock className="h-3 w-3" />
                 <span>L.{match.courtNumber || "—"} · R.{match.round}</span>
-                {isTournament && <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">Turnamen</span>}
+                {isTournament && <span className="rounded bg-[var(--color-primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">League</span>}
               </div>
             </div>
             <div className="flex items-center gap-2">

@@ -13,7 +13,7 @@ const allMenus = [
   { key: "schedules", label: "Jadwal" },
   { key: "mabar", label: "Mabar" },
   { key: "sparing", label: "Sparing" },
-  { key: "turnamen", label: "Turnamen" },
+  { key: "turnamen", label: "League" },
   { key: "riwayat", label: "Riwayat" },
   { key: "scoreboard", label: "Scoreboard" },
   { key: "live-score", label: "Live Score" },
