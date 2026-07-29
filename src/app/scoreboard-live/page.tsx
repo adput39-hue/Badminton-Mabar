@@ -435,11 +435,11 @@ export default function ScoreboardLivePage() {
                 </div>
               );
             })}
-            {allRoundsDone && finalStats && (
+            {finalStats && (
               <>
                 <div className="border-t border-white/10" />
                 <div className="flex items-center gap-1.5 text-sm font-bold text-white sm:text-base">
-                  <span className="w-16 shrink-0 text-right text-white/50">FINAL</span>
+                  <span className={`w-16 shrink-0 text-right ${allRoundsDone ? "text-yellow-300" : "text-white/50"}`}>{allRoundsDone ? "FINAL" : "TOTAL"}</span>
                   <span className="text-white/40">:</span>
                   <span className="ml-1.5 text-white">{pbName || "PB"}</span>
                   <span className="ml-1.5 font-black tabular-nums text-white">{finalStats.kitaWins}</span>
