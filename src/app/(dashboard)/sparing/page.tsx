@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-types";
-import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle } from "lucide-react";
+import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle, Check } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
@@ -400,6 +400,14 @@ export default function SparingPage() {
               <h2 className="text-lg font-bold text-gray-900">{pbName || "Sparing"} vs {selectedSparing.sparingOpponent}</h2>
               <p className="text-sm text-gray-500">{new Date(selectedSparing.date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
+            <button onClick={async () => { try { await updateSchedule(selectedSparing.id, { status: selectedSparing.status === "completed" ? "scheduled" : "completed" }); } catch {} }}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition-all ${
+                selectedSparing.status === "completed"
+                  ? "border border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}>
+              <Check className="h-3.5 w-3.5" /> {selectedSparing.status === "completed" ? "Buka Lagi" : "Selesai"}
+            </button>
           </div>
 
           {/* Tab bar */}
