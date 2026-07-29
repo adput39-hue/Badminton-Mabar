@@ -663,21 +663,21 @@ export default function SparingPage() {
                         </div>
                       </div>
                     ) : (
-                    <div key={m.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-xs font-bold text-[var(--color-primary)]">{i + 1}</span>
-                        <div>
-                          <span className="font-semibold text-gray-800">{getName(m.team1Player1Id)} & {getName(m.team1Player2Id)}</span>
-                          <span className="mx-2 text-gray-300">vs</span>
-                          <span className="font-semibold text-gray-800">{getName(m.team2Player1Id) || "—"} & {getName(m.team2Player2Id || "") || "—"}</span>
+                    <div key={m.id} className="flex flex-col gap-3 rounded-lg border border-gray-100 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-xs font-bold text-[var(--color-primary)]">{i + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-800 break-words">{getName(m.team1Player1Id)} <span className="text-gray-400 font-normal">&</span> {getName(m.team1Player2Id)}</div>
+                          <div className="mt-0.5 text-xs text-gray-400">vs</div>
+                          <div className="font-semibold text-gray-800 break-words">{getName(m.team2Player1Id) || "—"} <span className="text-gray-400 font-normal">&</span> {getName(m.team2Player2Id || "") || "—"}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 pl-10 sm:shrink-0 sm:pl-0">
                         <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">{m.totalGames} game</span>
                         {lapanganList.length > 0 && (
                           <>
                           <select value={pendingCourt[m.id] !== undefined ? (pendingCourt[m.id] || "") : (m.courtNumber || "")} onChange={(e) => { const v = e.target.value; setPendingCourt((prev) => ({ ...prev, [m.id]: v ? Number(v) : null })); }}
-                            className="rounded border border-gray-200 px-2 py-1 text-[10px] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                            className="rounded border border-gray-200 px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
                             <option value="">Lapangan</option>
                             {lapanganList.map((c, ci) => <option key={ci} value={ci+1}>{c.name}</option>)}
                           </select>
@@ -705,16 +705,16 @@ export default function SparingPage() {
                 </div>
                 <div className="space-y-2">
                   {pendingNewMatches.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg border border-dashed border-yellow-300 px-4 py-3 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-100 text-xs font-bold text-yellow-700">{i + 1}</span>
-                        <div>
-                          <span className="font-semibold text-gray-800">{getName(m.team1Player1Id)} & {getName(m.team1Player2Id)}</span>
-                          <span className="mx-2 text-gray-300">vs</span>
-                          <span className="font-semibold text-gray-800">{getName(m.team2Player1Id) || "—"} & {getName(m.team2Player2Id || "") || "—"}</span>
+                    <div key={i} className="flex flex-col gap-3 rounded-lg border border-dashed border-yellow-300 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-yellow-100 text-xs font-bold text-yellow-700">{i + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-800 break-words">{getName(m.team1Player1Id)} <span className="text-gray-400 font-normal">&</span> {getName(m.team1Player2Id)}</div>
+                          <div className="mt-0.5 text-xs text-gray-400">vs</div>
+                          <div className="font-semibold text-gray-800 break-words">{getName(m.team2Player1Id) || "—"} <span className="text-gray-400 font-normal">&</span> {getName(m.team2Player2Id || "") || "—"}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 pl-10 sm:shrink-0 sm:pl-0">
                         <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">Round {m.round}</span>
                         <button onClick={() => setPendingNewMatches((prev) => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><XCircle className="h-3.5 w-3.5" /></button>
                       </div>
