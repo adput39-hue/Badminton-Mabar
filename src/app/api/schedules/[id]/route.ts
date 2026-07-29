@@ -16,11 +16,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.htm !== undefined) data.htm = body.htm ?? null;
     if (body.cockPrice !== undefined) data.cockPrice = Number(body.cockPrice) || 0;
     if (body.notes !== undefined) data.notes = body.notes || null;
+    if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl || null;
     if (body.status !== undefined) data.status = body.status || "planned";
     const schedule = await prisma.schedule.update({ where: { id }, data });
     return NextResponse.json(schedule);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : "";
+    console.error("PUT /api/schedules/[id] error:", msg, stack);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 

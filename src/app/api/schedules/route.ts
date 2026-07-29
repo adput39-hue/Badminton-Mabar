@@ -26,6 +26,7 @@ export async function POST(request: Request) {
         cockPrice: body.cockPrice ?? 0,
         notes: body.notes || null,
         sparingOpponent: body.sparingOpponent || null,
+        logoUrl: body.logoUrl || null,
         status: body.status || "planned",
         createdBy: body.createdBy || null,
       },

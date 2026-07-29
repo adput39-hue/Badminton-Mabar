@@ -9,7 +9,7 @@ export interface ApiMember {
 export interface ApiSchedule {
   id: string; pbId: string; title: string; date: string;
   startTime: string | null; endTime: string | null; location: string | null;
-  maxParticipants: number; htm: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null;
+  maxParticipants: number; htm: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null; logoUrl: string | null;
   tournamentId: string | null; team1Id: string | null; team2Id: string | null;
   notes: string | null; status: string;
   createdBy: string | null; createdAt: string; updatedAt: string;

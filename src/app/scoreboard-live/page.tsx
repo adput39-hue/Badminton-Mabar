@@ -6,7 +6,7 @@ import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
-  Swords, ChevronLeft, Radio, Minus, Trophy,
+  Swords, ChevronLeft, Minus, Trophy,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -76,6 +76,7 @@ export default function ScoreboardLivePage() {
   const [mode, setMode] = useState<"sparing" | "turnamen">("sparing");
   const [selRound, setSelRound] = useState(1);
   const [pbName, setPbName] = useState("");
+  const [pbLogo, setPbLogo] = useState("");
   const [tournamentDetail, setTournamentDetail] = useState<ApiTournament | null>(null);
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export default function ScoreboardLivePage() {
       if (raw) {
         const u = JSON.parse(raw);
         if (u.pb?.name) setPbName(u.pb.name);
+        if (u.pb?.logoUrl) setPbLogo(u.pb.logoUrl);
       }
     } catch {}
   }, []);
@@ -112,34 +114,18 @@ export default function ScoreboardLivePage() {
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
-  function shortName(name: string) {
-    const parts = name.split(" ");
-    return parts.length > 1 ? parts[0] + " " + parts[parts.length - 1][0] + "." : name;
-  }
-
   const roundStatsMap = useMemo(() => {
-    const map: Record<number, { kitaWins: number; lawanWins: number; total: number; completed: number }> = {};
+    const map: Record<number, { kitaWins: number; lawanWins: number }> = {};
     for (let r = 1; r <= totalRounds; r++) {
       const rm = sparingMatches.filter((m) => m.round === r);
       const completed = rm.filter((m) => m.status === "completed");
       map[r] = {
-        total: rm.length,
-        completed: completed.length,
         kitaWins: completed.filter((m) => m.winnerTeam === 1).length,
         lawanWins: completed.filter((m) => m.winnerTeam === 2).length,
       };
     }
     return map;
   }, [sparingMatches, totalRounds]);
-
-  const allRoundsDone = useMemo(() => {
-    if (totalRounds === 0) return false;
-    for (let r = 1; r <= totalRounds; r++) {
-      const s = roundStatsMap[r];
-      if (!s || s.total === 0 || s.completed < s.total) return false;
-    }
-    return true;
-  }, [roundStatsMap, totalRounds]);
 
   const finalStats = useMemo(() => {
     let kitaWins = 0, lawanWins = 0;
@@ -402,210 +388,233 @@ export default function ScoreboardLivePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
-        </div>
-        <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
-                {pbName || "PB"} vs {selectedSparing?.sparingOpponent || "—"}
-              </span>
-              <span className="text-xs text-white/60">{new Date(selectedSparing?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+      {/* Red Header */}
+      <div className="sticky top-0 z-20 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white shadow-md">
+        <div className="mx-auto max-w-[1440px] px-3 pt-2 sm:px-4 sm:pt-3">
+          {/* Top bar: title + date */}
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-[10px] font-bold tracking-wider uppercase sm:text-xs">{(pbName || "PB").toUpperCase()} vs {(selectedSparing?.sparingOpponent || "—").toUpperCase()}</h1>
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:size-3.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span>{new Date(selectedSparing?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
             </div>
-            <div className="w-20" />
           </div>
 
-          {/* Round stats */}
-          <div className="mt-1.5 space-y-0.5 border-t border-white/10 pt-1.5 sm:mt-2 sm:pt-2">
-            {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => {
-              const s = roundStatsMap[r];
-              if (!s || s.total === 0) return null;
-              return (
-                <div key={r} className="flex items-center gap-1.5 text-[13px] text-white/90 sm:text-sm">
-                  <span className="w-16 shrink-0 text-right text-white/50">Round {r}</span>
-                  <span className="text-white/40">:</span>
-                  <span className="ml-1.5 font-semibold text-white">{pbName || "PB"}</span>
-                  <span className="ml-1.5 font-black tabular-nums text-white">{s.kitaWins}</span>
-                  <span className="mx-1.5 text-white/40">vs</span>
-                  <span className="font-black tabular-nums text-white">{s.lawanWins}</span>
-                  <span className="ml-1.5 font-semibold text-white">{selectedSparing?.sparingOpponent || "Lawan"}</span>
-                </div>
-              );
-            })}
-            {finalStats && (
-              <>
-                <div className="border-t border-white/10" />
-                <div className="flex items-center gap-1.5 text-sm font-bold text-white sm:text-base">
-                  <span className={`w-16 shrink-0 text-right ${allRoundsDone ? "text-yellow-300" : "text-white/50"}`}>{allRoundsDone ? "FINAL" : "TOTAL"}</span>
-                  <span className="text-white/40">:</span>
-                  <span className="ml-1.5 text-white">{pbName || "PB"}</span>
-                  <span className="ml-1.5 font-black tabular-nums text-white">{finalStats.kitaWins}</span>
-                  <span className="mx-1.5 text-white/40">vs</span>
-                  <span className="font-black tabular-nums text-white">{finalStats.lawanWins}</span>
-                  <span className="ml-1.5 text-white">{selectedSparing?.sparingOpponent || "Lawan"}</span>
-                </div>
-              </>
-            )}
+          {/* Big total score */}
+          <div className="mt-1.5 flex items-center justify-center gap-3 sm:mt-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{pbLogo ? <img src={pbLogo} alt="" className="h-full w-full object-cover" /> : "PB"}</div>
+              <span className="text-sm font-bold sm:text-base">{pbName || "PB Testing"}</span>
+            </div>
+            <div className="text-[34px] font-black tabular-nums sm:text-[40px]">
+              <span>{finalStats.kitaWins}</span>
+              <span className="mx-2 text-white/60 sm:mx-3">-</span>
+              <span>{finalStats.lawanWins}</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm font-bold sm:text-base">{selectedSparing?.sparingOpponent || "TSES"}</span>
+              <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{selectedSparing?.logoUrl ? <img src={selectedSparing.logoUrl} alt="" className="h-full w-full object-cover" /> : (selectedSparing?.sparingOpponent || "T").slice(0, 4).toUpperCase()}</div>
+            </div>
           </div>
+
+          {/* Round stat cards */}
+          {totalRounds > 0 && (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:mt-3 sm:gap-3">
+              {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => {
+                const s = roundStatsMap[r];
+                const kita = s?.kitaWins || 0;
+                const lawan = s?.lawanWins || 0;
+                return (
+                  <div key={r} className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] backdrop-blur-sm sm:gap-2 sm:px-4 sm:py-1.5 sm:text-xs">
+                    <span className="font-semibold text-white/80">Round {r}</span>
+                    <span className="text-white/60">:</span>
+                    <span className="font-bold tabular-nums">{kita}</span>
+                    <span className="text-white/60">-</span>
+                    <span className="font-bold tabular-nums">{lawan}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Round tabs */}
+        {totalRounds > 1 && (
+          <div className="mt-2 flex border-b border-white/10">
+            <div className="mx-auto flex w-full max-w-[1440px] gap-1 px-3 sm:px-4">
+              {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
+                <button key={r} onClick={() => setSelRound(r)}
+                  className={`relative px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm ${selRound === r ? "text-white" : "text-white/60 hover:text-white/90"}`}>
+                  Round {r}
+                  {selRound === r && <span className="absolute right-0 bottom-0 left-0 h-0.5 bg-white" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Content */}
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col overflow-hidden p-2 sm:p-3 md:p-4">
         <div className="flex-1 overflow-y-auto">
-            {/* Round selector */}
-            {totalRounds > 1 && (
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase sm:text-xs">Round:</span>
-                {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
-                  <button key={r} onClick={() => setSelRound(r)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all sm:text-sm ${selRound === r ? "bg-[var(--color-primary)] text-white shadow-sm" : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
-                    Round {r}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Live courts section — show all courts */}
-            <div className="mb-3 sm:mb-4">
-              <h2 className="mb-2 text-[10px] font-semibold tracking-wide text-gray-500 uppercase sm:text-xs">Sedang Berlangsung</h2>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                  {courts.map((court, i) => {
-                    const color = courtColors[i % courtColors.length];
-                    const liveMatches = sparingMatches.filter((m) => m.courtNumber === i + 1 && m.status !== "completed");
-                    const live = liveMatches[0] || null;
-                    const hasLive = !!live;
-                    return (
-                      <div key={i} className={`flex min-h-[180px] min-w-[180px] flex-1 flex-col rounded-xl border-2 bg-white p-3 shadow-md sm:min-h-[200px] sm:min-w-[200px] sm:p-4 ${hasLive ? color.border : "border-gray-200"}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-base font-bold text-gray-900 sm:text-lg">{court.name}</h3>
-                          {hasLive ? (
-                            <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-sm font-semibold text-green-700 sm:text-base">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                              LIVE
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-sm font-medium text-gray-500 sm:text-base">—</span>
-                          )}
-                        </div>
-                        {hasLive && live ? (
-                          <>
-                            <div className="mt-2 flex items-center justify-center gap-2 sm:mt-3 sm:gap-3">
-                              <div className="min-w-0 flex-1 text-right">
-                                <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{shortName(getName(live.team1Player1Id))}</p>
-                                <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{shortName(getName(live.team1Player2Id))}</p>
-                              </div>
-                              <div className="flex items-center gap-1 rounded-lg bg-white px-2 py-1 shadow-sm ring-1 ring-gray-100 sm:gap-2 sm:px-3 sm:py-1.5">
-                                {(live.notes || "").startsWith("2-21") ? (
-                                  <div className="flex items-center gap-0.5 sm:gap-1">
-                                    <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam1 || 0}</span>
-                                    <span className="text-xs text-gray-300">/</span>
-                                    <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam1Game2 || 0}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam1 || 0}</span>
-                                )}
-                                <span className={`mx-1 h-4 w-0.5 sm:mx-1.5 ${color.bg}`} />
-                                {(live.notes || "").startsWith("2-21") ? (
-                                  <div className="flex items-center gap-0.5 sm:gap-1">
-                                    <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam2 || 0}</span>
-                                    <span className="text-xs text-gray-300">/</span>
-                                    <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam2Game2 || 0}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-lg font-black tabular-nums text-gray-900 sm:text-xl">{live.scoreTeam2 || 0}</span>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1 text-left">
-                                <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{shortName(getName(live.team2Player1Id))}</p>
-                                <p className="truncate text-sm font-medium text-gray-900 sm:text-base">{shortName(getName(live.team2Player2Id))}</p>
-                              </div>
-                            </div>
-                            <p className="mt-1 text-center text-[13px] text-gray-400 sm:text-sm">R{live.round} · {modeLabel(live.notes || "1-30")}</p>
-                          </>
-                        ) : (
-                          <div className="mt-2 flex flex-col items-center justify-center py-4 text-gray-300 sm:mt-3 sm:py-6">
-                            <Radio className="h-6 w-6 sm:h-7 sm:w-7" />
-                            <p className="mt-1 text-[13px] text-gray-400 sm:text-sm">Belum mulai</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+          {/* Sedang Berlangsung */}
+          <div className="mb-3 sm:mb-4">
+            <div className="mb-2 flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+              <h2 className="text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">SEDANG BERLANGSUNG</h2>
             </div>
-
-            {/* All matches chart — grid of compact match cards */}
-            <h2 className="mb-2 text-sm font-semibold tracking-wide text-gray-500 uppercase sm:text-base">Semua Pertandingan</h2>
-            {roundMatches.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
-                {roundMatches
-                  .sort((a, b) => {
-                    if (a.status !== "completed" && b.status === "completed") return -1;
-                    if (a.status === "completed" && b.status !== "completed") return 1;
-                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-                  })
-                  .map((m) => {
-                    const courtIdx = (m.courtNumber || 1) - 1;
-                    const color = courtColors[courtIdx % courtColors.length];
-                    const mIsLive = m.status !== "completed" && ((m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
-                    const mIsCompleted = m.status === "completed";
-                    const t1s = m.scoreTeam1 || 0;
-                    const t2s = m.scoreTeam2 || 0;
-                    const t1g2 = m.scoreTeam1Game2 || 0;
-                    const t2g2 = m.scoreTeam2Game2 || 0;
-                    const isTwoGame = (m.notes || "").startsWith("2-21");
-
-                    return (
-                      <div key={m.id} className={`rounded-xl border bg-white p-3 shadow-sm ring-1 ring-gray-50 transition-all sm:p-4 ${mIsLive ? `${color.border} border-2 shadow-md` : "border-gray-500"} ${mIsCompleted ? "opacity-80" : ""}`}>
-                        {/* Court label + status */}
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[13px] font-bold text-gray-600 sm:text-sm">L{m.courtNumber}</span>
-                          {mIsLive ? (
-                            <span className="flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-700 sm:text-[13px]">
-                              <span className="inline-block h-1 w-1 rounded-full bg-green-500" />LIVE
-                            </span>
-                          ) : mIsCompleted ? (
-                            <span className="text-[13px] font-semibold text-green-600 sm:text-sm">✓</span>
-                          ) : (
-                            <span className="text-xs text-gray-400 sm:text-[13px]">⏳</span>
-                          )}
-                        </div>
-
-                        {/* Teams + score */}
-                        <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+              {courts.map((court, i) => {
+                const color = courtColors[i % courtColors.length];
+                const liveMatches = sparingMatches.filter((m) => m.courtNumber === i + 1 && m.status !== "completed");
+                const live = liveMatches[0] || null;
+                const hasLive = !!live;
+                return (
+                  <div key={i} className={`relative flex min-h-[150px] flex-col rounded-xl border-2 bg-white p-3 shadow-sm sm:min-h-[170px] sm:p-4 ${hasLive ? color.border : "border-gray-200"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{court.name}</h3>
+                      {hasLive ? (
+                        <span className="flex items-center gap-1 rounded bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white sm:text-xs">
+                          ● LIVE
+                        </span>
+                      ) : null}
+                    </div>
+                    {hasLive && live ? (
+                      <>
+                        <div className="mt-2 flex items-center justify-center gap-2 sm:mt-3 sm:gap-3">
                           <div className="min-w-0 flex-1 text-right">
-                            <p className={`truncate text-[13px] font-medium sm:text-sm ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-green-600" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-900"}`}>{shortName(getName(m.team1Player1Id))}</p>
-                            <p className={`truncate text-[13px] font-medium sm:text-sm ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-green-600" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-900"}`}>{shortName(getName(m.team1Player2Id))}</p>
+                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team1Player1Id)}</p>
+                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team1Player2Id)}</p>
                           </div>
-                          <div className={`flex shrink-0 items-center rounded-md bg-white px-1.5 py-0.5 shadow-sm ring-1 ring-gray-100 sm:px-2 ${mIsCompleted ? "opacity-60" : ""}`}>
-                            <span className={`text-base font-black tabular-nums sm:text-lg ${mIsCompleted && m.winnerTeam === 1 ? "text-green-600" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-900"}`}>{t1s}</span>
-                            {isTwoGame && <><span className="text-[11px] text-gray-300">/</span><span className={`text-base font-black tabular-nums sm:text-lg ${mIsCompleted && m.winnerTeam === 1 ? "text-green-600" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-900"}`}>{t1g2}</span></>}
-                            <span className={`mx-0.5 h-3 w-px sm:mx-1 ${color.bg}`} />
-                            <span className={`text-base font-black tabular-nums sm:text-lg ${mIsCompleted && m.winnerTeam === 2 ? "text-blue-600" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-900"}`}>{t2s}</span>
-                            {isTwoGame && <><span className="text-[11px] text-gray-300">/</span><span className={`text-base font-black tabular-nums sm:text-lg ${mIsCompleted && m.winnerTeam === 2 ? "text-blue-600" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-900"}`}>{t2g2}</span></>}
+                          <div className="flex items-center gap-1 rounded-lg bg-white px-2 py-1 shadow-sm ring-1 ring-gray-100 sm:gap-2 sm:px-3 sm:py-1.5">
+                            {(live.notes || "").startsWith("2-21") ? (
+                              <div className="flex items-center gap-0.5 sm:gap-1">
+                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1 || 0}</span>
+                                <span className="text-xs text-gray-300">/</span>
+                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1Game2 || 0}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1 || 0}</span>
+                            )}
+                            <span className={`mx-1 h-4 w-0.5 sm:mx-1.5 ${color.bg}`} />
+                            {(live.notes || "").startsWith("2-21") ? (
+                              <div className="flex items-center gap-0.5 sm:gap-1">
+                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2 || 0}</span>
+                                <span className="text-xs text-gray-300">/</span>
+                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2Game2 || 0}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2 || 0}</span>
+                            )}
                           </div>
                           <div className="min-w-0 flex-1 text-left">
-                            <p className={`truncate text-[13px] font-medium sm:text-sm ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-blue-600" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-900"}`}>{shortName(getName(m.team2Player1Id))}</p>
-                            <p className={`truncate text-[13px] font-medium sm:text-sm ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-blue-600" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-900"}`}>{shortName(getName(m.team2Player2Id))}</p>
+                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team2Player1Id)}</p>
+                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team2Player2Id)}</p>
                           </div>
                         </div>
-
-                        <p className="mt-1 text-center text-xs text-gray-400 sm:text-[13px]">R{m.round} · {modeLabel(m.notes || "1-30")}</p>
+                        <p className="mt-1 text-center text-[10px] text-gray-400 sm:text-xs">R{live.round} · {modeLabel(live.notes || "1-30")}</p>
+                      </>
+                    ) : (
+                      <div className="mt-2 flex flex-1 flex-col items-center justify-center py-3 text-gray-300 sm:mt-3 sm:py-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="sm:size-10">
+                          <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                          <path d="m22 8-2 4 2 4"></path>
+                          <path d="M2 12h20"></path>
+                        </svg>
+                        <p className="mt-1 text-[10px] text-gray-400 sm:text-xs">Belum mulai</p>
                       </div>
-                    );
-                  })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-12 text-gray-300 sm:py-16">
-                <Minus className="h-12 w-12 sm:h-14 sm:w-14" />
-                <p className="mt-2 text-sm text-gray-400 sm:text-base">Belum ada pertandingan</p>
-                <p className="text-sm text-gray-400 sm:text-base">Buat pertandingan di halaman Sparing</p>
-              </div>
-            )}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Hasil Pertandingan */}
+          <h2 className="mb-2 text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">Hasil Pertandingan</h2>
+          {roundMatches.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+              {roundMatches
+                .sort((a, b) => {
+                  if (a.status !== "completed" && b.status === "completed") return -1;
+                  if (a.status === "completed" && b.status !== "completed") return 1;
+                  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                })
+                .map((m) => {
+                  const courtIdx = (m.courtNumber || 1) - 1;
+                  const color = courtColors[courtIdx % courtColors.length];
+                  const mIsLive = m.status !== "completed" && ((m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
+                  const mIsCompleted = m.status === "completed";
+                  const t1s = m.scoreTeam1 || 0;
+                  const t2s = m.scoreTeam2 || 0;
+                  const t1g2 = m.scoreTeam1Game2 || 0;
+                  const t2g2 = m.scoreTeam2Game2 || 0;
+                  const isTwoGame = (m.notes || "").startsWith("2-21");
+
+                  return (
+                    <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm ring-1 ring-gray-50 transition-all sm:p-3 ${mIsLive ? `${color.border} border-2` : "border-gray-200"} ${mIsCompleted ? "" : ""}`}>
+                      {/* Court label + status */}
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-700 sm:text-xs">
+                          <span className={`flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-black text-white sm:px-1.5 sm:py-1 sm:text-xs ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
+                          {mIsLive ? (
+                            <span className="text-green-600">● LIVE</span>
+                          ) : mIsCompleted ? (
+                            <span className="text-green-600">✓</span>
+                          ) : (
+                            <span className="text-gray-400">⏳</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Teams */}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player1Id)}</p>
+                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player2Id)}</p>
+                          </div>
+                          <span className={`shrink-0 text-xs font-bold tabular-nums sm:text-sm ${mIsCompleted && m.winnerTeam === 1 ? "text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{t1s}{isTwoGame ? `, ${t1g2}` : ""}</span>
+                        </div>
+                        <hr className="border-black/50" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player1Id)}</p>
+                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player2Id)}</p>
+                          </div>
+                          <span className={`shrink-0 text-xs font-bold tabular-nums sm:text-sm ${mIsCompleted && m.winnerTeam === 2 ? "text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{t2s}{isTwoGame ? `, ${t2g2}` : ""}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">R{m.round} · {modeLabel(m.notes || "1-30")}</p>
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-12 text-gray-300 sm:py-16">
+              <Minus className="h-12 w-12 sm:h-14 sm:w-14" />
+              <p className="mt-2 text-sm text-gray-400 sm:text-base">Belum ada pertandingan</p>
+              <p className="text-sm text-gray-400 sm:text-base">Buat pertandingan di halaman Sparing</p>
+            </div>
+          )}
+
+          {/* Legend */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[10px] text-gray-500 sm:gap-3 sm:text-xs">
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span>Sedang Berlangsung</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-gray-300" />
+              <span>Belum Dimulai</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-green-600">✓</span>
+              <span>Selesai</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

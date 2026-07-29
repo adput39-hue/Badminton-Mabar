@@ -154,6 +154,7 @@ model Schedule {
   htm            Int?
   cockPrice      Int?    @default(0) @map("cock_price")
   sparingOpponent String?  @map("sparing_opponent")
+  logoUrl        String?  @map("logo_url")
   tournamentId   String?  @map("tournament_id")
   team1Id        String?  @map("team1_id")
   team2Id        String?  @map("team2_id")
