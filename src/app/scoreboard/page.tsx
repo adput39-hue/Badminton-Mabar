@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useControlData } from "@/lib/api-store";
 import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
@@ -178,9 +177,6 @@ export default function ScoreboardPage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <Link href="/dashboard" className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </Link>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Scoreboard</h1>
             <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing untuk menampilkan scoreboard</p>
           </div>
@@ -243,9 +239,6 @@ export default function ScoreboardPage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-            <button onClick={() => window.history.back()} className="mb-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/25">
-              <ChevronLeft className="h-4 w-4" /> Kembali
-            </button>
             <h1 className="text-xl font-bold text-white sm:text-2xl">Pilih Lapangan</h1>
             <p className="mt-1 text-sm font-medium text-white/70">Pilih lapangan untuk melihat pertandingan</p>
           </div>
@@ -318,10 +311,7 @@ export default function ScoreboardPage() {
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
-        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4">
-          <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/25 sm:text-sm">
-            <ChevronLeft className="h-3.5 w-3.5" /> Kembali
-          </button>
+        <div className="relative mx-auto flex max-w-5xl items-center px-3 sm:px-4">
           <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
             {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
           </span>
