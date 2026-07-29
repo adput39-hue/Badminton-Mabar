@@ -6,6 +6,7 @@ import { useControlData } from "@/lib/api-store";
 import { writeLiveScore, readLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
+import { createPortal } from "react-dom";
 import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -45,6 +46,8 @@ export default function SparingMatchPage() {
   const [activeMatch, setActiveMatch] = useState<ApiMatch | null>(null);
   const [loadingMatch, setLoadingMatch] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const [showCompletedPopup, setShowCompletedPopup] = useState(false);
+  const [completedSparingName, setCompletedSparingName] = useState("");
   const [saving, setSaving] = useState(false);
   const [cockCount, setCockCount] = useState("1");
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -352,16 +355,19 @@ export default function SparingMatchPage() {
   // --- VIEW 1: Pilih Sparing atau Turnamen ---
   if (!selSparingId && !selTournamentId) {
     return (
-      <SelectionView
-        schedules={schedules}
-        tournaments={tournaments}
-        matches={matches}
-        tournamentSchedIds={tournamentSchedIds}
-        sparings={sparings}
-        pbName={pbName}
-        onSelectSparing={(id) => { history.pushState(null, ""); setSelSparingId(id); }}
-        onSelectTournament={(id) => { history.pushState(null, ""); setSelTournamentId(id); }}
-      />
+      <>
+        <SelectionView
+          schedules={schedules}
+          tournaments={tournaments}
+          matches={matches}
+          tournamentSchedIds={tournamentSchedIds}
+          sparings={sparings}
+          pbName={pbName}
+          onSelectSparing={(id) => { const s = sparings.find(sp => sp.id === id); if (s?.status === "completed") { setCompletedSparingName(s.sparingOpponent || "Sparing"); setShowCompletedPopup(true); } else { history.pushState(null, ""); setSelSparingId(id); } }}
+          onSelectTournament={(id) => { history.pushState(null, ""); setSelTournamentId(id); }}
+        />
+        {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+      </>
     );
   }
 
@@ -379,8 +385,9 @@ export default function SparingMatchPage() {
     const color = courtColors[ci % courtColors.length];
 
     return (
-      <div className="relative min-h-screen bg-[var(--color-bg)]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-4 pt-4">
+      <>
+        <div className="relative min-h-screen bg-[var(--color-bg)]">
+          <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-4 pt-4">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -468,14 +475,17 @@ export default function SparingMatchPage() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+        {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+      </>
     );
   }
 
   // --- VIEW 3: Belum Assign ---
   if (selCourt !== null && selCourt === 0) {
     return (
-      <div className="relative min-h-screen bg-[var(--color-bg)]">
+      <>
+        <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
@@ -514,8 +524,10 @@ export default function SparingMatchPage() {
               })}
             </div>
           )}
+          </div>
         </div>
-      </div>
+        {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+      </>
     );
   }
 
@@ -523,7 +535,8 @@ export default function SparingMatchPage() {
   if (selCourt !== null) {
     const color = courtColors[(selCourt - 1) % courtColors.length];
     return (
-      <div className="relative min-h-screen bg-[var(--color-bg)]">
+      <>
+        <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
@@ -640,12 +653,15 @@ export default function SparingMatchPage() {
           )}
         </div>
       </div>
+        {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+      </>
     );
   }
 
   // --- VIEW 5: Grid Lapangan ---
   return (
-    <div className="relative min-h-screen bg-[var(--color-bg)]">
+    <>
+      <div className="relative min-h-screen bg-[var(--color-bg)]">
       {/* Header gradient */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -768,6 +784,21 @@ export default function SparingMatchPage() {
         )}
       </div>
     </div>
+    {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+  </>
+);
+}
+
+function CompletedSparingModal({ name, onClose }: { name: string; onClose: () => void }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-sm mx-4 rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-gray-900">Sparing Selesai</h2>
+        <p className="mt-2 text-sm text-gray-600">Sparing {name} sudah selesai dan tidak dapat diakses lagi.</p>
+        <button onClick={onClose} className="mt-6 w-full rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]">Tutup</button>
+      </div>
+    </div>,
+    document.body
   );
 }
 
