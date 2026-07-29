@@ -375,11 +375,13 @@ export default function SparingPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sparings.map((s) => {
             const extCount = getOpponentMemberIds(s).length;
+            const isCompleted = s.status === "completed";
             return (
               <div key={s.id} onClick={() => setSelSparingId(s.id)}
-                className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[var(--color-primary)]" : ""}`}>
+                className={`cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${selSparingId === s.id ? "ring-2 ring-[var(--color-primary)]" : ""} ${isCompleted ? "opacity-60" : ""}`}>
                 <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                   <Swords className="h-4 w-4 text-[var(--color-primary)]" /> {pbName || "Sparing"} vs {s.sparingOpponent}
+                  {isCompleted && <span className="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Selesai</span>}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
                 <p className="mt-2 text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</p>
