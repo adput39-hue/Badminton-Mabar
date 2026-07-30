@@ -380,7 +380,7 @@ export default function ScoreboardPage() {
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
-        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4 md:px-6">
+        <div className="relative mx-auto flex max-w-7xl items-center justify-between px-3 sm:px-4 md:px-8">
           <div className="flex items-center gap-2">
             <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm md:px-5 md:py-2 md:text-base lg:text-lg">
               {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
@@ -405,12 +405,12 @@ export default function ScoreboardPage() {
         </div>
       </div>
 
-      <div className="relative mx-auto flex h-[calc(100vh-52px)] w-full max-w-5xl flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4 lg:p-6">
-        <div className="flex flex-1 flex-col justify-start overflow-hidden">
-          <div className="mx-auto flex w-full flex-1 flex-col rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-6 lg:p-8">
+      <div className="relative mx-auto flex h-[calc(100vh-52px)] w-full max-w-7xl flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4 lg:p-6">
+        <div className="flex flex-1 flex-col justify-center overflow-hidden">
+          <div className="mx-auto flex w-full flex-1 flex-col justify-center rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-6 lg:p-8">
             {currentMatch ? (
               <>
-                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-3 md:mt-1.5 md:text-sm lg:text-base">
+                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-4 md:mt-2 md:text-base lg:text-lg">
                   Round {currentMatch.round} · {modeLabel(currentMatch.notes || "1-30")}
                 </p>
 
@@ -420,30 +420,30 @@ export default function ScoreboardPage() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-5 lg:gap-8">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
                     <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
                   </div>
-                  <div className="basis-1/4 shrink-0 min-w-0 text-left">
+                  <div className="shrink-0 min-w-0 text-left md:basis-2/5">
                     <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player1Id)}</p>
                     <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player2Id)}</p>
                   </div>
                   <div className="flex flex-1 items-center justify-center">
-                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
+                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-6 md:py-2 lg:px-8 lg:py-3">
                       {isTwoGame ? (
                         <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
                           </div>
                           <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
                           <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1Game2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1Game2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
+                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
                       )}
                     </div>
                   </div>
@@ -455,43 +455,43 @@ export default function ScoreboardPage() {
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
 
-                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-5 lg:gap-8">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
                     <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
                   </div>
-                  <div className="basis-1/4 shrink-0 min-w-0 text-left">
+                  <div className="shrink-0 min-w-0 text-left md:basis-2/5">
                     <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player1Id)}</p>
                     <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player2Id)}</p>
                   </div>
                   <div className="flex flex-1 items-center justify-center">
-                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
+                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-6 md:py-2 lg:px-8 lg:py-3">
                       {isTwoGame ? (
                         <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
                           </div>
                           <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
                           <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2Game2 || 0}</div>
+                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2Game2 || 0}</div>
                             <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
+                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="mx-auto mt-1 flex items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-100 sm:mt-2 sm:gap-3 sm:px-5 sm:py-2 md:mt-3 md:gap-6 md:rounded-2xl md:px-6 md:py-2.5 lg:mt-4 lg:gap-8 lg:px-8 lg:py-3">
-                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-2 md:text-sm lg:gap-2.5 lg:text-base">
-                    <Clock className="h-3 w-3 text-[var(--color-primary)] sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                <div className="mx-auto mt-1 flex w-full max-w-2xl items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-100 sm:mt-2 sm:gap-3 sm:px-5 sm:py-2 md:mt-4 md:gap-8 md:rounded-2xl md:px-8 md:py-3 lg:mt-6 lg:gap-12 lg:px-12 lg:py-4">
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-3 md:text-base lg:gap-3 lg:text-lg">
+                    <Clock className="h-3 w-3 text-[var(--color-primary)] sm:h-4 sm:w-4 md:h-6 md:w-6 lg:h-7 lg:w-7" />
                     <span>Durasi <strong className="font-bold text-gray-700">{fmtDuration(elapsed)}</strong></span>
                   </div>
-                  <div className="h-4 w-px bg-gray-200 sm:h-5 md:h-6" />
-                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-2 md:text-sm lg:gap-2.5 lg:text-base">
-                    <Trophy className="h-3 w-3 text-amber-500 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                  <div className="h-4 w-px bg-gray-200 sm:h-5 md:h-8" />
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-3 md:text-base lg:gap-3 lg:text-lg">
+                    <Trophy className="h-3 w-3 text-amber-500 sm:h-4 sm:w-4 md:h-6 md:w-6 lg:h-7 lg:w-7" />
                     <span>{gameLabel(currentMatch.notes || "1-30")}</span>
                   </div>
                 </div>
