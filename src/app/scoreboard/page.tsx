@@ -6,9 +6,8 @@ import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy, Share2, Check } from "lucide-react";
+import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy, Share2, Check, User } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
-import ShuttlecockIcon from "@/components/shuttlecock-icon";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -105,6 +104,7 @@ export default function ScoreboardPage() {
   }, [isMabarMode, selectedMabar, selectedSparing]);
 
   const courts: { name: string; startTime: string; endTime: string }[] = savedSettings?.courts || [];
+  const scheduleGameMode: string = savedSettings?.draftGames || savedSettings?.gameMode || "";
 
   const sparingMatches = useMemo(() => {
     if (isMabarMode) return matches.filter((m) => m.scheduleId === selMabarId);
@@ -128,8 +128,9 @@ export default function ScoreboardPage() {
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
   function modeLabel(notes: string) {
-    if (notes.startsWith("2-21")) return "2 Game 21";
-    if (notes.startsWith("1-42")) return "1 Game 42";
+    const mode = scheduleGameMode || notes || "1-30";
+    if (mode.startsWith("2-21")) return "2 Game 21";
+    if (mode.startsWith("1-42")) return "1 Game 42";
     return "1 Game 30";
   }
 
@@ -166,19 +167,24 @@ export default function ScoreboardPage() {
   }
 
   function raceTo(notes: string) {
-    if (notes.startsWith("1-30")) return "30";
-    if (notes.startsWith("1-42")) return "42";
+    const mode = scheduleGameMode || notes || "1-30";
+    if (mode.startsWith("1-30")) return "30";
+    if (mode.startsWith("1-42")) return "42";
     return "21";
   }
 
   function gameLabel(notes: string) {
-    if (notes.startsWith("2-21")) return "Game Ini";
+    const mode = scheduleGameMode || notes || "1-30";
+    if (mode.startsWith("2-21")) return "Game Ini";
     const r = raceTo(notes);
     return `Race to ${r} Poin`;
   }
 
   const dataReady = loaded && matchesLoadedRef.current;
   const [copied, setCopied] = useState(false);
+
+  const currentGameMode: string = scheduleGameMode || (currentMatch?.notes || "") || "1-30";
+  const isTwoGame: boolean = currentGameMode.startsWith("2-21");
 
   function handleShare() {
     const fromStorage = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
@@ -369,42 +375,42 @@ export default function ScoreboardPage() {
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4 md:pb-5 md:pt-5">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
-        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4">
+        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
+            <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm md:px-5 md:py-2 md:text-base lg:text-lg">
               {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
             </span>
             <button onClick={handleShare}
-              className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 text-[10px] text-white transition-colors hover:bg-white/25 sm:text-xs">
-              {copied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+              className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 text-[10px] text-white transition-colors hover:bg-white/25 sm:px-2.5 sm:py-1.5 sm:text-xs md:px-3 md:py-2 md:text-sm">
+              {copied ? <Check className="size-3 sm:size-3.5 md:size-4" /> : <Share2 className="size-3 sm:size-3.5 md:size-4" />}
               <span className="hidden sm:inline">{copied ? "Disalin" : "Bagikan"}</span>
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 md:gap-3">
             {isCompleted ? (
-              <span className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs">SELESAI</span>
+              <span className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs md:px-4 md:py-1.5 md:text-sm">SELESAI</span>
             ) : isLive ? (
-              <span className="flex items-center gap-1 rounded-full bg-green-400/30 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs">
+              <span className="flex items-center gap-1 rounded-full bg-green-400/30 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs md:px-4 md:py-1.5 md:text-sm">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-300 sm:h-2 sm:w-2" />
                 LIVE
               </span>
             ) : <span className="text-[10px] text-white/50 sm:text-xs">—</span>}
-            <span className="font-mono text-[10px] tabular-nums text-white/60 sm:text-xs">{currentTime}</span>
+            <span className="font-mono text-[10px] tabular-nums text-white/60 sm:text-xs md:text-sm">{currentTime}</span>
           </div>
         </div>
       </div>
 
       <div className="relative mx-auto flex h-[calc(100vh-52px)] w-full max-w-5xl flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4 lg:p-6">
         <div className="flex flex-1 flex-col justify-start overflow-hidden">
-          <div className="mx-auto w-full rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-5 lg:p-6">
+          <div className="mx-auto flex w-full flex-1 flex-col rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-6 lg:p-8">
             {currentMatch ? (
               <>
-                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-3 md:mt-1.5 md:text-sm">
+                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-3 md:mt-1.5 md:text-sm lg:text-base">
                   Round {currentMatch.round} · {modeLabel(currentMatch.notes || "1-30")}
                 </p>
 
@@ -415,16 +421,16 @@ export default function ScoreboardPage() {
                 )}
 
                 <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500 shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl md:h-16 md:w-16 lg:h-20 lg:w-20">
-                    <ShuttlecockIcon size={24} className="text-white sm:size-7 md:size-9 lg:size-11" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
+                    <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
                   </div>
                   <div className="basis-1/4 shrink-0 min-w-0 text-left">
-                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team1Player1Id)}</p>
-                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team1Player2Id)}</p>
+                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player1Id)}</p>
+                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player2Id)}</p>
                   </div>
-                  <div className="flex flex-1 items-center justify-end">
+                  <div className="flex flex-1 items-center justify-center">
                     <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
-                      {(currentMatch.notes || "1-30").startsWith("2-21") ? (
+                      {isTwoGame ? (
                         <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
                             <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
@@ -440,27 +446,26 @@ export default function ScoreboardPage() {
                         <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
                       )}
                     </div>
-                    <div className="h-12 w-2 rounded-r-lg bg-green-500 sm:h-14 sm:w-2.5 md:h-16 md:w-3 lg:h-20 lg:w-3.5" />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 py-1 sm:gap-2 sm:py-1.5 md:gap-3 md:py-2 lg:py-3">
+                <div className="flex items-center gap-1.5 py-1 sm:gap-2 sm:py-1.5 md:gap-3 md:py-2 lg:gap-4 lg:py-3">
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold tracking-wider text-gray-500 sm:h-6 sm:w-6 sm:text-[10px] md:h-8 md:w-8 md:text-xs lg:h-10 lg:w-10 lg:text-sm">VS</div>
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
 
                 <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl md:h-16 md:w-16 lg:h-20 lg:w-20">
-                    <ShuttlecockIcon size={24} className="text-white sm:size-7 md:size-9 lg:size-11" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
+                    <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
                   </div>
                   <div className="basis-1/4 shrink-0 min-w-0 text-left">
-                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team2Player1Id)}</p>
-                    <p className="truncate text-xs font-bold leading-tight text-gray-900 sm:text-sm md:text-base lg:text-lg xl:text-xl">{getName(currentMatch.team2Player2Id)}</p>
+                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player1Id)}</p>
+                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player2Id)}</p>
                   </div>
-                  <div className="flex flex-1 items-center justify-end">
+                  <div className="flex flex-1 items-center justify-center">
                     <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-5 md:py-1.5 lg:px-6 lg:py-1.5">
-                      {(currentMatch.notes || "1-30").startsWith("2-21") ? (
+                      {isTwoGame ? (
                         <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                           <div className="text-center">
                             <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
@@ -476,7 +481,6 @@ export default function ScoreboardPage() {
                         <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-9xl tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
                       )}
                     </div>
-                    <div className="h-12 w-2 rounded-r-lg bg-blue-500 sm:h-14 sm:w-2.5 md:h-16 md:w-3 lg:h-20 lg:w-3.5" />
                   </div>
                 </div>
 
