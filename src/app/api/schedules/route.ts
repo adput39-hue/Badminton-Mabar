@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
-  const pbId = request.headers.get("x-pb-id");
+  const url = new URL(request.url);
+  const queryPbId = url.searchParams.get("pbId");
+  const pbId = queryPbId || request.headers.get("x-pb-id");
   const where = pbId ? { pbId } : {};
   const schedules = await prisma.schedule.findMany({ where, orderBy: { date: "desc" } });
   return NextResponse.json(schedules);

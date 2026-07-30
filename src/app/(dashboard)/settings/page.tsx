@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiPb } from "@/lib/api-types";
-import { Save, Upload, ImageIcon, Palette, Type } from "lucide-react";
+import { Save, Upload, ImageIcon, Palette, Type, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
@@ -80,6 +80,7 @@ export default function SettingsPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [faviconUrl, setFaviconUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY);
   const [captionColor, setCaptionColor] = useState(DEFAULT_CAPTION);
   const [bgColor, setBgColor] = useState(DEFAULT_BG);
@@ -96,10 +97,11 @@ export default function SettingsPage() {
       if (raw) {
         const u = JSON.parse(raw);
         setUser(u);
-        if (u.pb) {
-          setName(u.pb.name || "");
-          setLogoUrl(u.pb.logoUrl || "");
-          setPrimaryColor(u.primaryColor || u.pb?.primaryColor || DEFAULT_PRIMARY);
+          if (u.pb) {
+            setName(u.pb.name || "");
+            setLogoUrl(u.pb.logoUrl || "");
+            setFaviconUrl(u.pb.favicon || "");
+            setPrimaryColor(u.primaryColor || u.pb?.primaryColor || DEFAULT_PRIMARY);
           setCaptionColor(u.captionColor || DEFAULT_CAPTION);
           setBgColor(u.bgColor || DEFAULT_BG);
           const cached = localStorage.getItem("pb_" + u.pb.id);
@@ -109,6 +111,7 @@ export default function SettingsPage() {
             setAddress(p.address || "");
             setPhone(p.phone || "");
             setLogoUrl(p.logoUrl || u.pb.logoUrl || "");
+            setFaviconUrl(p.favicon || u.pb.favicon || "");
           }
         }
       }
@@ -121,6 +124,7 @@ export default function SettingsPage() {
       setAddress(myPb.address || "");
       setPhone(myPb.phone || "");
       setLogoUrl(myPb.logoUrl || "");
+      setFaviconUrl(myPb.favicon || "");
       try { localStorage.setItem("pb_" + myPb.id, JSON.stringify(myPb)); } catch {}
     }
   }, [myPb]);
@@ -137,16 +141,25 @@ export default function SettingsPage() {
     reader.readAsDataURL(file);
   }
 
+  async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !myPb) return;
+    const reader = new FileReader();
+    reader.onload = () => setFaviconUrl(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function handleSave() {
     if (!user?.pb?.id || !name.trim() || saving) return;
     setSaving(true);
     try {
-      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, primaryColor: primaryColor || null, captionColor: captionColor || null, bgColor: bgColor || null });
+      const result = await updatePb(user.pb.id, { name: name.trim(), address: address || null, phone: phone || null, logoUrl: logoUrl || null, favicon: faviconUrl || null, primaryColor: primaryColor || null, captionColor: captionColor || null, bgColor: bgColor || null });
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
         u.pb.name = name.trim();
         u.pb.logoUrl = result?.logoUrl || logoUrl || null;
+        u.pb.favicon = result?.favicon || faviconUrl || null;
         u.pb.primaryColor = primaryColor;
         u.primaryColor = primaryColor;
         u.captionColor = captionColor;
@@ -207,6 +220,20 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="mt-1 text-xs text-gray-400">Upload gambar atau masukkan URL logo PB</p>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">Favicon (icon tab browser)</label>
+              <div className="mt-1.5 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-white">
+                  {faviconUrl ? <img src={faviconUrl} alt="" className="h-full w-full object-contain" /> : <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                  <Upload className="h-3 w-3" /> Upload
+                  <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+                </label>
+                {faviconUrl && <button onClick={() => setFaviconUrl("")} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-red-500"><X className="h-3 w-3" /></button>}
+              </div>
+              <p className="mt-1 text-xs text-gray-400">Upload icon untuk tab browser (32x32 px ideal)</p>
             </div>
           </div>
         </div>

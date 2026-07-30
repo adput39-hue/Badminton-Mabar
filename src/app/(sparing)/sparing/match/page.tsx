@@ -39,6 +39,7 @@ export default function SparingMatchPage() {
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
+  const [selMabarId, setSelMabarId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
   const [selRound, setSelRound] = useState(1);
   const [selAssignMatch, setSelAssignMatch] = useState("");
@@ -97,8 +98,8 @@ export default function SparingMatchPage() {
   }, [startedAt]);
 
   // Track current view for browser back button
-  const viewRef = useRef({ selSparingId, selTournamentId, selCourt, activeMatch });
-  useEffect(() => { viewRef.current = { selSparingId, selTournamentId, selCourt, activeMatch }; });
+  const viewRef = useRef({ selSparingId, selTournamentId, selMabarId, selCourt, activeMatch });
+  useEffect(() => { viewRef.current = { selSparingId, selTournamentId, selMabarId, selCourt, activeMatch }; });
 
   useEffect(() => {
     const handlePop = () => {
@@ -107,6 +108,7 @@ export default function SparingMatchPage() {
       if (v.selCourt !== null) { setSelCourt(null); return; }
       if (v.selSparingId) { setSelSparingId(null); return; }
       if (v.selTournamentId) { setSelTournamentId(null); return; }
+      if (v.selMabarId) { setSelMabarId(null); return; }
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -128,6 +130,12 @@ export default function SparingMatchPage() {
   // Sparing schedules (sparingOpponent set)
   const sparings = useMemo(() =>
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+  [schedules]);
+
+  // Mabar schedules (no sparingOpponent, no tournamentId)
+  const mabarSchedules = useMemo(() =>
+    schedules.filter((s) => !s.sparingOpponent && !s.tournamentId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
   // Tournament groupings
@@ -156,23 +164,35 @@ export default function SparingMatchPage() {
   }, [selectedSparing]);
 
   const isTournamentMode = !!selTournamentId;
+  const isMabarMode = !!selMabarId;
   const tournamentSchedIdsList = selTournamentId ? (tournamentSchedIds.get(selTournamentId) || []) : [];
+
+  const selectedMabar = mabarSchedules.find((s) => s.id === selMabarId);
+  const mabarSettings = useMemo(() => {
+    if (!selectedMabar?.notes) return null;
+    try { return JSON.parse(selectedMabar.notes); } catch { return null; }
+  }, [selectedMabar]);
 
   const courts: { name: string; startTime: string; endTime: string }[] = isTournamentMode
     ? (selectedTournament?.courts ? JSON.parse(selectedTournament.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : [])
-    : savedSettings?.courts || (selectedSparing?.courts ? JSON.parse(selectedSparing.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []);
+    : isMabarMode
+      ? (mabarSettings?.courts || (selectedMabar?.courts ? JSON.parse(selectedMabar.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []))
+      : savedSettings?.courts || (selectedSparing?.courts ? JSON.parse(selectedSparing.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []);
 
   const formatLabels: Record<string, string> = { "1x30": "1-30", "1x42": "1-42", "2x21": "2-21" };
   const modeLabel = isTournamentMode
     ? (formatLabels[selectedTournament?.gameFormat || "1x30"] || "1-30")
-    : savedSettings?.draftGames || "1-30";
+    : isMabarMode
+      ? (mabarSettings?.gameMode || "1-30")
+      : savedSettings?.draftGames || "1-30";
 
-  const totalRounds = isTournamentMode ? 1 : savedSettings?.totalRounds || 1;
+  const totalRounds = isTournamentMode ? 1 : (isMabarMode ? 1 : savedSettings?.totalRounds || 1);
 
   const sparingMatches = useMemo(() => {
     if (isTournamentMode) return matches.filter((m) => tournamentSchedIdsList.includes(m.scheduleId));
+    if (isMabarMode) return matches.filter((m) => m.scheduleId === selMabarId);
     return matches.filter((m) => m.scheduleId === selSparingId);
-  }, [matches, selSparingId, isTournamentMode, tournamentSchedIdsList]);
+  }, [matches, selSparingId, isTournamentMode, tournamentSchedIdsList, isMabarMode, selMabarId]);
 
   const courtMatches = useMemo(() =>
     selCourt !== null ? sparingMatches.filter((m) => m.courtNumber === selCourt && m.round === selRound) : [],
@@ -352,8 +372,8 @@ export default function SparingMatchPage() {
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
 
-  // --- VIEW 1: Pilih Sparing atau League ---
-  if (!selSparingId && !selTournamentId) {
+  // --- VIEW 1: Pilih Sparing, League, atau Mabar ---
+  if (!selSparingId && !selTournamentId && !selMabarId) {
     return (
       <>
         <SelectionView
@@ -362,9 +382,11 @@ export default function SparingMatchPage() {
           matches={matches}
           tournamentSchedIds={tournamentSchedIds}
           sparings={sparings}
+          mabarSchedules={mabarSchedules}
           pbName={pbName}
           onSelectSparing={(id) => { const s = sparings.find(sp => sp.id === id); if (s?.status === "completed") { setCompletedSparingName(s.sparingOpponent || "Sparing"); setShowCompletedPopup(true); } else { history.pushState(null, ""); setSelSparingId(id); } }}
           onSelectTournament={(id) => { history.pushState(null, ""); setSelTournamentId(id); }}
+          onSelectMabar={(id) => { history.pushState(null, ""); setSelMabarId(id); }}
         />
         {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
       </>
@@ -668,9 +690,11 @@ export default function SparingMatchPage() {
               <p className="mt-1 text-sm font-medium text-white/80">
                 {isTournamentMode
                   ? selectedTournament?.name || "League"
-                  : selectedSparing?.sparingOpponent
-                    ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
-                    : "Pilih"}
+                  : isMabarMode
+                    ? selectedMabar?.title || "Mabar"
+                    : selectedSparing?.sparingOpponent
+                      ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
+                      : "Pilih"}
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-white/70">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">
@@ -678,6 +702,8 @@ export default function SparingMatchPage() {
                 </span>
                 {isTournamentMode ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">League</span>
+                ) : isMabarMode ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">Mabar</span>
                 ) : savedSettings?.lokasi ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 font-medium backdrop-blur-sm">
                     {savedSettings.lokasi}
@@ -700,7 +726,7 @@ export default function SparingMatchPage() {
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm">
             <Swords className="mx-auto h-10 w-10 text-gray-300" />
             <p className="mt-3 text-sm text-gray-500">Belum ada lapangan</p>
-            <p className="text-xs text-gray-400">{isTournamentMode ? "Atur lapangan di menu Pengaturan League" : "Atur lapangan di menu Sparing → Pengaturan"}</p>
+            <p className="text-xs text-gray-400">{isTournamentMode ? "Atur lapangan di menu Pengaturan League" : isMabarMode ? "Atur lapangan di halaman Mabar" : "Atur lapangan di menu Sparing → Pengaturan"}</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -792,10 +818,10 @@ function CompletedSparingModal({ name, onClose }: { name: string; onClose: () =>
   );
 }
 
-function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sparings, pbName, onSelectSparing, onSelectTournament }: {
+function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sparings, mabarSchedules, pbName, onSelectSparing, onSelectTournament, onSelectMabar }: {
   schedules: ApiSchedule[]; tournaments: ApiTournament[]; matches: ApiMatch[];
-  tournamentSchedIds: Map<string, string[]>; sparings: ApiSchedule[];
-  pbName: string; onSelectSparing: (id: string) => void; onSelectTournament: (id: string) => void;
+  tournamentSchedIds: Map<string, string[]>; sparings: ApiSchedule[]; mabarSchedules: ApiSchedule[];
+  pbName: string; onSelectSparing: (id: string) => void; onSelectTournament: (id: string) => void; onSelectMabar: (id: string) => void;
 }) {
   const tournamentCards = useMemo(() => {
     const seen = new Set<string>();
@@ -900,8 +926,47 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
               </button>
             );
           })}
-          {sparings.length === 0 && tournamentCards.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing atau league</p>}
+          {sparings.length === 0 && tournamentCards.length === 0 && mabarSchedules.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing, league, atau mabar</p>}
         </div>
+
+        {mabarSchedules.length > 0 && (
+          <>
+            <h2 className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider text-gray-500">Mabar</h2>
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {mabarSchedules.map((s, i) => {
+                const cMatches = matches.filter((m) => m.scheduleId === s.id);
+                const hasLive = cMatches.some((m) => m.status !== "completed" && m.courtNumber);
+                const color = courtColors[i % courtColors.length];
+                return (
+                  <button key={s.id} onClick={() => onSelectMabar(s.id)}
+                    className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                    {hasLive && (
+                      <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${color.bg}`}>
+                        <Star className="h-4 w-4 text-white" fill="white" />
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${color.bg}`}>
+                        <Swords className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-gray-900 sm:text-base">{s.title || "Mabar"}</h3>
+                        <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        {hasLive ? (
+                          <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${color.liveBadge}`}>
+                            <Radio className="h-2.5 w-2.5" /> LIVE
+                          </span>
+                        ) : (
+                          <span className="mt-2 text-xs text-gray-400">{cMatches.length} pertandingan</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

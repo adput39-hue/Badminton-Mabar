@@ -34,6 +34,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (address !== undefined) data.address = address || null;
     if (phone !== undefined) data.phone = phone || null;
     if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl || null;
+    if (body.favicon !== undefined) data.favicon = body.favicon || null;
     if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor || null;
     if (body.captionColor !== undefined) data.captionColor = body.captionColor || null;
     if (body.bgColor !== undefined) data.bgColor = body.bgColor || null;

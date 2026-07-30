@@ -11,6 +11,7 @@ model Pb {
   name       String
   slug       String    @unique
   logoUrl    String?   @map("logo_url")
+  favicon    String?   @map("favicon")
   primaryColor String? @map("primary_color")
   captionColor String? @map("caption_color")
   bgColor      String? @map("bg_color")
@@ -30,6 +31,13 @@ model Pb {
   tournaments    Tournament[]
 
   @@map("pb")
+}
+
+model AppConfig {
+  id      String @id @default("default")
+  favicon String?
+
+  @@map("app_config")
 }
 
 model Tournament {

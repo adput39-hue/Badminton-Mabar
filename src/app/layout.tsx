@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Teko } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/toast";
 import { ThemeProvider } from "@/components/theme-provider";
+import FaviconSetter from "@/components/favicon-setter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -80,7 +81,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col"><ThemeProvider><ToastProvider>{children}</ToastProvider></ThemeProvider></body>
+      <body className="min-h-full flex flex-col"><ThemeProvider><ToastProvider><FaviconSetter />{children}</ToastProvider></ThemeProvider></body>
     </html>
   );
 }

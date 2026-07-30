@@ -6,7 +6,7 @@ import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
-  Swords, ChevronLeft, Minus, Trophy,
+  Swords, ChevronLeft, Minus, Trophy, Share2, Check,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -73,11 +73,13 @@ export default function ScoreboardLivePage() {
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
   const [selTournamentId, setSelTournamentId] = useState<string | null>(null);
+  const [selMabarId, setSelMabarId] = useState<string | null>(null);
   const [mode, setMode] = useState<"sparing" | "turnamen">("sparing");
   const [selRound, setSelRound] = useState(1);
   const [pbName, setPbName] = useState("");
   const [pbLogo, setPbLogo] = useState("");
   const [tournamentDetail, setTournamentDetail] = useState<ApiTournament | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     try {
@@ -90,23 +92,42 @@ export default function ScoreboardLivePage() {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const schedId = params.get("scheduleId");
+    const mabarId = params.get("mabarId");
+    const tourneyId = params.get("tournamentId");
+    if (schedId) { window.history.pushState(null, ""); setSelSparingId(schedId); }
+    else if (mabarId) { window.history.pushState(null, ""); setSelMabarId(mabarId); }
+    else if (tourneyId) { window.history.pushState(null, ""); setSelTournamentId(tourneyId); }
+  }, []);
+
   const sparings = useMemo(() =>
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
+  const mabarSchedules = useMemo(() =>
+    schedules.filter((s) => !s.sparingOpponent && !s.tournamentId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+  [schedules]);
+
   const selectedSparing = sparings.find((s) => s.id === selSparingId);
+  const selectedMabar = mabarSchedules.find((s) => s.id === selMabarId);
+  const isMabarMode = !!selMabarId;
 
   const savedSettings = useMemo(() => {
-    if (!selectedSparing?.notes) return null;
-    try { return JSON.parse(selectedSparing.notes); } catch { return null; }
-  }, [selectedSparing]);
+    const s = isMabarMode ? selectedMabar : selectedSparing;
+    if (!s?.notes) return null;
+    try { return JSON.parse(s.notes); } catch { return null; }
+  }, [isMabarMode, selectedMabar, selectedSparing]);
 
   const courts: { name: string; startTime: string; endTime: string }[] = savedSettings?.courts || [];
   const totalRounds: number = savedSettings?.totalRounds || 1;
 
-  const sparingMatches = useMemo(() =>
-    matches.filter((m) => m.scheduleId === selSparingId).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
-  [matches, selSparingId]);
+  const sparingMatches = useMemo(() => {
+    if (isMabarMode) return matches.filter((m) => m.scheduleId === selMabarId).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    return matches.filter((m) => m.scheduleId === selSparingId).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [matches, selSparingId, isMabarMode, selMabarId]);
 
   const roundMatches = useMemo(() =>
     sparingMatches.filter((m) => m.round === selRound),
@@ -136,20 +157,38 @@ export default function ScoreboardLivePage() {
     return { kitaWins, lawanWins };
   }, [roundStatsMap, totalRounds]);
 
-  const viewRef = useRef({ selSparingId, selTournamentId });
-  useEffect(() => { viewRef.current = { selSparingId, selTournamentId }; });
+  const viewRef = useRef({ selSparingId, selTournamentId, selMabarId });
+  useEffect(() => { viewRef.current = { selSparingId, selTournamentId, selMabarId }; });
 
   useEffect(() => {
     const handlePop = () => {
       const v = viewRef.current;
       if (v.selSparingId) { setSelSparingId(null); }
       if (v.selTournamentId) { setSelTournamentId(null); }
+      if (v.selMabarId) { setSelMabarId(null); }
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
   const dataReady = loaded && matchesLoadedRef.current;
+
+  function handleShare() {
+    const fromStorage = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    const fromUrl = new URLSearchParams(window.location.search).get("pbId") || "";
+    const pbId = fromStorage || fromUrl;
+    if (!pbId) return;
+    const params = new URLSearchParams();
+    params.set("pbId", pbId);
+    if (selSparingId) params.set("scheduleId", selSparingId);
+    if (selMabarId) params.set("mabarId", selMabarId);
+    if (selTournamentId) params.set("tournamentId", selTournamentId);
+    const url = `${window.location.origin}/scoreboard-live?${params.toString()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   useEffect(() => {
     if (!selTournamentId) { setTournamentDetail(null); return; }
@@ -185,7 +224,7 @@ export default function ScoreboardLivePage() {
     return [...map.values()].sort((a, b) => b.points - a.points || b.won - a.won);
   }, [tournamentTeams, tournamentScheds, tourneyMatches]);
 
-  if (!selSparingId && !selTournamentId) {
+  if (!selSparingId && !selTournamentId && !selMabarId) {
     return (
       <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
@@ -195,7 +234,7 @@ export default function ScoreboardLivePage() {
           </div>
           <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
             <h1 className="text-xl font-bold text-white sm:text-2xl">Scoreboard Live</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing atau league</p>
+            <p className="mt-1 text-sm font-medium text-white/70">Pilih sparing, league, atau mabar</p>
           </div>
         </div>
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
@@ -260,6 +299,36 @@ export default function ScoreboardLivePage() {
               ))}
             </div>
             )}
+
+            {/* Mabar */}
+            <h2 className="mb-3 mt-6 text-sm font-bold text-gray-700">Mabar</h2>
+            {mabarSchedules.length === 0 ? (
+              <p className="text-xs text-gray-400">Belum ada mabar</p>
+            ) : (
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {mabarSchedules.map((s, i) => {
+                const sColor = courtColors[i % courtColors.length];
+                return (
+                  <button key={s.id} onClick={() => { history.pushState(null, ""); setSelMabarId(s.id); }}
+                    className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
+                        <Swords className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-gray-900 sm:text-base">{s.title || "Mabar"}</h3>
+                        <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
+                      <span className="text-xs text-gray-400">{matches.filter((m) => m.scheduleId === s.id).length} pertandingan</span>
+                      <ChevronLeft className="h-4 w-4 -rotate-180 text-gray-400 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            )}
           </>)}
         </div>
       </div>
@@ -277,8 +346,17 @@ export default function ScoreboardLivePage() {
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
           <div className="relative mx-auto max-w-[1440px] px-3 sm:px-4">
-            <h1 className="mt-2 text-lg font-bold text-white sm:text-xl">{tournamentDetail?.name || "League"}</h1>
-            <p className="text-xs text-white/60">{tournamentTeams.length} tim · {tournamentScheds.length} sesi</p>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h1 className="mt-2 text-lg font-bold text-white sm:text-xl">{tournamentDetail?.name || "League"}</h1>
+                <p className="text-xs text-white/60">{tournamentTeams.length} tim · {tournamentScheds.length} sesi</p>
+              </div>
+              <button onClick={handleShare}
+                className="flex items-center gap-1 rounded bg-white/15 px-2 py-1 text-xs text-white transition-colors hover:bg-white/25">
+                {copied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+                {copied ? "Disalin" : "Bagikan"}
+              </button>
+            </div>
           </div>
         </div>
         <div className="mx-auto grid w-full max-w-[1440px] flex-1 grid-cols-1 gap-4 overflow-auto p-3 lg:grid-cols-[1fr_320px] lg:p-4">
@@ -393,28 +471,39 @@ export default function ScoreboardLivePage() {
         <div className="mx-auto max-w-[1440px] px-3 pt-2 sm:px-4 sm:pt-3">
           {/* Top bar: title + date */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[10px] font-bold tracking-wider uppercase sm:text-xs">{(pbName || "PB").toUpperCase()} vs {(selectedSparing?.sparingOpponent || "—").toUpperCase()}</h1>
+            <h1 className="text-[10px] font-bold tracking-wider uppercase sm:text-xs">{isMabarMode ? (selectedMabar?.title || "MABAR").toUpperCase() : `${(pbName || "PB").toUpperCase()} vs ${(selectedSparing?.sparingOpponent || "—").toUpperCase()}`}</h1>
             <div className="flex items-center gap-1 text-[10px] sm:text-xs">
+              <button onClick={handleShare}
+                className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 text-white transition-colors hover:bg-white/25">
+                {copied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+                <span className="hidden sm:inline">{copied ? "Disalin" : "Bagikan"}</span>
+              </button>
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:size-3.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              <span>{new Date(selectedSparing?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+              <span>{new Date((isMabarMode ? selectedMabar : selectedSparing)?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
             </div>
           </div>
 
           {/* Big total score */}
           <div className="mt-1.5 flex items-center justify-center gap-3 sm:mt-2 sm:gap-4">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{pbLogo ? <img src={pbLogo} alt="" className="h-full w-full object-cover" /> : "PB"}</div>
-              <span className="text-sm font-bold sm:text-base">{pbName || "PB Testing"}</span>
-            </div>
-            <div className="text-[34px] font-black tabular-nums sm:text-[40px]">
-              <span>{finalStats.kitaWins}</span>
-              <span className="mx-2 text-white/60 sm:mx-3">-</span>
-              <span>{finalStats.lawanWins}</span>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-sm font-bold sm:text-base">{selectedSparing?.sparingOpponent || "TSES"}</span>
-              <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{selectedSparing?.logoUrl ? <img src={selectedSparing.logoUrl} alt="" className="h-full w-full object-cover" /> : (selectedSparing?.sparingOpponent || "T").slice(0, 4).toUpperCase()}</div>
-            </div>
+            {!isMabarMode ? (
+              <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{pbLogo ? <img src={pbLogo} alt="" className="h-full w-full object-cover" /> : "PB"}</div>
+                <span className="text-sm font-bold sm:text-base">{pbName || "PB Testing"}</span>
+              </div>
+              <div className="text-[34px] font-black tabular-nums sm:text-[40px]">
+                <span>{finalStats.kitaWins}</span>
+                <span className="mx-2 text-white/60 sm:mx-3">-</span>
+                <span>{finalStats.lawanWins}</span>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-sm font-bold sm:text-base">{selectedSparing?.sparingOpponent || "TSES"}</span>
+                <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white text-[10px] font-bold text-gray-700 sm:h-9 sm:w-9 sm:text-xs">{selectedSparing?.logoUrl ? <img src={selectedSparing.logoUrl} alt="" className="h-full w-full object-cover" /> : (selectedSparing?.sparingOpponent || "T").slice(0, 4).toUpperCase()}</div>
+              </div>
+              </div>
+            ) : (
+              <div className="text-sm font-bold text-white/80">{sparingMatches.length} pertandingan</div>
+            )}
           </div>
 
           {/* Round stat cards */}

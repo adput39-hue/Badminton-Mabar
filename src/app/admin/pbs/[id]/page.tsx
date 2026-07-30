@@ -18,8 +18,9 @@ export default function PbDetailPage() {
   const pbUsers = users.filter((u) => u.pbId === pbId);
 
   const [editingPb, setEditingPb] = useState(false);
-  const [pbForm, setPbForm] = useState({ name: "", address: "", phone: "", logoUrl: "" });
+  const [pbForm, setPbForm] = useState({ name: "", address: "", phone: "", logoUrl: "", favicon: "" });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [faviconUploading, setFaviconUploading] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [userForm, setUserForm] = useState({ fullName: "", email: "", password: "", role: "" });
   const [showAddUser, setShowAddUser] = useState(false);
@@ -39,9 +40,21 @@ export default function PbDetailPage() {
     reader.readAsDataURL(file);
   }
 
+  async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !pb) return;
+    setFaviconUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPbForm({ ...pbForm, favicon: reader.result as string });
+      setFaviconUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
   function startEditPb() {
     if (!pb) return;
-    setPbForm({ name: pb.name, address: pb.address || "", phone: pb.phone || "", logoUrl: pb.logoUrl || "" });
+    setPbForm({ name: pb.name, address: pb.address || "", phone: pb.phone || "", logoUrl: pb.logoUrl || "", favicon: pb.favicon || "" });
     setEditingPb(true);
     setError("");
   }
@@ -50,7 +63,7 @@ export default function PbDetailPage() {
     e.preventDefault();
     if (!pb) return;
     try {
-      await updatePb(pb.id, { name: pbForm.name.trim(), address: pbForm.address || null, phone: pbForm.phone || null, logoUrl: pbForm.logoUrl || null });
+      await updatePb(pb.id, { name: pbForm.name.trim(), address: pbForm.address || null, phone: pbForm.phone || null, logoUrl: pbForm.logoUrl || null, favicon: pbForm.favicon || null });
       setEditingPb(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan");
@@ -152,6 +165,22 @@ export default function PbDetailPage() {
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-gray-400">Upload gambar atau masukkan URL logo PB</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">Favicon (icon tab browser)</label>
+                <div className="mt-1 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                    {pbForm.favicon ? <img src={pbForm.favicon} alt="" className="h-full w-full object-contain" /> : <ImageIcon className="h-4 w-4 text-gray-300" />}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <input value={pbForm.favicon} onChange={(e) => setPbForm({ ...pbForm, favicon: e.target.value })} placeholder="URL favicon atau upload" className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                    <label className="inline-flex cursor-pointer items-center gap-1 self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                      <Upload className="h-3 w-3" /> {faviconUploading ? "Mengupload..." : "Upload"}
+                      <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Upload icon tab browser (32x32 px ideal)</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2">

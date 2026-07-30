@@ -6,7 +6,7 @@ import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy } from "lucide-react";
+import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy, Share2, Check } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 
@@ -70,6 +70,7 @@ export default function ScoreboardPage() {
   }, []);
 
   const [selSparingId, setSelSparingId] = useState<string | null>(null);
+  const [selMabarId, setSelMabarId] = useState<string | null>(null);
   const [selCourt, setSelCourt] = useState<number | null>(null);
   const [courtEntryTimestamps, setCourtEntryTimestamps] = useState<Record<number, number>>({});
   const [pbName, setPbName] = useState("");
@@ -88,18 +89,27 @@ export default function ScoreboardPage() {
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
+  const mabarSchedules = useMemo(() =>
+    schedules.filter((s) => !s.sparingOpponent && !s.tournamentId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+  [schedules]);
+
   const selectedSparing = sparings.find((s) => s.id === selSparingId);
+  const selectedMabar = mabarSchedules.find((s) => s.id === selMabarId);
+  const isMabarMode = !!selMabarId;
 
   const savedSettings = useMemo(() => {
-    if (!selectedSparing?.notes) return null;
-    try { return JSON.parse(selectedSparing.notes); } catch { return null; }
-  }, [selectedSparing]);
+    const s = isMabarMode ? selectedMabar : selectedSparing;
+    if (!s?.notes) return null;
+    try { return JSON.parse(s.notes); } catch { return null; }
+  }, [isMabarMode, selectedMabar, selectedSparing]);
 
   const courts: { name: string; startTime: string; endTime: string }[] = savedSettings?.courts || [];
 
-  const sparingMatches = useMemo(() =>
-    matches.filter((m) => m.scheduleId === selSparingId),
-  [matches, selSparingId]);
+  const sparingMatches = useMemo(() => {
+    if (isMabarMode) return matches.filter((m) => m.scheduleId === selMabarId);
+    return matches.filter((m) => m.scheduleId === selSparingId);
+  }, [matches, selSparingId, isMabarMode, selMabarId]);
 
   const courtMatches = useMemo(() => {
     if (selCourt === null) return [];
@@ -123,14 +133,15 @@ export default function ScoreboardPage() {
     return "1 Game 30";
   }
 
-  const viewRef = useRef({ selSparingId, selCourt, courtEntryTimestamps });
-  useEffect(() => { viewRef.current = { selSparingId, selCourt, courtEntryTimestamps }; });
+  const viewRef = useRef({ selSparingId, selMabarId, selCourt, courtEntryTimestamps });
+  useEffect(() => { viewRef.current = { selSparingId, selMabarId, selCourt, courtEntryTimestamps }; });
 
   useEffect(() => {
     const handlePop = () => {
       const v = viewRef.current;
       if (v.selCourt !== null) { setCourtEntryTimestamps((p) => { const n = { ...p }; delete n[v.selCourt!]; return n; }); setSelCourt(null); return; }
       if (v.selSparingId) { setSelSparingId(null); return; }
+      if (v.selMabarId) { setSelMabarId(null); return; }
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -167,8 +178,25 @@ export default function ScoreboardPage() {
   }
 
   const dataReady = loaded && matchesLoadedRef.current;
+  const [copied, setCopied] = useState(false);
 
-  if (!selSparingId) {
+  function handleShare() {
+    const fromStorage = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    const fromUrl = new URLSearchParams(window.location.search).get("pbId") || "";
+    const pbId = fromStorage || fromUrl;
+    if (!pbId) return;
+    const params = new URLSearchParams();
+    params.set("pbId", pbId);
+    if (selSparingId) params.set("scheduleId", selSparingId);
+    if (selMabarId) params.set("mabarId", selMabarId);
+    const url = `${window.location.origin}/scoreboard-live?${params.toString()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  if (!selSparingId && !selMabarId) {
     return (
       <div className="relative min-h-screen bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
@@ -222,9 +250,44 @@ export default function ScoreboardPage() {
               );
              })}
            </div>
-           )}
-         </div>
-       </div>
+            )}
+            {mabarSchedules.length > 0 && (
+              <>
+                <h2 className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider text-gray-500">Mabar</h2>
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+                  {mabarSchedules.map((s, i) => {
+                    const sColor = courtColors[i % courtColors.length];
+                    const totalMatches = matches.filter((m) => m.scheduleId === s.id).length;
+                    const hasLiveMatches = matches.some((m) => m.scheduleId === s.id && (m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
+                    return (
+                      <button key={s.id} onClick={() => { history.pushState(null, ""); setSelMabarId(s.id); setCourtEntryTimestamps({}); }}
+                        className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-[var(--color-primary)] sm:p-5">
+                        {hasLiveMatches && (
+                          <div className={`absolute -top-1 -right-1 flex h-10 w-10 items-center justify-center rounded-bl-2xl ${sColor.bg}`}>
+                            <Star className="h-4 w-4 text-white" fill="white" />
+                          </div>
+                        )}
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${sColor.bg}`}>
+                            <Swords className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-bold text-gray-900 sm:text-base">{s.title || "Mabar"}</h3>
+                            <p className="mt-0.5 text-xs text-gray-500">{new Date(s.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4">
+                          <span className="text-xs text-gray-400">{totalMatches} pertandingan</span>
+                          <ChevronRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
      );
    }
 
@@ -311,10 +374,17 @@ export default function ScoreboardPage() {
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
         </div>
-        <div className="relative mx-auto flex max-w-5xl items-center px-3 sm:px-4">
-          <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
-            {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
-          </span>
+        <div className="relative mx-auto flex max-w-5xl items-center justify-between px-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-sm">
+              {courts[selCourt - 1]?.name || `Lapangan ${selCourt}`}
+            </span>
+            <button onClick={handleShare}
+              className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 text-[10px] text-white transition-colors hover:bg-white/25 sm:text-xs">
+              {copied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+              <span className="hidden sm:inline">{copied ? "Disalin" : "Bagikan"}</span>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             {isCompleted ? (
               <span className="flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs">SELESAI</span>

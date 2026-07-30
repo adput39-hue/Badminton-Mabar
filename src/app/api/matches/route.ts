@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { broadcast } from "@/lib/sse-events";
 
 export async function GET(request: Request) {
-  const pbId = request.headers.get("x-pb-id");
   const url = new URL(request.url);
+  const queryPbId = url.searchParams.get("pbId");
+  const pbId = queryPbId || request.headers.get("x-pb-id");
   const ids = url.searchParams.get("ids");
   const where: Record<string, unknown> = pbId ? { pbId } : {};
   if (ids) where.id = { in: ids.split(",") };

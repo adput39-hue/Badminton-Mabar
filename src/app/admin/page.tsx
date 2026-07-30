@@ -17,11 +17,15 @@ export default function AdminDashboard() {
   const [bg, setBg] = useState<string | null>(null);
   const [bgSaved, setBgSaved] = useState(false);
   const [bgError, setBgError] = useState("");
+  const [favicon, setFavicon] = useState<string | null>(null);
+  const [faviconSaved, setFaviconSaved] = useState(false);
+  const [faviconError, setFaviconError] = useState("");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetch("/api/config?key=login_background").then((r) => r.json()).then((d) => { if (d.value) setBg(d.value); }).catch(() => {});
+    fetch("/api/app-config").then((r) => r.json()).then((d) => { if (d.favicon) setFavicon(d.favicon); }).catch(() => {});
   }, []);
 
   async function handleBgUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -39,6 +43,31 @@ export default function AdminDashboard() {
       setTimeout(() => setBgSaved(false), 2000);
     };
     reader.readAsDataURL(file);
+  }
+
+  async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFaviconError("");
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const res = await fetch("/api/app-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ favicon: dataUrl }) });
+      if (!res.ok) { const d = await res.json(); setFaviconError(d.error || "Gagal simpan"); return; }
+      setFavicon(dataUrl);
+      setFaviconSaved(true);
+      setTimeout(() => setFaviconSaved(false), 2000);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function removeFavicon() {
+    setFaviconError("");
+    const res = await fetch("/api/app-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ favicon: null }) });
+    if (!res.ok) { const d = await res.json(); setFaviconError(d.error || "Gagal hapus"); return; }
+    setFavicon(null);
+    setFaviconSaved(true);
+    setTimeout(() => setFaviconSaved(false), 2000);
   }
 
   const filtered = pbs.filter((p) => !search.trim() || p.name.toLowerCase().includes(search.toLowerCase()) || p.slug.toLowerCase().includes(search.toLowerCase()));
@@ -118,6 +147,30 @@ export default function AdminDashboard() {
               <Upload className="h-3.5 w-3.5" /> Upload
               <input type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
             </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Favicon */}
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-white">
+              {favicon ? <img src={favicon} alt="Favicon" className="h-full w-full object-contain" /> : <ImageIcon className="h-5 w-5 text-gray-300" />}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Favicon Website</h3>
+              <p className="text-xs text-gray-400">Icon tab browser untuk seluruh website Badminton Mabar</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {faviconError && <span className="text-xs font-semibold text-red-600">{faviconError}</span>}
+            {faviconSaved && <span className="text-xs font-semibold text-[var(--color-primary)]">✓ Tersimpan</span>}
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)]">
+              <Upload className="h-3.5 w-3.5" /> Upload
+              <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+            </label>
+            {favicon && <button onClick={removeFavicon} className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>}
           </div>
         </div>
       </div>

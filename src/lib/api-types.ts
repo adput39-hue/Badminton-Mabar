@@ -58,9 +58,10 @@ export interface ApiUserLevel {
 
 export interface ApiPb {
   id: string; name: string; slug: string;
-  logoUrl: string | null; address: string | null;
-  phone: string | null; primaryColor: string | null;
-  cockPrice: number | null; createdAt: string; updatedAt: string;
+  logoUrl: string | null; favicon: string | null;
+  primaryColor: string | null; captionColor: string | null; bgColor: string | null;
+  address: string | null;
+  phone: string | null; cockPrice: number | null; createdAt: string; updatedAt: string;
   _count?: { users: number; members: number; schedules: number };
 }
 
