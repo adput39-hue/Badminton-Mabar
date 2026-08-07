@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const attendances = await prisma.attendance.findMany();
-  return NextResponse.json(attendances);
+  try {
+    const attendances = await prisma.attendance.findMany();
+    return NextResponse.json(attendances);
+  } catch (error) {
+    console.error("GET /api/attendances error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

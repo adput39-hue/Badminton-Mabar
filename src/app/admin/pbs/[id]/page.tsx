@@ -6,6 +6,7 @@ import { useApi } from "@/lib/api-store";
 import type { ApiPb, ApiUser } from "@/lib/api-types";
 import { ArrowLeft, Shield, Users, Calendar, Globe, Phone as PhoneIcon, Mail, Pencil, X, Check, Save, Plus, Upload, ImageIcon } from "lucide-react";
 import Link from "next/link";
+import { compressImage } from "@/lib/compress-image";
 
 export default function PbDetailPage() {
   const params = useParams();
@@ -31,25 +32,22 @@ export default function PbDetailPage() {
     const file = e.target.files?.[0];
     if (!file || !pb) return;
     setLogoUploading(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
+    try {
+      const dataUrl = await compressImage(file, 512);
       setPbForm({ ...pbForm, logoUrl: dataUrl });
-      setLogoUploading(false);
-    };
-    reader.readAsDataURL(file);
+    } catch {}
+    setLogoUploading(false);
   }
 
   async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !pb) return;
     setFaviconUploading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPbForm({ ...pbForm, favicon: reader.result as string });
-      setFaviconUploading(false);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImage(file, 128);
+      setPbForm({ ...pbForm, favicon: dataUrl });
+    } catch {}
+    setFaviconUploading(false);
   }
 
   function startEditPb() {

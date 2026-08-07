@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getHtmRate } from "@/lib/htm-rate";
 
 export async function GET(request: Request) {
   const pbId = request.headers.get("x-pb-id");
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   });
 
   const schedules = await prisma.schedule.findMany({
-    where: { ...where, htm: { gt: 0 }, status: { not: "cancelled" } } as any,
+    where: { ...where, OR: [{ htm: { gt: 0 } }, { htmInsidentil: { gt: 0 } }], status: { not: "cancelled" } } as any,
     orderBy: { date: "desc" },
   });
 
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
           scheduleId: s.id,
           title: s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title,
           tanggal: s.date.toISOString(),
-          amount: s.htm!,
+          amount: getHtmRate(s, member),
         });
       }
     }
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
       if (!attIds.includes(s.id)) continue;
       const paidIds = getPaidMembers(s);
       if (!paidIds.includes(m.id)) {
-        totalUnpaidHtm += s.htm!;
+        totalUnpaidHtm += getHtmRate(s, m);
       }
     }
     const totalDebt = (m.saldoAwalHutang || 0) + totalUnpaidHtm;
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
     }
 
     const schedules = await prisma.schedule.findMany({
-      where: { id: { in: scheduleIds }, pbId, htm: { gt: 0 } },
+      where: { id: { in: scheduleIds }, pbId, OR: [{ htm: { gt: 0 } }, { htmInsidentil: { gt: 0 } }] },
     });
 
     const created: { scheduleId: string; amount: number }[] = [];
@@ -163,14 +164,15 @@ export async function POST(request: Request) {
           pbId,
           type: "masuk",
           description: `Bayar HTM - ${member?.name || "?"} - ${title}`,
-          amount: s.htm!,
+          amount: getHtmRate(s, member),
           tanggal: new Date(),
           reference: s.id,
+          scheduleId: s.id,
           memberId,
         },
       });
 
-      created.push({ scheduleId: s.id, amount: s.htm! });
+      created.push({ scheduleId: s.id, amount: getHtmRate(s, member) });
     }
 
     return NextResponse.json({ ok: true, created });

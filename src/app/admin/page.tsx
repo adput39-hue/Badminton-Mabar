@@ -6,6 +6,7 @@ import type { ApiPb } from "@/lib/api-types";
 import { Plus, Trash2, X, Search, Building2, Users, Shield, Globe, Phone as PhoneIcon, Calendar, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/toast";
+import { compressImage } from "@/lib/compress-image";
 
 export default function AdminDashboard() {
   const { items: pbs, add: addPb, remove: removePb } = useApi<ApiPb>("pbs");
@@ -32,33 +33,29 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
     setBgError("");
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
+    try {
+      const dataUrl = await compressImage(file, 1920);
       const res = await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "login_background", value: dataUrl }) });
       if (!res.ok) { const d = await res.json(); setBgError(d.error || "Gagal simpan"); return; }
       setBg(dataUrl);
       localStorage.setItem("login_background", dataUrl);
       setBgSaved(true);
       setTimeout(() => setBgSaved(false), 2000);
-    };
-    reader.readAsDataURL(file);
+    } catch { setBgError("Gagal membaca gambar"); }
   }
 
   async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setFaviconError("");
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
+    try {
+      const dataUrl = await compressImage(file, 128);
       const res = await fetch("/api/app-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ favicon: dataUrl }) });
       if (!res.ok) { const d = await res.json(); setFaviconError(d.error || "Gagal simpan"); return; }
       setFavicon(dataUrl);
       setFaviconSaved(true);
       setTimeout(() => setFaviconSaved(false), 2000);
-    };
-    reader.readAsDataURL(file);
+    } catch { setFaviconError("Gagal membaca gambar"); }
   }
 
   async function removeFavicon() {

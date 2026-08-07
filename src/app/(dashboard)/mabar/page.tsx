@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
 import { useToast } from "@/components/toast";
-import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
+import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2, Shuffle } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { buildPairingSuggestions, type PairingRecord, type PairingSuggestion } from "@/lib/pairing";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -39,6 +40,11 @@ export default function MabarPage() {
   }, [schedule]);
 
   const scheduleMatches = useMemo(() => matches.filter((m) => m.scheduleId === selId), [matches, selId]);
+  const activeMatchIds = useMemo(() => {
+    const ids = new Set<string>();
+    scheduleMatches.filter((m) => m.status !== "completed").forEach((m) => { [m.team1Player1Id, m.team1Player2Id, m.team2Player1Id, m.team2Player2Id].forEach((id) => ids.add(id)); });
+    return ids;
+  }, [scheduleMatches]);
   const draftMatches = useMemo(() => scheduleMatches.filter((m) => m.courtNumber === null && m.status === "scheduled"), [scheduleMatches]);
   const liveMatches = useMemo(() => scheduleMatches.filter((m) => m.courtNumber !== null && m.status === "scheduled"), [scheduleMatches]);
   const doneMatches = useMemo(() => scheduleMatches.filter((m) => m.status === "completed"), [scheduleMatches]);
@@ -49,6 +55,7 @@ export default function MabarPage() {
   const [editMatch, setEditMatch] = useState<ApiMatch | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showAbsen, setShowAbsen] = useState(false);
+  const [showReferensi, setShowReferensi] = useState(false);
   const [pairMode, setPairMode] = useState<"all" | string>("all");
   const [assignCourtFor, setAssignCourtFor] = useState<string | null>(null);
 
@@ -127,7 +134,7 @@ export default function MabarPage() {
     setAssignCourtFor(null);
   }
 
-  async function handleScore(matchId: string, score1: number, score2: number, cockCount: number, score1g2?: number, score2g2?: number) {
+  async function handleScore(matchId: string, score1: number, score2: number, cockCount: number, score1g2?: number, score2g2?: number, score1g3?: number, score2g3?: number) {
     const m = matches.find((x) => x.id === matchId); if (!m) return;
     let winner: number | null = null;
     if (m.totalGames === 1) {
@@ -135,12 +142,14 @@ export default function MabarPage() {
     } else {
       const g1w = score1 > score2 ? 1 : score2 > score1 ? 2 : null;
       const g2w = score1g2 !== undefined && score2g2 !== undefined ? (score1g2 > score2g2 ? 1 : score2g2 > score1g2 ? 2 : null) : null;
-      const wins1 = (g1w === 1 ? 1 : 0) + (g2w === 1 ? 1 : 0);
-      const wins2 = (g1w === 2 ? 1 : 0) + (g2w === 2 ? 1 : 0);
+      const g3w = score1g3 !== undefined && score2g3 !== undefined ? (score1g3 > score2g3 ? 1 : score2g3 > score1g3 ? 2 : null) : null;
+      const wins1 = (g1w === 1 ? 1 : 0) + (g2w === 1 ? 1 : 0) + (g3w === 1 ? 1 : 0);
+      const wins2 = (g1w === 2 ? 1 : 0) + (g2w === 2 ? 1 : 0) + (g3w === 2 ? 1 : 0);
       winner = wins1 > wins2 ? 1 : wins2 > wins1 ? 2 : null;
     }
     const upd: Record<string, unknown> = { scoreTeam1: score1, scoreTeam2: score2, winnerTeam: winner, status: "completed", cockCount };
     if (score1g2 !== undefined) { upd.scoreTeam1Game2 = score1g2; upd.scoreTeam2Game2 = score2g2; }
+    if (score1g3 !== undefined) { upd.scoreTeam1Game3 = score1g3; upd.scoreTeam2Game3 = score2g3; } else { upd.scoreTeam1Game3 = null; upd.scoreTeam2Game3 = null; }
     await updateMatch(matchId, upd);
     const team1 = [m.team1Player1Id, m.team1Player2Id], team2 = [m.team2Player1Id, m.team2Player2Id];
     for (const memberId of [...team1, ...team2]) {
@@ -157,6 +166,10 @@ export default function MabarPage() {
 
   async function handleFinish(matchId: string) {
     await updateMatch(matchId, { status: "completed", winnerTeam: null });
+  }
+
+  async function addFromSuggestion(team1: [string, string], team2: [string, string]) {
+    await addMatch({ scheduleId: selId, courtNumber: null, round: draftMatches.length + liveMatches.length + 1, team1Player1Id: team1[0], team1Player2Id: team1[1], team2Player1Id: team2[0], team2Player2Id: team2[1], totalGames: gameMode.startsWith("2") ? 2 : 1, notes: gameMode || undefined, status: "scheduled" });
   }
 
   const notInvited = members.filter((m) => !invitedIds.includes(m.id) && m.isActive !== false);
@@ -221,6 +234,7 @@ export default function MabarPage() {
                 <button onClick={() => setShowAbsen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Absen</button>
                 <button onClick={() => setShowSearch(!showSearch)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><UserPlus className="h-3.5 w-3.5" /> Tambah</button>
                 <button onClick={() => setShowStats(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><BarChart3 className="h-3.5 w-3.5" /> Rotasi</button>
+                <button onClick={() => setShowReferensi(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><Shuffle className="h-3.5 w-3.5" /> Referensi</button>
                 {schedule?.status !== "completed" && <button onClick={handleSelesai} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)]"><Check className="h-3.5 w-3.5" /> Selesai</button>}
                 <a href="/riwayat" className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Riwayat</a>
               </div>
@@ -325,7 +339,7 @@ export default function MabarPage() {
                       {cMatches.length === 0 ? (
                         <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
                       ) : (
-                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2) => handleScore(m.id, s1, s2, cc, s1g2, s2g2)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} />)
+                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, cc, s1g2, s2g2, s1g3, s2g3)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} />)
                       )}
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -377,18 +391,30 @@ export default function MabarPage() {
           onClose={() => setShowAbsen(false)}
         />
       )}
+      {showReferensi && (
+        <ReferensiModal
+          hadir={hadirIds.map((id) => members.find((m) => m.id === id)).filter((m): m is ApiMember => !!m)}
+          takenIds={activeMatchIds}
+          matchCounts={playerMatchCounts}
+          gameMode={gameMode}
+          onAdd={addFromSuggestion}
+          onClose={() => setShowReferensi(false)}
+        />
+      )}
     </div>
     </div>
   );
 }
 
 function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
-  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void; onFinish: () => void;
+  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void; onFinish: () => void;
 }) {
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
   const [s1g2, setS1g2] = useState(match.scoreTeam1Game2 !== null ? String(match.scoreTeam1Game2) : "");
   const [s2g2, setS2g2] = useState(match.scoreTeam2Game2 !== null ? String(match.scoreTeam2Game2) : "");
+  const [s1g3, setS1g3] = useState(match.scoreTeam1Game3 !== null ? String(match.scoreTeam1Game3) : "");
+  const [s2g3, setS2g3] = useState(match.scoreTeam2Game3 !== null ? String(match.scoreTeam2Game3) : "");
   const [cockCount, setCockCount] = useState(match.cockCount !== null ? String(match.cockCount) : "1");
   const [showScore, setShowScore] = useState(false);
   const team1Won = match.winnerTeam === 1; const team2Won = match.winnerTeam === 2;
@@ -398,7 +424,9 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
   const n = (v: string) => Number(v) || 0;
   const g1Filled = s1 !== "" && s2 !== "";
   const g2Filled = s1g2 !== "" && s2g2 !== "";
-  const canSave = isTwoGames ? g1Filled && g2Filled : g1Filled;
+  const g3Filled = s1g3 !== "" && s2g3 !== "";
+  const canSave = isTwoGames ? (g1Filled && g2Filled && ((s1g3 === "" && s2g3 === "") || g3Filled)) : g1Filled;
+  const hasG3 = (match.scoreTeam1Game3 || 0) > 0 || (match.scoreTeam2Game3 || 0) > 0;
 
   return (
     <div className="rounded-lg border border-gray-100 p-3">
@@ -415,7 +443,9 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
         )}
         {match.status === "completed" && (
           <span className="text-xs font-bold text-[var(--color-primary)]">
-            {match.winnerTeam !== null ? `${match.scoreTeam1}-${match.scoreTeam2}${isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}` : "Selesai"}
+            {match.winnerTeam !== null
+              ? `${match.scoreTeam1}-${match.scoreTeam2}${isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}${hasG3 ? `, ${match.scoreTeam1Game3}-${match.scoreTeam2Game3}` : ""}`
+              : "SERI"}
           </span>
         )}
       </div>
@@ -447,12 +477,19 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
               <input type="number" value={s2g2} onChange={(e) => setS2g2(e.target.value)} placeholder="0" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
             </div>
           )}
+          {isTwoGames && (
+            <div className="flex items-center justify-center gap-2">
+              <input type="number" value={s1g3} onChange={(e) => setS1g3(e.target.value)} placeholder="0" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
+              <span className="text-xs font-bold text-gray-400">G3</span>
+              <input type="number" value={s2g3} onChange={(e) => setS2g3(e.target.value)} placeholder="0" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2">
             <span className="text-xs font-bold text-black">Cock</span>
             <input type="number" value={cockCount} onChange={(e) => setCockCount(e.target.value)} placeholder="1" className="w-14 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm font-bold" min={0} />
           </div>
           <div className="flex justify-center gap-2">
-            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), n(cockCount), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan</button>
+            <button disabled={!canSave} onClick={() => { setShowScore(false); onScore(n(s1), n(s2), n(cockCount), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined, isTwoGames && g3Filled ? n(s1g3) : undefined, isTwoGames && g3Filled ? n(s2g3) : undefined); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">Simpan</button>
             <button onClick={() => setShowScore(false)} className="rounded-lg border border-gray-200 px-4 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Batal</button>
           </div>
         </div>
@@ -739,6 +776,126 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
             <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{editMatch ? "Simpan" : "Buat Draft"}</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function ReferensiModal({ hadir, takenIds, matchCounts, gameMode, onAdd, onClose }: {
+  hadir: ApiMember[]; takenIds: Set<string>; matchCounts: Map<string, number>; gameMode: string;
+  onAdd: (team1: [string, string], team2: [string, string]) => Promise<void>; onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const [adding, setAdding] = useState<string | null>(null);
+
+  const freePlayers = useMemo(() => hadir.filter((m) => !takenIds.has(m.id)), [hadir, takenIds]);
+  const takenPlayers = useMemo(() => hadir.filter((m) => takenIds.has(m.id)), [hadir, takenIds]);
+
+  const result = useMemo(() => {
+    const records: PairingRecord[] = freePlayers.map((m, idx) => ({ id: m.id, className: m.class || "X", matchCount: matchCounts.get(m.id) || 0, arrival: idx }));
+    return buildPairingSuggestions(records);
+  }, [freePlayers, matchCounts]);
+
+  const nameOf = (id: string) => hadir.find((m) => m.id === id)?.name || "—";
+  const clsOf = (id: string) => hadir.find((m) => m.id === id)?.class || "X";
+
+  async function handleAdd(s: PairingSuggestion) {
+    setAdding(s.team1[0] + s.team1[1] + s.team2[0] + s.team2[1]);
+    try { await onAdd(s.team1, s.team2); toast("success", "Draft ditambahkan"); }
+    catch { toast("error", "Gagal menambah draft"); }
+    finally { setAdding(null); }
+  }
+
+  const modeLabel = gameMode.startsWith("2") ? "2G 21" : gameMode === "1-42" ? "1G 42" : "1G 30";
+
+  function PlayerLine({ id }: { id: string }) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${classBadgeStyle[clsOf(id)] || "bg-gray-100 text-gray-600"}`}>{clsOf(id)}</span>
+        <span className="truncate text-sm font-medium text-gray-900">{nameOf(id)}</span>
+        <span className="shrink-0 text-[10px] text-gray-400">({matchCounts.get(id) || 0}x)</span>
+      </span>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
+      <div className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900"><Shuffle className="h-5 w-5 text-[var(--color-primary)]" /> Referensi Pairing</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><XIcon className="h-5 w-5" /></button>
+        </div>
+        <div className="border-b border-gray-100 px-6 py-3 text-xs text-gray-500">
+          Prioritas: yang belum main dulu, lalu yang datang duluan. Pasangan rekan utamakan beda kelas yang cocok, lawan diseimbangkan. {freePlayers.length} pemain bebas · {takenPlayers.length} sudah terjadwal · {result.suggestions.length} usulan pertandingan.
+        </div>
+        <div className="flex-1 space-y-2 overflow-y-auto p-4">
+          {result.suggestions.length === 0 && (
+            <p className="py-8 text-center text-sm text-gray-400">Belum ada usulan. Pastikan minimal 4 pemain hadir.</p>
+          )}
+          {result.suggestions.map((s) => (
+            <div key={s.team1[0] + s.team1[1] + s.team2[0] + s.team2[1]} className="rounded-xl border border-gray-200 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">Tim 1</span>
+                      <span className="text-[10px] text-gray-400">res {s.team1Strength} poin</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">vs</span>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="text-[10px] text-gray-400">res {s.team2Strength} poin</span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">Tim 2</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <div className="space-y-1">
+                      <PlayerLine id={s.team1[0]} />
+                      <PlayerLine id={s.team1[1]} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-400">vs</span>
+                    <div className="space-y-1 text-right">
+                      <PlayerLine id={s.team2[0]} />
+                      <PlayerLine id={s.team2[1]} />
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => handleAdd(s)} disabled={adding !== null}
+                  className="shrink-0 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{adding ? "..." : "Tambah"}</button>
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+                <span className={`rounded-full px-2 py-0.5 font-semibold ${s.diff <= 1 ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+                  {s.diff <= 1 ? "Seimbang" : `Selisih ${s.diff}`}
+                </span>
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500">{modeLabel}</span>
+              </div>
+            </div>
+          ))}
+
+          {takenPlayers.length > 0 && (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 p-3">
+              <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">Sudah terjadwal ({takenPlayers.length})</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {takenPlayers.map((m) => (
+                  <span key={m.id} className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] text-gray-500 ring-1 ring-gray-200">
+                    <span className={`rounded-full px-1 py-0.5 text-[8px] font-bold ${classBadgeStyle[m.class] || "bg-gray-100 text-gray-600"}`}>{m.class}</span>
+                    {m.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.leftovers.length > 0 && (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/50 p-3">
+              <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">Tidak ikut ({result.leftovers.length})</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {result.leftovers.map((l) => (
+                  <span key={l.id} className="rounded-full bg-white px-2 py-0.5 text-[10px] text-gray-500 ring-1 ring-gray-200">{nameOf(l.id)} · {l.reason}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

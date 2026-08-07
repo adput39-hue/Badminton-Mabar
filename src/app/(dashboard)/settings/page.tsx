@@ -6,6 +6,7 @@ import type { ApiPb } from "@/lib/api-types";
 import { Save, Upload, ImageIcon, Palette, Type, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { compressImage } from "@/lib/compress-image";
 
 function darken(hex: string, amount: number) {
   const num = parseInt(hex.replace("#", ""), 16);
@@ -133,20 +134,20 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file || !myPb) return;
     setLogoUploading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setLogoUrl(reader.result as string);
-      setLogoUploading(false);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImage(file, 512);
+      setLogoUrl(dataUrl);
+    } catch {}
+    setLogoUploading(false);
   }
 
   async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !myPb) return;
-    const reader = new FileReader();
-    reader.onload = () => setFaviconUrl(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImage(file, 128);
+      setFaviconUrl(dataUrl);
+    } catch {}
   }
 
   async function handleSave() {

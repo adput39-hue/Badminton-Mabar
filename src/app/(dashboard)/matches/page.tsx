@@ -46,7 +46,7 @@ export default function MatchesPage() {
     await addMatch({ scheduleId: data.scheduleId, courtNumber: data.courtNumber, round: data.round, team1Player1Id: data.team1[0], team1Player2Id: data.team1[1], team2Player1Id: data.team2[0], team2Player2Id: data.team2[1], totalGames: data.totalGames });
   }
 
-  async function handleScore(matchId: string, score1: number, score2: number, score1g2?: number, score2g2?: number) {
+  async function handleScore(matchId: string, score1: number, score2: number, score1g2?: number, score2g2?: number, score1g3?: number, score2g3?: number) {
     const m = matches.find((x) => x.id === matchId); if (!m) return;
     let winner: number | null = null;
     if (m.totalGames === 1) {
@@ -54,12 +54,14 @@ export default function MatchesPage() {
     } else {
       const g1w = score1 > score2 ? 1 : score2 > score1 ? 2 : null;
       const g2w = score1g2 !== undefined && score2g2 !== undefined ? (score1g2 > score2g2 ? 1 : score2g2 > score1g2 ? 2 : null) : null;
-      const wins1 = (g1w === 1 ? 1 : 0) + (g2w === 1 ? 1 : 0);
-      const wins2 = (g1w === 2 ? 1 : 0) + (g2w === 2 ? 1 : 0);
+      const g3w = score1g3 !== undefined && score2g3 !== undefined ? (score1g3 > score2g3 ? 1 : score2g3 > score1g3 ? 2 : null) : null;
+      const wins1 = (g1w === 1 ? 1 : 0) + (g2w === 1 ? 1 : 0) + (g3w === 1 ? 1 : 0);
+      const wins2 = (g1w === 2 ? 1 : 0) + (g2w === 2 ? 1 : 0) + (g3w === 2 ? 1 : 0);
       winner = wins1 > wins2 ? 1 : wins2 > wins1 ? 2 : null;
     }
     const upd: Record<string, unknown> = { scoreTeam1: score1, scoreTeam2: score2, winnerTeam: winner, status: "completed" };
     if (score1g2 !== undefined) { upd.scoreTeam1Game2 = score1g2; upd.scoreTeam2Game2 = score2g2; }
+    if (score1g3 !== undefined) { upd.scoreTeam1Game3 = score1g3; upd.scoreTeam2Game3 = score2g3; } else { upd.scoreTeam1Game3 = null; upd.scoreTeam2Game3 = null; }
     await updateMatch(matchId, upd);
     const team1 = [m.team1Player1Id, m.team1Player2Id], team2 = [m.team2Player1Id, m.team2Player2Id];
     for (const memberId of [...team1, ...team2]) {
@@ -101,7 +103,7 @@ export default function MatchesPage() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
-            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} getTeamByPlayerId={getTeamByPlayerId} onScore={(s1, s2, s1g2, s2g2) => handleScore(m.id, s1, s2, s1g2, s2g2)} onDelete={() => removeMatch(m.id)} />)}
+            {scheduled.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} getTeamByPlayerId={getTeamByPlayerId} onScore={(s1, s2, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, s1g2, s2g2, s1g3, s2g3)} onDelete={() => removeMatch(m.id)} />)}
             {completed.map((m) => <MatchCard key={m.id} match={m} schedule={schedules.find((s) => s.id === m.scheduleId)} getName={getName} getTeamByPlayerId={getTeamByPlayerId} onScore={() => {}} onDelete={() => removeMatch(m.id)} />)}
           </div>
           <div className="space-y-4">
@@ -137,7 +139,7 @@ export default function MatchesPage() {
 }
 
 function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDelete }: {
-  match: MatchItem; schedule?: ScheduleItem; getName: (id: string) => string; getTeamByPlayerId: (id: string) => TeamItem | undefined; onScore: (s1: number, s2: number, s1g2?: number, s2g2?: number) => void; onDelete: () => void;
+  match: MatchItem; schedule?: ScheduleItem; getName: (id: string) => string; getTeamByPlayerId: (id: string) => TeamItem | undefined; onScore: (s1: number, s2: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void;
 }) {
   const isTournament = !!schedule?.tournamentId;
   const team1 = isTournament ? getTeamByPlayerId(match.team1Player1Id) : undefined;
@@ -146,13 +148,17 @@ function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDel
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
   const [s1g2, setS1g2] = useState(match.scoreTeam1Game2 !== null ? String(match.scoreTeam1Game2) : "");
   const [s2g2, setS2g2] = useState(match.scoreTeam2Game2 !== null ? String(match.scoreTeam2Game2) : "");
+  const [s1g3, setS1g3] = useState(match.scoreTeam1Game3 !== null ? String(match.scoreTeam1Game3) : "");
+  const [s2g3, setS2g3] = useState(match.scoreTeam2Game3 !== null ? String(match.scoreTeam2Game3) : "");
   const [showScore, setShowScore] = useState(false);
   const team1Won = match.winnerTeam === 1; const team2Won = match.winnerTeam === 2;
   const isTwoGames = match.totalGames === 2;
   const n = (v: string) => Number(v) || 0;
   const g1Filled = s1 !== "" && s2 !== "";
   const g2Filled = s1g2 !== "" && s2g2 !== "";
-  const canSave = isTwoGames ? g1Filled && g2Filled : g1Filled;
+  const g3Filled = s1g3 !== "" && s2g3 !== "";
+  const canSave = isTwoGames ? (g1Filled && g2Filled && ((s1g3 === "" && s2g3 === "") || g3Filled)) : g1Filled;
+  const hasG3 = (match.scoreTeam1Game3 || 0) > 0 || (match.scoreTeam2Game3 || 0) > 0;
   const ci = (match.courtNumber || 1) - 1;
   const color = courtColors[ci % courtColors.length];
   const hasScore = (match.scoreTeam1 || 0) + (match.scoreTeam2 || 0) > 0;
@@ -178,7 +184,8 @@ function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDel
               )}
               {match.status === "completed" && (
                 <span className={`rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm ${team1Won || team2Won ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "bg-gray-100 text-gray-500"}`}>
-                  {match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}
+                  {match.scoreTeam1}-{match.scoreTeam2}{isTwoGames && match.scoreTeam1Game2 !== null ? `, ${match.scoreTeam1Game2}-${match.scoreTeam2Game2}` : ""}{hasG3 ? `, ${match.scoreTeam1Game3}-${match.scoreTeam2Game3}` : ""}
+                  {match.winnerTeam === null && <span className="ml-2 text-[10px] font-semibold uppercase">Seri</span>}
                 </span>
               )}
               <button onClick={onDelete} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
@@ -219,14 +226,14 @@ function MatchCard({ match, schedule, getName, getTeamByPlayerId, onScore, onDel
           {team2Won && <span className="mt-1.5 inline-block rounded-full bg-[var(--color-primary)] px-3 py-0.5 text-xs font-bold text-white">MENANG</span>}
         </div>
       </div>
-      {showScore && <ScoreInput s1={s1} s2={s2} s1g2={s1g2} s2g2={s2g2} onS1={setS1} onS2={setS2} onS1g2={setS1g2} onS2g2={setS2g2} isTwoGames={isTwoGames} canSave={canSave} onSubmit={async () => { await onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined); }} />}
+      {showScore && <ScoreInput s1={s1} s2={s2} s1g2={s1g2} s2g2={s2g2} s1g3={s1g3} s2g3={s2g3} onS1={setS1} onS2={setS2} onS1g2={setS1g2} onS2g2={setS2g2} onS1g3={setS1g3} onS2g3={setS2g3} isTwoGames={isTwoGames} canSave={canSave} onSubmit={async () => { await onScore(n(s1), n(s2), isTwoGames ? n(s1g2) : undefined, isTwoGames ? n(s2g2) : undefined, isTwoGames && g3Filled ? n(s1g3) : undefined, isTwoGames && g3Filled ? n(s2g3) : undefined); }} />}
     </div>
   );
 }
 
-function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames, canSave, onSubmit }: {
-  s1: string; s2: string; s1g2: string; s2g2: string;
-  onS1: (v: string) => void; onS2: (v: string) => void; onS1g2: (v: string) => void; onS2g2: (v: string) => void;
+function ScoreInput({ s1, s2, s1g2, s2g2, s1g3, s2g3, onS1, onS2, onS1g2, onS2g2, onS1g3, onS2g3, isTwoGames, canSave, onSubmit }: {
+  s1: string; s2: string; s1g2: string; s2g2: string; s1g3: string; s2g3: string;
+  onS1: (v: string) => void; onS2: (v: string) => void; onS1g2: (v: string) => void; onS2g2: (v: string) => void; onS1g3: (v: string) => void; onS2g3: (v: string) => void;
   isTwoGames: boolean; canSave: boolean; onSubmit: () => Promise<void>;
 }) {
   const { toast } = useToast();
@@ -256,6 +263,13 @@ function ScoreInput({ s1, s2, s1g2, s2g2, onS1, onS2, onS1g2, onS2g2, isTwoGames
           <input type="number" value={s1g2} onChange={(e) => onS1g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
           <span className="text-sm font-bold text-gray-400">Game 2</span>
           <input type="number" value={s2g2} onChange={(e) => onS2g2(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
+        </div>
+      )}
+      {isTwoGames && (
+        <div className="flex items-center justify-center gap-3">
+          <input type="number" value={s1g3} onChange={(e) => onS1g3(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
+          <span className="text-sm font-bold text-gray-400">Game 3</span>
+          <input type="number" value={s2g3} onChange={(e) => onS2g3(e.target.value)} placeholder="0" className="w-16 rounded-xl border border-gray-200 px-3 py-2 text-center text-lg font-bold shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" min={0} />
         </div>
       )}
       <div className="flex justify-center">

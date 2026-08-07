@@ -14,8 +14,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.maxParticipants !== undefined) data.maxParticipants = body.maxParticipants ?? 20;
     if (body.courts !== undefined) data.courts = body.courts || null;
     if (body.htm !== undefined) data.htm = body.htm ?? null;
+    if (body.htmInsidentil !== undefined) data.htmInsidentil = body.htmInsidentil ?? null;
     if (body.cockPrice !== undefined) data.cockPrice = Number(body.cockPrice) || 0;
     if (body.notes !== undefined) data.notes = body.notes || null;
+    if (body.sparingOpponent !== undefined) data.sparingOpponent = body.sparingOpponent || null;
     if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl || null;
     if (body.status !== undefined) data.status = body.status || "planned";
     const schedule = await prisma.schedule.update({ where: { id }, data });

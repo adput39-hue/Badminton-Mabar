@@ -26,6 +26,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (body.maxMatchPerTeam !== undefined) data.maxMatchPerTeam = body.maxMatchPerTeam;
     if (body.gameFormat !== undefined) data.gameFormat = body.gameFormat;
     if (body.courts !== undefined) data.courts = body.courts;
+    if (body.standingsMode !== undefined) data.standingsMode = body.standingsMode;
+    if (body.winPoints !== undefined) data.winPoints = body.winPoints;
+    if (body.drawPoints !== undefined) data.drawPoints = body.drawPoints;
+    if (body.lossPoints !== undefined) data.lossPoints = body.lossPoints;
     const updated = await prisma.tournament.update({ where: { id }, data });
     return NextResponse.json(updated);
   } catch (error) {

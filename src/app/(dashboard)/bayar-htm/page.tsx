@@ -7,6 +7,7 @@ import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock, Loader2 } fro
 import { getClientPbId } from "@/lib/tenant";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useToast } from "@/components/toast";
+import { getHtmRate } from "@/lib/htm-rate";
 
 function getPaidMembers(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -57,7 +58,7 @@ export default function BayarHtmPage() {
 
   const htmSchedules = useMemo(() => {
     return schedules
-      .filter((s) => s.htm && s.htm > 0 && s.status !== "cancelled")
+      .filter((s) => ((s.htm && s.htm > 0) || (s.htmInsidentil && s.htmInsidentil > 0)) && s.status !== "cancelled")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [schedules]);
 
@@ -67,7 +68,7 @@ export default function BayarHtmPage() {
     if (matched.length > 0) return matched.sort((a, b) => a.name.localeCompare(b.name));
     const fallback = internalMembers.filter((m) => {
       const mAtts = attendances.filter((a) => a.memberId === m.id && a.status === "hadir");
-      return mAtts.some((a) => schedules.find((s) => s.id === a.scheduleId && s.htm && s.htm > 0));
+      return mAtts.some((a) => schedules.find((s) => s.id === a.scheduleId && ((s.htm && s.htm > 0) || (s.htmInsidentil && s.htmInsidentil > 0))));
     });
     return fallback.slice(0, 20);
   }
@@ -117,9 +118,11 @@ export default function BayarHtmPage() {
 
       for (const memberId of paidIds) {
         const member = members.find((m) => m.id === memberId);
+        if (!member) continue;
         const cock = getPlayerCockCost(scheduleId, memberId);
-        const totalAmount = (s.htm || 0) + cock.cost;
-        const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${(s.htm||0).toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
+        const rate = getHtmRate(s, member);
+        const totalAmount = rate + cock.cost;
+        const desc = `Bayar HTM - ${member?.name || "?"} - ${s.sparingOpponent ? `Sparing vs ${s.sparingOpponent}` : s.title}${cock.cost ? ` (HTM Rp${rate.toLocaleString("id-ID")} + Cock ${cock.totalCocks}bh Rp${cock.cost.toLocaleString("id-ID")})` : ""}`;
         const existing = existingMutasis.find((m) => m.memberId === memberId);
         if (existing) {
           await fetch("/api/kas-mutasi/" + existing.id, {
@@ -131,7 +134,7 @@ export default function BayarHtmPage() {
           await fetch("/api/kas-mutasi", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
-            body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, memberId, tanggal: new Date().toISOString() }),
+            body: JSON.stringify({ type: "masuk", amount: totalAmount, description: desc, reference: scheduleId, scheduleId, memberId, tanggal: new Date().toISOString() }),
           });
         }
       }
@@ -230,7 +233,7 @@ export default function BayarHtmPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-bold text-[var(--color-primary)]">Rp {(s.htm||0).toLocaleString("id-ID")}/org</p>
+                      <p className="text-sm font-bold text-[var(--color-primary)]">{s.htmInsidentil ? `Member Rp${(s.htm||0).toLocaleString("id-ID")} / Insidentil Rp${s.htmInsidentil.toLocaleString("id-ID")}` : `Rp ${(s.htm||0).toLocaleString("id-ID")}/org`}</p>
                       <p className="text-xs text-gray-400">{peserta.length} pemain &middot; {paidIds.length} bayar</p>
                     </div>
                     {isOpen ? (
@@ -252,7 +255,7 @@ export default function BayarHtmPage() {
                       {scheduleTotalCocks > 0 && (
                         <span className="rounded-lg bg-blue-50 px-3 py-1 text-xs text-blue-700">Total {scheduleTotalCocks} cock: Rp{scheduleTotalCockCost.toLocaleString("id-ID")}</span>
                       )}
-                      <span className="text-xs text-gray-400">HTM Rp{(s.htm||0).toLocaleString("id-ID")}/org</span>
+                      <span className="text-xs text-gray-400">HTM {s.htmInsidentil ? `Member ${(s.htm||0).toLocaleString("id-ID")} / Insidentil ${s.htmInsidentil.toLocaleString("id-ID")}` : `Rp ${(s.htm||0).toLocaleString("id-ID")}`}/org</span>
                     </div>
                     <div className="mb-3 flex items-center gap-2">
                       <input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Cari pemain..." className="flex-1 rounded-xl border border-gray-200 px-3 py-1.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
@@ -274,7 +277,8 @@ export default function BayarHtmPage() {
                             </div>
                             <span className="flex-1 text-sm font-medium text-gray-900">{m.name}</span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold text-gray-600">{m.class}</span>
-                            <span className="text-xs text-gray-400">{(s.htm||0).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
+                            {m.memberType === "insidentil" && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">Insidentil</span>}
+                            <span className="text-xs text-gray-400">{getHtmRate(s, m).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
                             {paid.includes(m.id) && <span className="text-xs font-semibold text-[var(--color-primary)]">Lunas</span>}
                           </div>
                         ) : (
@@ -284,8 +288,9 @@ export default function BayarHtmPage() {
                             </div>
                             <span className="flex-1 text-sm font-medium text-gray-900">{m.name}</span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold text-gray-600">{m.class}</span>
-                            <span className="text-xs text-gray-400">{(s.htm||0).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
-                            <span className="text-xs font-semibold text-[var(--color-primary)]">Rp{((s.htm||0) + getPlayerCockCost(s.id, m.id).cost).toLocaleString("id-ID")}</span>
+                            {m.memberType === "insidentil" && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">Insidentil</span>}
+                            <span className="text-xs text-gray-400">{getHtmRate(s, m).toLocaleString("id-ID")}{(getPlayerCockCost(s.id, m.id).cost > 0 ? ` + ${getPlayerCockCost(s.id, m.id).totalCocks}cock` : "")}</span>
+                            <span className="text-xs font-semibold text-[var(--color-primary)]">Rp{(getHtmRate(s, m) + getPlayerCockCost(s.id, m.id).cost).toLocaleString("id-ID")}</span>
                           </label>
                         ))}
                       </div>

@@ -6,10 +6,12 @@ import { listenAllLiveScores, isFirebaseConfigured } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import {
-  Swords, ChevronLeft, Minus, Trophy, Share2, Check,
+  Swords, ChevronLeft, Minus, Trophy, Share2, Check, Timer, User, ImageIcon,
 } from "lucide-react";
 import ShuttlecockIcon from "@/components/shuttlecock-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { MatchCardModal } from "@/components/match-card-modal";
+import { getNotesText, getGameTarget, getGameWinner } from "@/lib/utils";
 
 const courtColors = [
   { bg: "bg-green-500", text: "text-green-600", light: "bg-green-50", border: "border-green-500" },
@@ -24,32 +26,20 @@ export default function ScoreboardLivePage() {
   const { schedules, members, tournaments, loaded } = useControlData(60000);
   const [matches, setMatches] = useState<ApiMatch[]>([]);
   const matchesLoadedRef = useRef(false);
+  const liveScoresRef = useRef<Record<string, Record<string, unknown>>>({});
   useEffect(() => {
-    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+    const fromUrl = new URLSearchParams(window.location.search).get("pbId") || "";
+    const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || fromUrl;
     function fetchMatches() {
       fetch("/api/matches", { headers: { "x-pb-id": pbId } })
         .then((r) => r.json())
-        .then((data) => { setMatches(data); matchesLoadedRef.current = true; })
-        .catch(() => { matchesLoadedRef.current = true; });
-    }
-    fetchMatches();
-    if (isFirebaseConfigured()) {
-      const seen = new Set<string>();
-      const unsub = listenAllLiveScores((scores) => {
-        setMatches((prev) => {
-          const seenIds = new Set(prev.map((m) => m.id));
-          const newIds = Object.keys(scores).filter((id) => !seenIds.has(id));
-          if (newIds.length > 0 && !seen.has(newIds[0])) {
-            newIds.forEach((id) => seen.add(id));
-            const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
-            fetch(`/api/matches?ids=${newIds.join(",")}`, { headers: { "x-pb-id": pbId } })
-              .then((r) => { if (r.ok) return r.json(); throw new Error(); })
-              .then((newMatches) => { setMatches((p) => [...p, ...newMatches]); })
-              .catch(() => {});
-          }
-          const merged = prev.map((m) => {
-            const live = scores[m.id];
+        .then((data) => {
+          const fb = liveScoresRef.current;
+          const merged = data.map((m: ApiMatch) => {
+            const live = fb[m.id];
             if (!live) return m;
+            const liveStatus = (live.status as string) || m.status;
+            if (liveStatus === "completed") return m;
             return {
               ...m,
               courtNumber: (live.courtNumber as number) ?? m.courtNumber,
@@ -57,8 +47,64 @@ export default function ScoreboardLivePage() {
               scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
               scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
               scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
-              status: (live.status as string) || m.status,
+              scoreTeam1Game3: (live.scoreTeam1Game3 as number) ?? m.scoreTeam1Game3,
+              scoreTeam2Game3: (live.scoreTeam2Game3 as number) ?? m.scoreTeam2Game3,
+              status: liveStatus,
               winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
+              team1Player1Id: (live.team1Player1Id as string) ?? m.team1Player1Id,
+              team1Player2Id: (live.team1Player2Id as string) ?? m.team1Player2Id,
+              team2Player1Id: (live.team2Player1Id as string) ?? m.team2Player1Id,
+              team2Player2Id: (live.team2Player2Id as string) ?? m.team2Player2Id,
+              lastScorer: (live.lastScorer as number) ?? (m as unknown as Record<string, unknown>).lastScorer ?? null,
+            };
+          });
+          setMatches(merged);
+          matchesLoadedRef.current = true;
+        })
+        .catch(() => { matchesLoadedRef.current = true; });
+    }
+    fetchMatches();
+    if (isFirebaseConfigured()) {
+      const seen = new Set<string>();
+      const unsub = listenAllLiveScores((scores) => {
+        liveScoresRef.current = scores;
+        setMatches((prev) => {
+          const seenIds = new Set(prev.map((m) => m.id));
+          const newIds = Object.keys(scores).filter((id) => !seenIds.has(id));
+          if (newIds.length > 0 && !seen.has(newIds[0])) {
+            newIds.forEach((id) => seen.add(id));
+            const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || new URLSearchParams(window.location.search).get("pbId") || "";
+            fetch(`/api/matches?ids=${newIds.join(",")}`, { headers: { "x-pb-id": pbId } })
+              .then((r) => { if (r.ok) return r.json(); throw new Error(); })
+              .then((newMatches) => {
+                setMatches((p) => {
+                  const existing = new Set(p.map((m) => m.id));
+                  return [...p, ...newMatches.filter((m: ApiMatch) => !existing.has(m.id))];
+                });
+              })
+              .catch(() => {});
+          }
+          const merged = prev.map((m) => {
+            const live = scores[m.id];
+            if (!live) return m;
+            const liveStatus = (live.status as string) || m.status;
+            if (liveStatus === "completed") return m;
+            return {
+              ...m,
+              courtNumber: (live.courtNumber as number) ?? m.courtNumber,
+              scoreTeam1: (live.scoreTeam1 as number) ?? m.scoreTeam1,
+              scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
+              scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
+              scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
+              scoreTeam1Game3: (live.scoreTeam1Game3 as number) ?? m.scoreTeam1Game3,
+              scoreTeam2Game3: (live.scoreTeam2Game3 as number) ?? m.scoreTeam2Game3,
+              status: liveStatus,
+              winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
+              team1Player1Id: (live.team1Player1Id as string) ?? m.team1Player1Id,
+              team1Player2Id: (live.team1Player2Id as string) ?? m.team1Player2Id,
+              team2Player1Id: (live.team2Player1Id as string) ?? m.team2Player1Id,
+              team2Player2Id: (live.team2Player2Id as string) ?? m.team2Player2Id,
+              lastScorer: (live.lastScorer as number) ?? (m as unknown as Record<string, unknown>).lastScorer ?? null,
             };
           });
           return merged;
@@ -80,6 +126,7 @@ export default function ScoreboardLivePage() {
   const [pbLogo, setPbLogo] = useState("");
   const [tournamentDetail, setTournamentDetail] = useState<ApiTournament | null>(null);
   const [copied, setCopied] = useState(false);
+  const [cardMatch, setCardMatch] = useState<ApiMatch | null>(null);
 
   useEffect(() => {
     try {
@@ -106,10 +153,11 @@ export default function ScoreboardLivePage() {
     schedules.filter((s) => s.sparingOpponent).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   [schedules]);
 
-  const mabarSchedules = useMemo(() =>
-    schedules.filter((s) => !s.sparingOpponent && !s.tournamentId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-  [schedules]);
+  const mabarSchedules = useMemo(() => {
+    const today = new Date(new Date().toDateString()).getTime();
+    return schedules.filter((s) => !s.sparingOpponent && !s.tournamentId && new Date(s.date).getTime() >= today)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [schedules]);
 
   const selectedSparing = sparings.find((s) => s.id === selSparingId);
   const selectedMabar = mabarSchedules.find((s) => s.id === selMabarId);
@@ -121,8 +169,26 @@ export default function ScoreboardLivePage() {
     try { return JSON.parse(s.notes); } catch { return null; }
   }, [isMabarMode, selectedMabar, selectedSparing]);
 
-  const courts: { name: string; startTime: string; endTime: string }[] = savedSettings?.courts || [];
+  const courts: { name: string; startTime: string; endTime: string }[] = (() => {
+    if (selTournamentId) {
+      if (tournamentDetail?.courts) {
+        try {
+          return JSON.parse(tournamentDetail.courts).map((c: { name: string }) => ({ name: c.name || "", startTime: "", endTime: "" }));
+        } catch { return []; }
+      }
+      return [];
+    }
+    if (savedSettings?.courts) return savedSettings.courts;
+    const s = isMabarMode ? selectedMabar : selectedSparing;
+    if (s?.courts) {
+      try {
+        return JSON.parse(s.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" }));
+      } catch { return []; }
+    }
+    return [];
+  })();
   const totalRounds: number = savedSettings?.totalRounds || 1;
+  const scheduleGameMode: string = savedSettings?.draftGames || savedSettings?.gameMode || "";
 
   const sparingMatches = useMemo(() => {
     if (isMabarMode) return matches.filter((m) => m.scheduleId === selMabarId).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -130,10 +196,30 @@ export default function ScoreboardLivePage() {
   }, [matches, selSparingId, isMabarMode, selMabarId]);
 
   const roundMatches = useMemo(() =>
-    sparingMatches.filter((m) => m.round === selRound),
-  [sparingMatches, selRound]);
+    sparingMatches.filter((m) => isMabarMode || m.round === selRound),
+  [sparingMatches, selRound, isMabarMode]);
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
+
+  function liveStartedAt(live: ApiMatch): string {
+    try {
+      const notes = JSON.parse(live.notes || "{}") as { startedAt?: string };
+      if (notes.startedAt) {
+        const diff = Math.max(0, Math.floor((Date.now() - new Date(notes.startedAt).getTime()) / 1000));
+        const m = Math.floor(diff / 60);
+        const s = diff % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+    } catch {}
+    return "00:00";
+  }
+
+  function modeLabel(notes: string) {
+    const mode = scheduleGameMode || notes || "1-30";
+    if (mode.startsWith("2-21")) return "2G21";
+    if (mode.startsWith("1-42")) return "1G42";
+    return "1G30";
+  }
 
   const roundStatsMap = useMemo(() => {
     const map: Record<number, { kitaWins: number; lawanWins: number }> = {};
@@ -156,6 +242,14 @@ export default function ScoreboardLivePage() {
     }
     return { kitaWins, lawanWins };
   }, [roundStatsMap, totalRounds]);
+
+  const mabarStats = useMemo(() => {
+    const completed = sparingMatches.filter((m) => m.status === "completed");
+    const t1 = completed.filter((m) => m.winnerTeam === 1).length;
+    const t2 = completed.filter((m) => m.winnerTeam === 2).length;
+    const draws = completed.filter((m) => m.winnerTeam === null).length;
+    return { t1, t2, draws, total: completed.length };
+  }, [sparingMatches]);
 
   const viewRef = useRef({ selSparingId, selTournamentId, selMabarId });
   useEffect(() => { viewRef.current = { selSparingId, selTournamentId, selMabarId }; });
@@ -204,25 +298,37 @@ export default function ScoreboardLivePage() {
   function getTeamName(teamId: string) { return tournamentTeams.find((t) => t.id === teamId)?.name || "—"; }
   function getTeamColor(teamId: string) { return tournamentTeams.find((t) => t.id === teamId)?.color || "#0d9488"; }
 
+  const tournamentGameMode = tournamentDetail?.gameFormat || "1x30";
+  const tournamentModeLabel = tournamentGameMode.startsWith("2-21") ? "2G21" : tournamentGameMode.startsWith("1-42") ? "1G42" : "1G30";
+
   const standings = useMemo(() => {
-    const map = new Map<string, { team: { id: string; name: string; color: string; icon?: string | null }; played: number; won: number; lost: number; points: number }>();
+    const mode = tournamentDetail?.standingsMode || "points";
+    const winPts = tournamentDetail?.winPoints ?? 2;
+    const drawPts = tournamentDetail?.drawPoints ?? 1;
+    const lossPts = tournamentDetail?.lossPoints ?? 0;
+    const map = new Map<string, { team: { id: string; name: string; color: string; icon?: string | null }; played: number; won: number; drawn: number; lost: number; points: number; score: number }>();
     for (const t of tournamentTeams) {
-      map.set(t.id, { team: { id: t.id, name: t.name, color: t.color, icon: t.icon }, played: 0, won: 0, lost: 0, points: 0 });
+      map.set(t.id, { team: { id: t.id, name: t.name, color: t.color, icon: t.icon }, played: 0, won: 0, drawn: 0, lost: 0, points: 0, score: 0 });
     }
     for (const s of tournamentScheds) {
-      const schedMatches = tourneyMatches.filter((m) => m.scheduleId === s.id);
-      for (const m of schedMatches) {
-        if (m.winnerTeam == null) continue;
-        const t1 = map.get(s.team1Id);
-        const t2 = map.get(s.team2Id);
-        if (!t1 || !t2) continue;
-        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += 1; t2.points -= 1; }
-        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += 1; t1.points -= 1; }
-        t1.played++; t2.played++;
+      const t1 = map.get(s.team1Id);
+      const t2 = map.get(s.team2Id);
+      if (!t1 || !t2) continue;
+      for (const m of tourneyMatches.filter((x) => x.scheduleId === s.id)) {
+        const hasResult = m.winnerTeam != null || m.status === "completed";
+        if (!hasResult) continue;
+        t1.played++;
+        t2.played++;
+        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += winPts; t2.points += lossPts; }
+        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += winPts; t1.points += lossPts; }
+        else { t1.drawn++; t2.drawn++; t1.points += drawPts; t2.points += drawPts; }
+        t1.score += (m.scoreTeam1 || 0) + (m.scoreTeam1Game2 || 0) + (m.scoreTeam1Game3 || 0);
+        t2.score += (m.scoreTeam2 || 0) + (m.scoreTeam2Game2 || 0) + (m.scoreTeam2Game3 || 0);
       }
     }
-    return [...map.values()].sort((a, b) => b.points - a.points || b.won - a.won);
-  }, [tournamentTeams, tournamentScheds, tourneyMatches]);
+    const rows = [...map.values()];
+    return mode === "score" ? rows.sort((a, b) => b.score - a.score || b.won - a.won) : rows.sort((a, b) => b.points - a.points || b.won - a.won);
+  }, [tournamentTeams, tournamentScheds, tourneyMatches, tournamentDetail?.standingsMode, tournamentDetail?.winPoints, tournamentDetail?.drawPoints, tournamentDetail?.lossPoints]);
 
   if (!selSparingId && !selTournamentId && !selMabarId) {
     return (
@@ -339,6 +445,7 @@ export default function ScoreboardLivePage() {
 
   if (selTournamentId) {
     return (
+      <>
       <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
         <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -360,69 +467,14 @@ export default function ScoreboardLivePage() {
           </div>
         </div>
         <div className="mx-auto grid w-full max-w-[1440px] flex-1 grid-cols-1 gap-4 overflow-auto p-3 lg:grid-cols-[1fr_320px] lg:p-4">
-          {/* Matches */}
-          <div className="space-y-3">
-            {tournamentScheds.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-16 text-gray-300">
-                <Minus className="h-14 w-14" />
-                <p className="mt-2 text-sm text-gray-400">Belum ada sesi pertandingan</p>
-              </div>
-            ) : (
-              tournamentScheds.map((s) => {
-                const schedMatches = tourneyMatches.filter((m) => m.scheduleId === s.id);
-                const completed = schedMatches.filter((m) => m.winnerTeam != null).length;
-                return (
-                  <div key={s.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">VS</span>
-                        <span>{getTeamName(s.team1Id)}</span>
-                        <span className="text-xs text-gray-400">vs</span>
-                        <span>{getTeamName(s.team2Id)}</span>
-                      </div>
-                      <span className="text-xs text-gray-400">{completed}/{schedMatches.length} ganda</span>
-                    </div>
-                    {schedMatches.length === 0 ? (
-                      <p className="py-4 text-center text-xs text-gray-400">Belum ada ganda</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {schedMatches.map((m) => {
-                          const isCompleted = m.winnerTeam != null;
-                          const t1s = m.scoreTeam1 || 0;
-                          const t2s = m.scoreTeam2 || 0;
-                          const isLive = !isCompleted && (t1s + t2s > 0);
-                          return (
-                            <div key={m.id} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${isLive ? "border-green-300 bg-green-50" : "border-gray-100"}`}>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-700"}`}>{getName(m.team1Player1Id)}</span>
-                                <span className="text-gray-300">&</span>
-                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-700"}`}>{getName(m.team1Player2Id)}</span>
-                              </div>
-                              <div className="mx-3 flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-sm font-bold">
-                                <span className={isCompleted && m.winnerTeam === 1 ? "text-green-600" : "text-gray-800"}>{t1s}</span>
-                                <span className="text-gray-300">:</span>
-                                <span className={isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-800"}>{t2s}</span>
-                              </div>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-700"}`}>{getName(m.team2Player1Id)}</span>
-                                <span className="text-gray-300">&</span>
-                                <span className={`truncate font-medium ${isCompleted && m.winnerTeam === 2 ? "text-blue-600" : "text-gray-700"}`}>{getName(m.team2Player2Id)}</span>
-                              </div>
-                              {isLive && <span className="ml-2 flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700"><span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />LIVE</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Standings sidebar */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-bold text-gray-700">Klasemen</h2>
+          {/* Standings - mobile first, desktop sidebar */}
+          <div className="order-first lg:order-last rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700">Klasemen</h2>
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-500">
+                {(tournamentDetail?.standingsMode || "points") === "score" ? "Total Skor" : "Poin Kemenangan"}
+              </span>
+            </div>
             {standings.length === 0 ? (
               <p className="py-6 text-center text-xs text-gray-400">Belum ada data</p>
             ) : (
@@ -434,8 +486,9 @@ export default function ScoreboardLivePage() {
                       <th className="pb-2 pr-2">Tim</th>
                       <th className="pb-2 pr-2 text-center">M</th>
                       <th className="pb-2 pr-2 text-center">W</th>
+                      <th className="pb-2 pr-2 text-center">D</th>
                       <th className="pb-2 pr-2 text-center">L</th>
-                      <th className="pb-2 text-center font-bold">Pts</th>
+                      <th className="pb-2 text-center font-bold">{(tournamentDetail?.standingsMode || "points") === "score" ? "Skor" : "Pts"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -450,8 +503,9 @@ export default function ScoreboardLivePage() {
                         </td>
                         <td className="py-2 pr-2 text-center">{s.played}</td>
                         <td className="py-2 pr-2 text-center text-green-600">{s.won}</td>
+                        <td className="py-2 pr-2 text-center text-gray-500">{s.drawn}</td>
                         <td className="py-2 pr-2 text-center text-red-500">{s.lost}</td>
-                        <td className="py-2 text-center font-bold text-lg">{s.points}</td>
+                        <td className="py-2 text-center font-bold text-lg">{(tournamentDetail?.standingsMode || "points") === "score" ? s.score : s.points}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -459,25 +513,311 @@ export default function ScoreboardLivePage() {
               </div>
             )}
           </div>
+
+          {/* Matches */}
+          <div className="order-last lg:order-first">
+            {/* Sedang Berlangsung */}
+            <div className="mb-3 sm:mb-4">
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                <h2 className="text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">SEDANG BERLANGSUNG</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+                {(() => {
+                  const liveIdx = courts.findIndex((_, i) => tourneyMatches.some((m) => m.courtNumber === i + 1 && m.status !== "completed"));
+                  return courts.map((court, i) => {
+                  const color = courtColors[i % courtColors.length];
+                  const liveMatches = tourneyMatches.filter((m) => m.courtNumber === i + 1 && m.status !== "completed");
+                  const live = liveMatches[0] || null;
+                  const hasLive = !!live;
+                  const isFeatured = hasLive && i === liveIdx;
+                  const serveTeam = live ? (() => {
+                    const raw = liveScoresRef.current[live.id]?.lastScorer as number | undefined;
+                    if (raw != null) return raw;
+                    const s1 = live.scoreTeam1 || 0;
+                    const s2 = live.scoreTeam2 || 0;
+                    if (s1 > s2) return 1;
+                    if (s2 > s1) return 2;
+                    return null;
+                  })() : null;                return (
+                  <div key={i} className={`relative flex min-h-[150px] flex-col rounded-xl border-2 bg-white p-3 shadow-sm sm:min-h-[170px] sm:p-4 ${hasLive ? color.border : "border-gray-200"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className={`flex items-center gap-1.5 font-bold text-gray-900 ${isFeatured ? "text-base sm:text-lg" : "text-sm sm:text-base"}`}>
+                        <span className={`rounded ${color.bg} px-1.5 py-0.5 text-[10px] font-black text-white sm:px-2 sm:py-1 sm:text-xs`}>{court.name}</span>
+                      </h3>
+                      {hasLive ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-1 rounded bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white sm:text-xs">
+                            ● LIVE
+                          </span>
+                          <span className="flex items-center gap-1 font-mono text-[10px] text-gray-500 sm:text-xs">
+                            <Timer className="h-3 w-3" />
+                            {liveStartedAt(live)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                    {hasLive && live ? (
+                      <>
+                        {(() => {
+                          const isMultiGame = tournamentGameMode.startsWith("2-21");
+                          const hasG3 = isMultiGame && ((live.scoreTeam1Game3 || 0) > 0 || (live.scoreTeam2Game3 || 0) > 0);
+                          const cols = isMultiGame ? (hasG3 ? 4 : 3) : 2;
+                          const pSize = isFeatured ? "text-xs sm:text-sm" : "text-[10px] sm:text-[11px]";
+                          const scoreSize = isFeatured ? "text-xs sm:text-sm" : "text-[11px] sm:text-xs";
+                          const boxH = isFeatured ? "h-7 w-9 sm:h-9 sm:w-11" : "h-6 w-8 sm:h-8 sm:w-10";
+                          return (
+                            <div className="mt-2 sm:mt-3" style={{ display: "grid", gridTemplateColumns: `1fr repeat(${cols - 1}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
+                              {/* Header */}
+                              <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
+                              <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
+                              {isMultiGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
+                              {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Team 1 */}
+                              <div className="flex items-center gap-1 sm:gap-1.5">
+                                <ShuttlecockIcon size={isFeatured ? 18 : 14} className="shrink-0 text-green-500" />
+                                <div className="min-w-0 flex-1">
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team1Player1Id)}</p>
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team1Player2Id)}</p>
+                                </div>
+                                {serveTeam == 1 && <span className="shrink-0 rounded-full bg-green-500 px-2 py-1 text-[9px] font-bold text-white sm:text-xs">SERVE</span>}
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex items-center justify-center rounded-md border border-green-300 bg-green-50 font-bold text-green-700 ${boxH} ${scoreSize}`}>{live.scoreTeam1 || 0}</span>
+                              </div>
+                              {isMultiGame && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-green-200 bg-green-50/50 font-bold text-green-600 ${boxH} ${scoreSize}`}>{live.scoreTeam1Game2 || 0}</span>
+                                </div>
+                              )}
+                              {hasG3 && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-green-200 bg-green-50/50 font-bold text-green-600 ${boxH} ${scoreSize}`}>{live.scoreTeam1Game3 || 0}</span>
+                                </div>
+                              )}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Team 2 */}
+                              <div className="flex items-center gap-1 sm:gap-1.5">
+                                <User size={isFeatured ? 18 : 14} className="shrink-0 text-blue-500" />
+                                <div className="min-w-0 flex-1">
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team2Player1Id)}</p>
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team2Player2Id)}</p>
+                                </div>
+                                {serveTeam == 2 && <span className="shrink-0 rounded-full bg-blue-500 px-2 py-1 text-[9px] font-bold text-white sm:text-xs">SERVE</span>}
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex items-center justify-center rounded-md border border-blue-300 bg-blue-50 font-bold text-blue-700 ${boxH} ${scoreSize}`}>{live.scoreTeam2 || 0}</span>
+                              </div>
+                              {isMultiGame && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50/50 font-bold text-blue-600 ${boxH} ${scoreSize}`}>{live.scoreTeam2Game2 || 0}</span>
+                                </div>
+                              )}
+                              {hasG3 && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50/50 font-bold text-blue-600 ${boxH} ${scoreSize}`}>{live.scoreTeam2Game3 || 0}</span>
+                                </div>
+                              )}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Bottom info bar - full width */}
+                              <div style={{ gridColumn: `1 / span ${cols}` }}>
+                                {isFeatured ? (
+                                  <div className="flex items-center justify-center gap-1.5 rounded-lg bg-gray-50 px-2 py-1 sm:gap-2 sm:px-3 sm:py-1">
+                                    <span className="flex items-center gap-1 text-[9px] text-gray-600 sm:text-[10px]"><Trophy className="h-2.5 w-2.5 text-amber-500 sm:h-3 sm:w-3" /> Round {live.round}</span>
+                                    <span className="h-2.5 w-px bg-gray-300" />
+                                    <span className="text-[9px] text-gray-600 sm:text-[10px]">Race to {tournamentGameMode.startsWith("1-42") ? "42" : tournamentGameMode.startsWith("2-21") ? "21" : "30"}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">R{live.round} · {tournamentModeLabel}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </>
+                    ) : (
+                      <div className="mt-2 flex flex-1 flex-col items-center justify-center py-3 text-gray-300 sm:mt-3 sm:py-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="sm:size-10">
+                          <rect x="2" y="6" width="20" height="12" rx="2" />
+                          <path d="m22 8-2 4 2 4"></path>
+                          <path d="M2 12h20"></path>
+                        </svg>
+                        <p className="mt-1 text-[10px] font-medium text-gray-500 sm:text-xs">Belum Dimulai</p>
+                        <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">Menunggu pertandingan sebelumnya selesai</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+              })()}
+              </div>
+            </div>
+
+            {/* Hasil Pertandingan */}
+            <div className="mb-3 sm:mb-4">
+              <div className="mb-2 flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-400/70" />
+                <h2 className="text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">Hasil Pertandingan</h2>
+              </div>
+              {(() => {
+                const sorted = [...tourneyMatches]
+                  .sort((a, b) => {
+                    if (a.status !== "completed" && b.status === "completed") return -1;
+                    if (a.status === "completed" && b.status !== "completed") return 1;
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                  });
+                if (sorted.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-12 text-gray-300 sm:py-16">
+                      <Minus className="h-12 w-12 sm:h-14 sm:w-14" />
+                      <p className="mt-2 text-sm text-gray-400 sm:text-base">Belum ada pertandingan</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {sorted.map((m) => {
+                      const hasCourt = m.courtNumber != null;
+                      const courtIdx = hasCourt ? (m.courtNumber as number) - 1 : 0;
+                      const color = courtColors[courtIdx % courtColors.length];
+                      const mIsLive = m.status !== "completed" && ((m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
+                      const mIsCompleted = m.status === "completed";
+                      const t1s = m.scoreTeam1 || 0;
+                      const t2s = m.scoreTeam2 || 0;
+                      const t1g2 = m.scoreTeam1Game2 || 0;
+                      const t2g2 = m.scoreTeam2Game2 || 0;
+                      const t1g3 = m.scoreTeam1Game3 || 0;
+                      const t2g3 = m.scoreTeam2Game3 || 0;
+                      const isTwoGame = tournamentGameMode.startsWith("2-21") || (m.notes || "").includes("2-21");
+                      const hasG3 = isTwoGame && (t1g3 > 0 || t2g3 > 0);
+                      const gameCols = isTwoGame ? (hasG3 ? 3 : 2) : 1;
+                      const target = getGameTarget(tournamentGameMode || getNotesText(m.notes));
+                      const g1w = getGameWinner(t1s, t2s, target);
+                      const g2w = isTwoGame ? getGameWinner(t1g2, t2g2, target) : null;
+                      const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
+                      return (
+                        <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm sm:p-2.5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
+                          {/* Court label */}
+                          <div className="mb-1.5 flex items-center justify-between">
+                            <span className="flex items-center gap-1 text-[9px] font-bold text-gray-700 sm:text-[10px]">
+                              {hasCourt ? (
+                                <span className={`rounded px-1 py-0.5 text-[8px] font-black text-white sm:px-1.5 sm:text-[9px] ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
+                              ) : (
+                                <span className="rounded bg-gray-100 px-1 py-0.5 text-[8px] font-black text-gray-400 sm:px-1.5 sm:text-[9px]">Belum</span>
+                              )}
+                              {mIsLive ? <span className="text-green-600">● LIVE</span> : mIsCompleted ? (m.winnerTeam === null ? <span className="text-amber-500">✓ SERI</span> : <span className="text-green-600">✓</span>) : <span className="text-gray-400">⏳</span>}
+                            </span>
+                            <span className="text-[8px] text-gray-400 sm:text-[9px]">R{m.round}</span>
+                            {mIsCompleted && (
+                              <button onClick={() => setCardMatch(m)} title="Buat Match Card"
+                                className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1 py-0.5 text-[8px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[9px]">
+                                <ImageIcon className="h-2.5 w-2.5" /> Card
+                              </button>
+                            )}
+                          </div>
+                          {/* Grid table */}
+                          <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
+                            <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
+                            <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
+                            {isTwoGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
+                            {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                            <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                            {/* Team 1 */}
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                              <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
+                              <div className="min-w-0 flex-1">
+                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
+                            </div>
+                            {isTwoGame && (
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
+                              </div>
+                            )}
+                            {hasG3 && (
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
+                              </div>
+                            )}
+                            <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                            {/* Team 2 */}
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                              <User size={14} className="shrink-0 text-blue-500" />
+                              <div className="min-w-0 flex-1">
+                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
+                            </div>
+                            {isTwoGame && (
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
+                              </div>
+                            )}
+                            {hasG3 && (
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Legend */}
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-[10px] text-gray-500 sm:gap-3 sm:text-xs">
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                <span>Sedang Berlangsung</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-gray-300" />
+                <span>Belum Dimulai</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-green-600">✓</span>
+                <span>Selesai</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      {cardMatch && <MatchCardModal match={cardMatch} members={members} title={tournamentDetail?.name || "Pertandingan"} onClose={() => setCardMatch(null)} />}
+      </>
     );
   }
 
   return (
+    <>
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
       {/* Red Header */}
       <div className="sticky top-0 z-20 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white shadow-md">
         <div className="mx-auto max-w-[1440px] px-3 pt-2 sm:px-4 sm:pt-3">
           {/* Top bar: title + date */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[10px] font-bold tracking-wider uppercase sm:text-xs">{isMabarMode ? (selectedMabar?.title || "MABAR").toUpperCase() : `${(pbName || "PB").toUpperCase()} vs ${(selectedSparing?.sparingOpponent || "—").toUpperCase()}`}</h1>
+            <h1 className="text-[10px] font-bold tracking-wider uppercase sm:text-xs">{isMabarMode ? "MABAR" : `${(pbName || "PB").toUpperCase()} vs ${(selectedSparing?.sparingOpponent || "—").toUpperCase()}`}</h1>
             <div className="flex items-center gap-1 text-[10px] sm:text-xs">
-              <button onClick={handleShare}
-                className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 text-white transition-colors hover:bg-white/25">
-                {copied ? <Check className="size-3" /> : <Share2 className="size-3" />}
-                <span className="hidden sm:inline">{copied ? "Disalin" : "Bagikan"}</span>
-              </button>
+              {!isMabarMode && selectedSparing && (() => {
+                const hp = JSON.parse(localStorage.getItem("user") || "{}").pbId || new URLSearchParams(window.location.search).get("pbId") || "";
+                return (
+                  <a href={`/hasil-akhir?pbId=${hp}&scheduleId=${selSparingId}`}
+                    className="flex items-center gap-1 rounded bg-white/15 px-1.5 py-1 font-semibold text-white transition-colors hover:bg-white/25">
+                    <Trophy className="size-3" />
+                    <span className="inline">Hasil Akhir</span>
+                  </a>
+                );
+              })()}
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:size-3.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               <span>{new Date((isMabarMode ? selectedMabar : selectedSparing)?.date || "").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
             </div>
@@ -502,7 +842,12 @@ export default function ScoreboardLivePage() {
               </div>
               </div>
             ) : (
-              <div className="text-sm font-bold text-white/80">{sparingMatches.length} pertandingan</div>
+              <div className="flex flex-col items-center gap-1">
+                <p className="text-sm font-bold tracking-wide text-white uppercase sm:text-xl">{selectedMabar?.title || "MABAR"}</p>
+                <p className="text-xs font-semibold text-white/80">
+                  {mabarStats.t1 > mabarStats.t2 ? "Tim 1 Menang" : mabarStats.t2 > mabarStats.t1 ? "Tim 2 Menang" : mabarStats.total > 0 ? "SERI" : `${sparingMatches.length} pertandingan`}
+                </p>
+              </div>
             )}
           </div>
 
@@ -553,55 +898,118 @@ export default function ScoreboardLivePage() {
               <h2 className="text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">SEDANG BERLANGSUNG</h2>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
-              {courts.map((court, i) => {
+              {(() => {
+                const liveIdx = courts.findIndex((_, i) => sparingMatches.some((m) => m.courtNumber === i + 1 && m.status !== "completed"));
+                return courts.map((court, i) => {
                 const color = courtColors[i % courtColors.length];
                 const liveMatches = sparingMatches.filter((m) => m.courtNumber === i + 1 && m.status !== "completed");
                 const live = liveMatches[0] || null;
                 const hasLive = !!live;
-                return (
+                const isFeatured = hasLive && i === liveIdx;
+                const serveTeam = live ? (() => {
+                  const raw = liveScoresRef.current[live.id]?.lastScorer as number | undefined;
+                  if (raw != null) return raw;
+                  const s1 = live.scoreTeam1 || 0;
+                  const s2 = live.scoreTeam2 || 0;
+                  if (s1 > s2) return 1;
+                  if (s2 > s1) return 2;
+                  return null;
+                })() : null;                return (
                   <div key={i} className={`relative flex min-h-[150px] flex-col rounded-xl border-2 bg-white p-3 shadow-sm sm:min-h-[170px] sm:p-4 ${hasLive ? color.border : "border-gray-200"}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-bold text-gray-900 sm:text-base">{court.name}</h3>
+                      <h3 className={`flex items-center gap-1.5 font-bold text-gray-900 ${isFeatured ? "text-base sm:text-lg" : "text-sm sm:text-base"}`}>
+                        <span className={`rounded ${color.bg} px-1.5 py-0.5 text-[10px] font-black text-white sm:px-2 sm:py-1 sm:text-xs`}>{court.name}</span>
+                      </h3>
                       {hasLive ? (
-                        <span className="flex items-center gap-1 rounded bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white sm:text-xs">
-                          ● LIVE
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-1 rounded bg-green-500 px-1.5 py-0.5 text-[10px] font-bold text-white sm:text-xs">
+                            ● LIVE
+                          </span>
+                          <span className="flex items-center gap-1 font-mono text-[10px] text-gray-500 sm:text-xs">
+                            <Timer className="h-3 w-3" />
+                            {liveStartedAt(live)}
+                          </span>
+                        </div>
                       ) : null}
                     </div>
                     {hasLive && live ? (
                       <>
-                        <div className="mt-2 flex items-center justify-center gap-2 sm:mt-3 sm:gap-3">
-                          <div className="min-w-0 flex-1 text-right">
-                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team1Player1Id)}</p>
-                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team1Player2Id)}</p>
-                          </div>
-                          <div className="flex items-center gap-1 rounded-lg bg-white px-2 py-1 shadow-sm ring-1 ring-gray-100 sm:gap-2 sm:px-3 sm:py-1.5">
-                            {(live.notes || "").startsWith("2-21") ? (
-                              <div className="flex items-center gap-0.5 sm:gap-1">
-                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1 || 0}</span>
-                                <span className="text-xs text-gray-300">/</span>
-                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1Game2 || 0}</span>
+                        {(() => {
+                          const isMultiGame = scheduleGameMode.startsWith("2-21");
+                          const hasG3 = isMultiGame && ((live.scoreTeam1Game3 || 0) > 0 || (live.scoreTeam2Game3 || 0) > 0);
+                          const cols = isMultiGame ? (hasG3 ? 4 : 3) : 2;
+                          const pSize = isFeatured ? "text-xs sm:text-sm" : "text-[10px] sm:text-[11px]";
+                          const scoreSize = isFeatured ? "text-xs sm:text-sm" : "text-[11px] sm:text-xs";
+                          const boxH = isFeatured ? "h-7 w-9 sm:h-9 sm:w-11" : "h-6 w-8 sm:h-8 sm:w-10";
+                          return (
+                            <div className="mt-2 sm:mt-3" style={{ display: "grid", gridTemplateColumns: `1fr repeat(${cols - 1}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
+                              {/* Header */}
+                              <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
+                              <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
+                              {isMultiGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
+                              {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Team 1 */}
+                              <div className="flex items-center gap-1 sm:gap-1.5">
+                                <ShuttlecockIcon size={isFeatured ? 18 : 14} className="shrink-0 text-green-500" />
+                                <div className="min-w-0 flex-1">
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team1Player1Id)}</p>
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team1Player2Id)}</p>
+                                </div>
+                                {serveTeam == 1 && <span className="shrink-0 rounded-full bg-green-500 px-2 py-1 text-[9px] font-bold text-white sm:text-xs">SERVE</span>}
                               </div>
-                            ) : (
-                              <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam1 || 0}</span>
-                            )}
-                            <span className={`mx-1 h-4 w-0.5 sm:mx-1.5 ${color.bg}`} />
-                            {(live.notes || "").startsWith("2-21") ? (
-                              <div className="flex items-center gap-0.5 sm:gap-1">
-                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2 || 0}</span>
-                                <span className="text-xs text-gray-300">/</span>
-                                <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2Game2 || 0}</span>
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex items-center justify-center rounded-md border border-green-300 bg-green-50 font-bold text-green-700 ${boxH} ${scoreSize}`}>{live.scoreTeam1 || 0}</span>
                               </div>
-                            ) : (
-                              <span className="text-[22px] font-black tabular-nums text-gray-900 sm:text-2xl">{live.scoreTeam2 || 0}</span>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team2Player1Id)}</p>
-                            <p className="truncate text-base font-medium text-gray-900 sm:text-lg">{getName(live.team2Player2Id)}</p>
-                          </div>
-                        </div>
-                        <p className="mt-1 text-center text-[10px] text-gray-400 sm:text-xs">R{live.round} · {modeLabel(live.notes || "1-30")}</p>
+                              {isMultiGame && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-green-200 bg-green-50/50 font-bold text-green-600 ${boxH} ${scoreSize}`}>{live.scoreTeam1Game2 || 0}</span>
+                                </div>
+                              )}
+                              {hasG3 && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-green-200 bg-green-50/50 font-bold text-green-600 ${boxH} ${scoreSize}`}>{live.scoreTeam1Game3 || 0}</span>
+                                </div>
+                              )}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Team 2 */}
+                              <div className="flex items-center gap-1 sm:gap-1.5">
+                                <User size={isFeatured ? 18 : 14} className="shrink-0 text-blue-500" />
+                                <div className="min-w-0 flex-1">
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team2Player1Id)}</p>
+                                  <p className={`truncate font-bold text-gray-900 ${pSize}`}>{getName(live.team2Player2Id)}</p>
+                                </div>
+                                {serveTeam == 2 && <span className="shrink-0 rounded-full bg-blue-500 px-2 py-1 text-[9px] font-bold text-white sm:text-xs">SERVE</span>}
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <span className={`inline-flex items-center justify-center rounded-md border border-blue-300 bg-blue-50 font-bold text-blue-700 ${boxH} ${scoreSize}`}>{live.scoreTeam2 || 0}</span>
+                              </div>
+                              {isMultiGame && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50/50 font-bold text-blue-600 ${boxH} ${scoreSize}`}>{live.scoreTeam2Game2 || 0}</span>
+                                </div>
+                              )}
+                              {hasG3 && (
+                                <div className="flex items-center justify-center">
+                                  <span className={`inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50/50 font-bold text-blue-600 ${boxH} ${scoreSize}`}>{live.scoreTeam2Game3 || 0}</span>
+                                </div>
+                              )}
+                              <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                              {/* Bottom info bar - full width */}
+                              <div style={{ gridColumn: `1 / span ${cols}` }}>
+                                {isFeatured ? (
+                                  <div className="flex items-center justify-center gap-1.5 rounded-lg bg-gray-50 px-2 py-1 sm:gap-2 sm:px-3 sm:py-1">
+                                    <span className="flex items-center gap-1 text-[9px] text-gray-600 sm:text-[10px]"><Trophy className="h-2.5 w-2.5 text-amber-500 sm:h-3 sm:w-3" /> Round {live.round}</span>
+                                    <span className="h-2.5 w-px bg-gray-300" />
+                                    <span className="text-[9px] text-gray-600 sm:text-[10px]">Race to {scheduleGameMode.startsWith("1-42") ? "42" : scheduleGameMode.startsWith("2-21") ? "21" : "30"}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">R{live.round} · {modeLabel(live.notes || "1-30")}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </>
                     ) : (
                       <div className="mt-2 flex flex-1 flex-col items-center justify-center py-3 text-gray-300 sm:mt-3 sm:py-6">
@@ -610,12 +1018,14 @@ export default function ScoreboardLivePage() {
                           <path d="m22 8-2 4 2 4"></path>
                           <path d="M2 12h20"></path>
                         </svg>
-                        <p className="mt-1 text-[10px] text-gray-400 sm:text-xs">Belum mulai</p>
+                        <p className="mt-1 text-[10px] font-medium text-gray-500 sm:text-xs">Belum Dimulai</p>
+                        <p className="mt-0.5 text-[9px] text-gray-400 sm:text-[10px]">Menunggu pertandingan sebelumnya selesai</p>
                       </div>
                     )}
                   </div>
                 );
-              })}
+              });
+              })()}
             </div>
           </div>
 
@@ -630,7 +1040,8 @@ export default function ScoreboardLivePage() {
                   return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
                 })
                 .map((m) => {
-                  const courtIdx = (m.courtNumber || 1) - 1;
+                  const hasCourt = m.courtNumber != null;
+                  const courtIdx = hasCourt ? (m.courtNumber as number) - 1 : 0;
                   const color = courtColors[courtIdx % courtColors.length];
                   const mIsLive = m.status !== "completed" && ((m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
                   const mIsCompleted = m.status === "completed";
@@ -638,44 +1049,87 @@ export default function ScoreboardLivePage() {
                   const t2s = m.scoreTeam2 || 0;
                   const t1g2 = m.scoreTeam1Game2 || 0;
                   const t2g2 = m.scoreTeam2Game2 || 0;
-                  const isTwoGame = (m.notes || "").startsWith("2-21");
+                  const t1g3 = m.scoreTeam1Game3 || 0;
+                  const t2g3 = m.scoreTeam2Game3 || 0;
+                  const isTwoGame = scheduleGameMode.startsWith("2-21") || (m.notes || "").includes("2-21");
+                  const hasG3 = isTwoGame && (t1g3 > 0 || t2g3 > 0);
+                  const gameCols = isTwoGame ? (hasG3 ? 3 : 2) : 1;
+                  const target = getGameTarget(scheduleGameMode || getNotesText(m.notes));
+                  const g1w = getGameWinner(t1s, t2s, target);
+                  const g2w = isTwoGame ? getGameWinner(t1g2, t2g2, target) : null;
+                  const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
 
                   return (
-                    <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm ring-1 ring-gray-50 transition-all sm:p-3 ${mIsLive ? `${color.border} border-2` : "border-gray-200"} ${mIsCompleted ? "" : ""}`}>
-                      {/* Court label + status */}
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-700 sm:text-xs">
-                          <span className={`flex items-center justify-center rounded px-1 py-0.5 text-[9px] font-black text-white sm:px-1.5 sm:py-1 sm:text-xs ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
-                          {mIsLive ? (
-                            <span className="text-green-600">● LIVE</span>
-                          ) : mIsCompleted ? (
-                            <span className="text-green-600">✓</span>
+                    <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm sm:p-2.5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
+                      {/* Court label */}
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[9px] font-bold text-gray-700 sm:text-[10px]">
+                          {hasCourt ? (
+                            <span className={`rounded px-1 py-0.5 text-[8px] font-black text-white sm:px-1.5 sm:text-[9px] ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
                           ) : (
-                            <span className="text-gray-400">⏳</span>
+                            <span className="rounded bg-gray-100 px-1 py-0.5 text-[8px] font-black text-gray-400 sm:px-1.5 sm:text-[9px]">Belum</span>
                           )}
+                          {mIsLive ? <span className="text-green-600">● LIVE</span> : mIsCompleted ? (m.winnerTeam === null ? <span className="text-amber-500">✓ SERI</span> : <span className="text-green-600">✓</span>) : <span className="text-gray-400">⏳</span>}
                         </span>
+                        <span className="text-[8px] text-gray-400 sm:text-[9px]">R{m.round}</span>
+                        {mIsCompleted && (
+                          <button onClick={() => setCardMatch(m)} title="Buat Match Card"
+                            className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1 py-0.5 text-[8px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[9px]">
+                            <ImageIcon className="h-2.5 w-2.5" /> Card
+                          </button>
+                        )}
                       </div>
-
-                      {/* Teams */}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
+                      {/* Grid table */}
+                      <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
+                        <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
+                        {isTwoGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
+                        {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                        <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                        {/* Team 1 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
                           <div className="min-w-0 flex-1">
-                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player1Id)}</p>
-                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 1 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player2Id)}</p>
+                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
                           </div>
-                          <span className={`shrink-0 text-xs font-bold tabular-nums sm:text-sm ${mIsCompleted && m.winnerTeam === 1 ? "text-gray-900" : mIsCompleted && m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{t1s}{isTwoGame ? `, ${t1g2}` : ""}</span>
                         </div>
-                        <hr className="border-black/50" />
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center justify-center">
+                          <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
+                        </div>
+                        {isTwoGame && (
+                          <div className="flex items-center justify-center">
+                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
+                          </div>
+                        )}
+                        {hasG3 && (
+                          <div className="flex items-center justify-center">
+                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
+                          </div>
+                        )}
+                        <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                        {/* Team 2 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <User size={14} className="shrink-0 text-blue-500" />
                           <div className="min-w-0 flex-1">
-                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player1Id)}</p>
-                            <p className={`truncate text-[11px] sm:text-xs ${mIsCompleted && m.winnerTeam === 2 ? "font-bold text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player2Id)}</p>
+                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
                           </div>
-                          <span className={`shrink-0 text-xs font-bold tabular-nums sm:text-sm ${mIsCompleted && m.winnerTeam === 2 ? "text-gray-900" : mIsCompleted && m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{t2s}{isTwoGame ? `, ${t2g2}` : ""}</span>
                         </div>
+                        <div className="flex items-center justify-center">
+                          <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
+                        </div>
+                        {isTwoGame && (
+                          <div className="flex items-center justify-center">
+                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
+                          </div>
+                        )}
+                        {hasG3 && (
+                          <div className="flex items-center justify-center">
+                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
+                          </div>
+                        )}
                       </div>
-
-                      <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">R{m.round} · {modeLabel(m.notes || "1-30")}</p>
                     </div>
                   );
                 })}
@@ -706,13 +1160,15 @@ export default function ScoreboardLivePage() {
         </div>
       </div>
     </div>
+
+    {cardMatch && (() => {
+      const s = schedules.find((x) => x.id === cardMatch.scheduleId);
+      const cardTitle = s?.sparingOpponent ? `${pbName || "Sparing"} vs ${s.sparingOpponent}` : s?.title || "Pertandingan";
+      return <MatchCardModal match={cardMatch} members={members} title={cardTitle} onClose={() => setCardMatch(null)} />;
+    })()}
+    </>
   );
 }
 
-function modeLabel(notes: string) {
-  if (notes.startsWith("2-21")) return "2G21";
-  if (notes.startsWith("1-42")) return "1G42";
-  return "1G30";
-}
 
 

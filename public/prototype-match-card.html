@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Match Card Prototype</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .match-card {
+      position: relative;
+      width: 400px;
+      height: 600px;
+      overflow: hidden;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .match-card-photo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 65%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .match-card-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 55%;
+      background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0) 0%, 
+        rgba(0, 0, 0, 0.3) 30%, 
+        rgba(0, 0, 0, 0.8) 100%);
+    }
+
+    .match-card-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+      color: white;
+    }
+
+    .tournament-info {
+      margin-bottom: 16px;
+    }
+
+    .tournament-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0.9;
+      margin-bottom: 4px;
+    }
+
+    .match-type {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .players-section {
+      margin-bottom: 20px;
+    }
+
+    .team {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .team:last-child {
+      margin-bottom: 0;
+    }
+
+    .player-names {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .player-names span {
+      display: block;
+    }
+
+    .score {
+      font-size: 36px;
+      font-weight: 900;
+      min-width: 80px;
+      text-align: right;
+      letter-spacing: -1px;
+    }
+
+    .vs-divider {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.5;
+      margin: 8px 0;
+      letter-spacing: 2px;
+    }
+
+    .match-details {
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .match-details span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .info {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      color: white;
+      opacity: 0.6;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <button class="btn btn-primary" onclick="downloadCard()">Download PNG</button>
+    <button class="btn btn-secondary" onclick="changePhoto()">Ganti Foto</button>
+  </div>
+
+  <div class="match-card" id="matchCard">
+    <!-- Foto pemain (ganti URL ini dengan foto yang di-upload) -->
+    <img 
+      src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=600&fit=crop" 
+      alt="Match Photo" 
+      class="match-card-photo"
+      id="matchPhoto"
+    />
+    
+    <!-- Gradient overlay -->
+    <div class="match-card-overlay"></div>
+    
+    <!-- Info pertandingan -->
+    <div class="match-card-info">
+      <div class="tournament-info">
+        <div class="tournament-name">PB Testing vs PB Seiryuu</div>
+        <div class="match-type">Ganda Putra • Round 1</div>
+      </div>
+
+      <div class="players-section">
+        <div class="team">
+          <div class="player-names">
+            <span>Steven & Andri</span>
+          </div>
+          <div class="score">21</div>
+        </div>
+        
+        <div class="vs-divider">VS</div>
+        
+        <div class="team">
+          <div class="player-names">
+            <span>Budi & Charles</span>
+          </div>
+          <div class="score">18</div>
+        </div>
+      </div>
+
+      <div class="match-details">
+        <span>2 Game 21</span>
+        <span class="badge">Selesai</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info">
+    Prototype Match Card • Klik "Download PNG" untuk test
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    function downloadCard() {
+      const card = document.getElementById('matchCard');
+      html2canvas(card, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'match-card.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    function changePhoto() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById('matchPhoto').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    }
+  </script>
+</body>
+</html>

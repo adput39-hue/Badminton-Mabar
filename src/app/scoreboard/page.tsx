@@ -8,6 +8,7 @@ import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Swords, ChevronLeft, Monitor, Users, ChevronRight, Clock, Radio, Timer, Star, Trophy, Share2, Check, User } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
+import ShuttlecockIcon from "@/components/shuttlecock-icon";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -22,6 +23,7 @@ export default function ScoreboardPage() {
   const { schedules, members, loaded } = useControlData(60000);
   const [matches, setMatches] = useState<ApiMatch[]>([]);
   const matchesLoadedRef = useRef(false);
+  const liveScoresRef = useRef<Record<string, Record<string, unknown>>>({});
   useEffect(() => {
     const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
     function fetchMatches() {
@@ -54,6 +56,8 @@ export default function ScoreboardPage() {
               scoreTeam2: (live.scoreTeam2 as number) ?? m.scoreTeam2,
               scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? m.scoreTeam1Game2,
               scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? m.scoreTeam2Game2,
+              scoreTeam1Game3: (live.scoreTeam1Game3 as number) ?? m.scoreTeam1Game3,
+              scoreTeam2Game3: (live.scoreTeam2Game3 as number) ?? m.scoreTeam2Game3,
               status: (live.status as string) || m.status,
               winnerTeam: (live.winnerTeam as number) ?? m.winnerTeam,
             };
@@ -375,7 +379,7 @@ export default function ScoreboardPage() {
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] overflow-hidden">
-      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-3 pt-3 sm:pb-4 sm:pt-4 md:pb-5 md:pt-5">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-1 pt-1 sm:pb-1.5 sm:pt-1.5">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
@@ -405,97 +409,92 @@ export default function ScoreboardPage() {
         </div>
       </div>
 
-      <div className="relative mx-auto flex h-[calc(100vh-52px)] w-full max-w-7xl flex-col overflow-hidden p-2 sm:h-[calc(100vh-60px)] sm:p-3 md:p-4 lg:p-6">
+      <div className="relative mx-auto flex h-[calc(100vh-36px)] w-full max-w-7xl flex-col overflow-hidden p-0.5 sm:h-[calc(100vh-40px)] sm:p-1 md:p-1.5 lg:p-2">
         <div className="flex flex-1 flex-col justify-center overflow-hidden">
-          <div className="mx-auto flex w-full flex-1 flex-col justify-center rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-3 sm:p-4 md:p-6 lg:p-8">
+          <div className="mx-auto flex w-full flex-1 flex-col justify-center rounded-2xl bg-white shadow-md ring-1 ring-gray-100 p-1 sm:p-1.5 md:p-2 lg:p-3">
             {currentMatch ? (
-              <>
-                <p className="mb-1 mt-0.5 text-center text-[10px] tracking-wide text-gray-400 sm:mb-2 sm:mt-1 sm:text-xs md:mb-4 md:mt-2 md:text-base lg:text-lg">
-                  Round {currentMatch.round} · {modeLabel(currentMatch.notes || "1-30")}
-                </p>
-
-                {isCompleted && (
-                  <div className="mb-1 rounded-xl bg-gray-50 px-4 py-1.5 text-center text-xs font-semibold text-gray-500 ring-1 ring-gray-200 sm:mb-2 sm:text-sm md:mb-3 md:text-base">
-                    ✓ Pertandingan Selesai
-                  </div>
-                )}
-
-                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-5 lg:gap-8">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-green-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
-                    <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
-                  </div>
-                  <div className="shrink-0 min-w-0 text-left md:basis-2/5">
-                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player1Id)}</p>
-                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team1Player2Id)}</p>
-                  </div>
-                  <div className="flex flex-1 items-center justify-center">
-                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-6 md:py-2 lg:px-8 lg:py-3">
-                      {isTwoGame ? (
-                        <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-                          <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
-                            <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
+              (() => {
+                const color = courtColors[(selCourt - 1) % courtColors.length];
+                const serveTeam = currentMatch ? (() => {
+                  const raw = liveScoresRef.current[currentMatch.id]?.lastScorer as number | undefined;
+                  if (raw != null) return raw;
+                  const s1 = currentMatch.scoreTeam1 || 0;
+                  const s2 = currentMatch.scoreTeam2 || 0;
+                  if (s1 > s2) return 1;
+                  if (s2 > s1) return 2;
+                  return null;
+                })() : null;
+                const isMultiGame = scheduleGameMode.startsWith("2-21");
+                const hasG3 = isMultiGame && ((currentMatch.scoreTeam1Game3 || 0) > 0 || (currentMatch.scoreTeam2Game3 || 0) > 0);
+                const cols = isMultiGame ? (hasG3 ? 4 : 3) : 2;
+                return (
+                  <div className={`relative flex flex-1 flex-col rounded-2xl border-[3px] bg-white p-0 sm:p-0.5 md:p-1 ${isLive ? color.border : "border-gray-200"}`}>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${cols - 1}, min-content)`, gap: "0.125rem 0.5rem", alignItems: "center" }}>
+                        <div className="text-[8px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[9px] md:text-[10px]">PASANGAN</div>
+                        <div className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[9px] md:text-[10px]">GAME 1</div>
+                        {isMultiGame && <div className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[9px] md:text-[10px]">GAME 2</div>}
+                        {hasG3 && <div className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-400 sm:text-[9px] md:text-[10px]">GAME 3</div>}
+                        <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                        {/* Team 1 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+                          <ShuttlecockIcon size={48} className="shrink-0 text-green-500 sm:size-14 md:size-16 lg:size-20 xl:size-24" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold text-gray-900 text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">{getName(currentMatch.team1Player1Id)}</p>
+                            <p className="truncate font-bold text-gray-900 text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">{getName(currentMatch.team1Player2Id)}</p>
                           </div>
-                          <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
-                          <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1Game2 || 0}</div>
-                            <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
+                          {serveTeam == 1 && <span className="shrink-0 rounded-full bg-green-500 px-2 py-0.5 text-[8px] font-bold text-white sm:text-[9px] md:text-[10px] lg:text-[12px] xl:text-[14px]">SERVE</span>}
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-green-300 bg-green-50 text-6xl font-bold text-green-700 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam1 || 0}</span>
+                        </div>
+                        {isMultiGame && (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-green-200 bg-green-50/50 text-6xl font-bold text-green-600 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam1Game2 || 0}</span>
+                          </div>
+                        )}
+                        {hasG3 && (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-green-200 bg-green-50/50 text-6xl font-bold text-green-600 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam1Game3 || 0}</span>
+                          </div>
+                        )}
+                        <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                        {/* Team 2 */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+                          <User size={48} className="shrink-0 text-blue-500 sm:size-14 md:size-16 lg:size-20 xl:size-24" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold text-gray-900 text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">{getName(currentMatch.team2Player1Id)}</p>
+                            <p className="truncate font-bold text-gray-900 text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">{getName(currentMatch.team2Player2Id)}</p>
+                          </div>
+                          {serveTeam == 2 && <span className="shrink-0 rounded-full bg-blue-500 px-2 py-0.5 text-[8px] font-bold text-white sm:text-[9px] md:text-[10px] lg:text-[12px] xl:text-[14px]">SERVE</span>}
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-blue-300 bg-blue-50 text-6xl font-bold text-blue-700 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam2 || 0}</span>
+                        </div>
+                        {isMultiGame && (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-blue-200 bg-blue-50/50 text-6xl font-bold text-blue-600 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam2Game2 || 0}</span>
+                          </div>
+                        )}
+                        {hasG3 && (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex h-28 w-32 items-center justify-center rounded-xl border-[3px] border-blue-200 bg-blue-50/50 text-6xl font-bold text-blue-600 sm:h-32 sm:w-40 sm:text-7xl md:h-40 md:w-48 md:text-8xl lg:h-48 lg:w-56 lg:text-9xl xl:h-56 xl:w-72 xl:text-9xl">{currentMatch.scoreTeam2Game3 || 0}</span>
+                          </div>
+                        )}
+                        <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
+                        {/* Bottom info */}
+                        <div style={{ gridColumn: `1 / span ${cols}` }}>
+                          <div className="flex items-center justify-center gap-1 rounded bg-gray-50 px-0.5 py-0 sm:gap-1 sm:px-1">
+                            <span className="flex items-center gap-0.5 text-[8px] text-gray-600 sm:text-[9px] md:text-[10px] lg:text-[11px]"><Trophy className="h-2 w-2 text-amber-500 lg:h-2.5 lg:w-2.5" /> Round {currentMatch.round}</span>
+                            <span className="h-2 w-px bg-gray-300" />
+                            <span className="text-[8px] text-gray-600 sm:text-[9px] md:text-[10px] lg:text-[11px]">Race to {scheduleGameMode.startsWith("1-42") ? "42" : scheduleGameMode.startsWith("2-21") ? "21" : "30"}</span>
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam1 || 0}</div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 py-1 sm:gap-2 sm:py-1.5 md:gap-3 md:py-2 lg:gap-4 lg:py-3">
-                  <div className="flex-1 border-t border-dashed border-gray-300" />
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[9px] font-bold tracking-wider text-gray-500 sm:h-6 sm:w-6 sm:text-[10px] md:h-8 md:w-8 md:text-xs lg:h-10 lg:w-10 lg:text-sm">VS</div>
-                  <div className="flex-1 border-t border-dashed border-gray-300" />
-                </div>
-
-                <div className="flex items-center justify-center gap-2 sm:gap-3 md:gap-5 lg:gap-8">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500 shadow-sm sm:h-12 sm:w-12 md:h-20 md:w-20 lg:h-24 lg:w-24">
-                    <User className="h-6 w-6 text-white sm:h-7 sm:w-7 md:h-12 md:w-12 lg:h-14 lg:w-14" />
-                  </div>
-                  <div className="shrink-0 min-w-0 text-left md:basis-2/5">
-                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player1Id)}</p>
-                    <p className="truncate text-sm font-bold leading-tight text-gray-900 sm:text-base md:text-2xl lg:text-3xl xl:text-4xl">{getName(currentMatch.team2Player2Id)}</p>
-                  </div>
-                  <div className="flex flex-1 items-center justify-center">
-                    <div className="flex w-full items-center justify-center rounded-xl bg-white px-3 py-1 shadow-md ring-1 ring-gray-100 sm:rounded-2xl sm:px-4 sm:py-1 md:px-6 md:py-2 lg:px-8 lg:py-3">
-                      {isTwoGame ? (
-                        <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-                          <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
-                            <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 1</p>
-                          </div>
-                          <div className="h-10 w-px bg-gray-200 sm:h-12 md:h-14 lg:h-16" />
-                          <div className="text-center">
-                            <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2Game2 || 0}</div>
-                            <p className="text-[8px] font-medium text-gray-400 uppercase sm:text-[10px] md:text-xs">Game 2</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-7xl font-black text-gray-900 tabular-nums sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide" style={{ fontFamily: "var(--font-score), sans-serif" }}>{currentMatch.scoreTeam2 || 0}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mx-auto mt-1 flex w-full max-w-2xl items-center justify-center gap-2 self-center rounded-xl bg-white px-3 py-1.5 shadow-md ring-1 ring-gray-100 sm:mt-2 sm:gap-3 sm:px-5 sm:py-2 md:mt-4 md:gap-8 md:rounded-2xl md:px-8 md:py-3 lg:mt-6 lg:gap-12 lg:px-12 lg:py-4">
-                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-3 md:text-base lg:gap-3 lg:text-lg">
-                    <Clock className="h-3 w-3 text-[var(--color-primary)] sm:h-4 sm:w-4 md:h-6 md:w-6 lg:h-7 lg:w-7" />
-                    <span>Durasi <strong className="font-bold text-gray-700">{fmtDuration(elapsed)}</strong></span>
-                  </div>
-                  <div className="h-4 w-px bg-gray-200 sm:h-5 md:h-8" />
-                  <div className="flex items-center gap-1 text-[10px] text-gray-500 sm:gap-1.5 sm:text-xs md:gap-3 md:text-base lg:gap-3 lg:text-lg">
-                    <Trophy className="h-3 w-3 text-amber-500 sm:h-4 sm:w-4 md:h-6 md:w-6 lg:h-7 lg:w-7" />
-                    <span>{gameLabel(currentMatch.notes || "1-30")}</span>
-                  </div>
-                </div>
-              </>
+                );
+              })()
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center py-16">
                 <Monitor className="mx-auto h-12 w-12 text-gray-200 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24" />

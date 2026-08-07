@@ -36,7 +36,7 @@ export default function LabaRugiPage() {
   const completedSchedules = useMemo(() => {
     return schedules
       .filter((s) => s.status === "completed" || s.status === "ongoing")
-      .filter((s) => s.htm && s.htm > 0)
+      .filter((s) => ((s.htm && s.htm > 0) || (s.htmInsidentil && s.htmInsidentil > 0)))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [schedules]);
 
@@ -115,7 +115,7 @@ export default function LabaRugiPage() {
     setSavingId(lr.id);
     const e = editMap[lr.id];
     if (!e) return;
-    const totalIncome = calcIncome(lr.schedule!);
+    const totalIncome = lr.totalIncome;
     const profitLoss = totalIncome - e.cockCost - e.courtCost;
     try {
       const res = await fetch("/api/laba-rugi/" + lr.id, {
@@ -155,7 +155,7 @@ export default function LabaRugiPage() {
       <div className="space-y-3">
         {filtered.map((m) => {
           const lr = m.labaRugi;
-          const income = calcIncome(m.schedule);
+          const income = lr ? (lr.totalIncome ?? calcIncome(m.schedule)) : calcIncome(m.schedule);
           const isExpanded = lr && expandId === lr.id;
           const edit = lr ? editMap[lr.id] : null;
           const cockCost = edit?.cockCost ?? lr?.cockCost ?? 0;
@@ -202,7 +202,7 @@ export default function LabaRugiPage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1"><DollarSign className="h-3 w-3 inline" /> Pendapatan</label>
                       <p className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-green-700">{formatRupiah(income)}</p>
-                      <p className="mt-0.5 text-[10px] text-gray-400">Auto: {getPaidCount(m.schedule)} orang &times; {formatRupiah(m.schedule.htm || 0)}</p>
+                      <p className="mt-0.5 text-[10px] text-gray-400">Auto: total kas &quot;Bayar HTM&quot; ({getPaidCount(m.schedule)} pemain)</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1"><Target className="h-3 w-3 inline" /> Cock (Shuttlecock)</label>

@@ -6,7 +6,9 @@ export async function GET(request: Request) {
   const key = searchParams.get("key");
   if (!key) return NextResponse.json({ error: "key is required" }, { status: 400 });
   const config = await prisma.siteConfig.findUnique({ where: { key } });
-  return NextResponse.json({ key, value: config?.value || null });
+  return NextResponse.json({ key, value: config?.value || null }, {
+    headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800" },
+  });
 }
 
 export async function POST(request: Request) {

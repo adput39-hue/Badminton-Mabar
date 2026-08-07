@@ -7,6 +7,7 @@ import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-
 import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle, Check } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { compressImage } from "@/lib/compress-image";
 
 function getOpponentMemberIds(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -60,9 +61,7 @@ export default function SparingPage() {
   function handleFormLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { setFormLogo(reader.result as string); };
-    reader.readAsDataURL(file);
+    compressImage(file, 512).then((dataUrl) => setFormLogo(dataUrl)).catch(() => {});
   }
   const [editOppId, setEditOppId] = useState<string | null>(null);
   const [editOppName, setEditOppName] = useState("");
@@ -82,6 +81,8 @@ export default function SparingPage() {
   const [pendingCourt, setPendingCourt] = useState<Record<string, number | null>>({});
   const [savingDraft, setSavingDraft] = useState(false);
   const [editMatchId, setEditMatchId] = useState<string | null>(null);
+  const [editSparingName, setEditSparingName] = useState("");
+  const [isEditingSparing, setIsEditingSparing] = useState(false);
   const [editPendingIdx, setEditPendingIdx] = useState<number | null>(null);
   const [editMatchOur1, setEditMatchOur1] = useState("");
   const [editMatchOur2, setEditMatchOur2] = useState("");
@@ -92,9 +93,7 @@ export default function SparingPage() {
   function handleEditLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { setEditLogo(reader.result as string); };
-    reader.readAsDataURL(file);
+    compressImage(file, 512).then((dataUrl) => setEditLogo(dataUrl)).catch(() => {});
   }
   const [editMatchMode, setEditMatchMode] = useState("1-30");
   const [matchesPerRound, setMatchesPerRound] = useState(10);
@@ -226,12 +225,20 @@ export default function SparingPage() {
     if (saving) return;
     setSaving(true);
     try {
-      for (const att of sparingAtts) await removeAtt(att.id);
-      for (const id of selectedOurIds) await addAtt({ scheduleId: selSparingId, memberId: id, status: "hadir" });
+      await fetch("/api/attendances/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduleId: selSparingId,
+          attendances: selectedOurIds.map((id) => ({ memberId: id, status: "hadir" })),
+        }),
+      });
       let opponentIds = selectedSparing ? getOpponentMemberIds(selectedSparing) : [];
-      for (const p of pendingOpponents) {
-        const m = await addMember({ name: p.name, class: p.class, type: "2" });
-        opponentIds = [...opponentIds, m.id];
+      if (pendingOpponents.length > 0) {
+        const created = await Promise.all(
+          pendingOpponents.map((p) => addMember({ name: p.name, class: p.class, type: "2" }))
+        );
+        opponentIds = [...opponentIds, ...created.map((m) => m.id)];
       }
       const extra = selectedSparing ? JSON.parse(selectedSparing.notes || "{}") : {};
       await updateSchedule(selSparingId, { notes: JSON.stringify({ ...extra, opponentMemberIds: opponentIds, draftGames, matchesPerRound, totalRounds: totalRoundsSetting, courts: lapanganList, lokasi, htm }), htm: htm || null, logoUrl: editLogo || null });
@@ -305,17 +312,27 @@ export default function SparingPage() {
     if (savingDraft) return;
     setSavingDraft(true);
     try {
-      for (const m of pendingNewMatches) {
-        await addMatch({
-          scheduleId: selSparingId, totalGames: m.totalGames, round: m.round,
-          team1Player1Id: m.team1Player1Id, team1Player2Id: m.team1Player2Id,
-          team2Player1Id: m.team2Player1Id, team2Player2Id: m.team2Player2Id,
-          courtNumber: null, scoreTeam1: null, scoreTeam2: null,
-          scoreTeam1Game2: null, scoreTeam2Game2: null, winnerTeam: null, status: "planned", notes: m.notes,
+      if (pendingNewMatches.length > 0) {
+        const pbId = JSON.parse(localStorage.getItem("user") || "{}").pbId || "";
+        const res = await fetch("/api/matches/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-pb-id": pbId },
+          body: JSON.stringify({
+            matches: pendingNewMatches.map((m) => ({
+              scheduleId: selSparingId, totalGames: m.totalGames, round: m.round,
+              team1Player1Id: m.team1Player1Id, team1Player2Id: m.team1Player2Id,
+              team2Player1Id: m.team2Player1Id, team2Player2Id: m.team2Player2Id,
+              courtNumber: null, scoreTeam1: null, scoreTeam2: null,
+              scoreTeam1Game2: null, scoreTeam2Game2: null, winnerTeam: null, status: "planned", notes: m.notes,
+            })),
+          }),
         });
+        if (!res.ok) throw new Error("Gagal simpan draft");
       }
-      for (const [matchId, court] of Object.entries(pendingCourt)) {
-        await updateMatch(matchId, { courtNumber: court });
+      if (Object.keys(pendingCourt).length > 0) {
+        await Promise.all(
+          Object.entries(pendingCourt).map(([matchId, court]) => updateMatch(matchId, { courtNumber: court }))
+        );
       }
       setPendingNewMatches([]);
       setPendingCourt({});
@@ -365,6 +382,13 @@ export default function SparingPage() {
     if (!editOppName.trim() || !editOppClass) return;
     await updateMember(id, { name: editOppName.trim(), class: editOppClass });
     setEditOppId(null); setEditOppName(""); setEditOppClass("");
+  }
+
+  async function saveSparingName() {
+    if (!selectedSparing || !editSparingName.trim()) return;
+    await updateSchedule(selectedSparing.id, { sparingOpponent: editSparingName.trim(), title: `Sparing vs ${editSparingName.trim()}` });
+    setIsEditingSparing(false);
+    setEditSparingName("");
   }
 
   function addNewOpponent() {
@@ -433,9 +457,23 @@ export default function SparingPage() {
         <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           {/* Header with title and action buttons */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">{pbName || "Sparing"} vs {selectedSparing.sparingOpponent}</h2>
-              <p className="text-sm text-gray-500">{new Date(selectedSparing.date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+            <div className="flex items-center gap-2">
+              {isEditingSparing ? (
+                <div className="flex items-center gap-2">
+                  <input value={editSparingName} onChange={(e) => setEditSparingName(e.target.value)} placeholder="Nama PB Lawan"
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]" />
+                  <button onClick={saveSparingName} disabled={!editSparingName.trim()} className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">Simpan</button>
+                  <button onClick={() => { setIsEditingSparing(false); setEditSparingName(""); }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">{pbName || "Sparing"} vs {selectedSparing.sparingOpponent}</h2>
+                    <p className="text-sm text-gray-500">{new Date(selectedSparing.date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                  </div>
+                  <button onClick={() => { setEditSparingName(selectedSparing.sparingOpponent || ""); setIsEditingSparing(true); }} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"><Pencil className="h-4 w-4" /></button>
+                </>
+              )}
             </div>
             <button onClick={async () => { try { await updateSchedule(selectedSparing.id, { status: selectedSparing.status === "completed" ? "scheduled" : "completed" }); } catch {} }}
               className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition-all ${

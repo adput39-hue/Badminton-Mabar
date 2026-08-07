@@ -6,9 +6,10 @@ import { writeLiveScore, readLiveScore } from "@/lib/firebase";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiTournament, ApiTeam } from "@/lib/api-types";
 import { createPortal } from "react-dom";
-import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star, Loader2 } from "lucide-react";
+import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star, Loader2, ImageIcon } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { MatchCardModal } from "@/components/match-card-modal";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -46,14 +47,19 @@ export default function SparingMatchPage() {
   const [activeMatch, setActiveMatch] = useState<ApiMatch | null>(null);
   const [loadingMatch, setLoadingMatch] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const [finishAsDraw, setFinishAsDraw] = useState(false);
+  const [showConfirmGame3, setShowConfirmGame3] = useState(false);
   const [showCompletedPopup, setShowCompletedPopup] = useState(false);
   const [completedSparingName, setCompletedSparingName] = useState("");
   const [saving, setSaving] = useState(false);
   const [cockCount, setCockCount] = useState("1");
+  const [curGame, setCurGame] = useState<1 | 2 | 3>(1);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const startedAtRef = useRef<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [pbName, setPbName] = useState("");
+  const [pbColor, setPbColor] = useState<string | null>(null);
+  const [cardMatch, setCardMatch] = useState<ApiMatch | null>(null);
   const [firstDataLoaded, setFirstDataLoaded] = useState(false);
   useEffect(() => {
     if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
@@ -61,10 +67,18 @@ export default function SparingMatchPage() {
 
   useEffect(() => {
     try {
+      const tid = new URLSearchParams(window.location.search).get("tournamentId");
+      if (tid) setSelTournamentId(tid);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
         if (u.pb?.name) setPbName(u.pb.name);
+        if (u.pb?.primaryColor) setPbColor(u.pb.primaryColor);
       }
     } catch {}
   }, []);
@@ -90,6 +104,31 @@ export default function SparingMatchPage() {
       writeLiveScore(activeMatch.id, { scoreTeam1: 0, scoreTeam2: 0, courtNumber: activeMatch.courtNumber ?? null });
     }
   }, [activeMatch?.id]);
+
+  // Reset ke Game 1 / buka Game berikutnya saat membuka match
+  useEffect(() => {
+    if (!activeMatch) return;
+    let game1Finished = false;
+    let game2Finished = false;
+    if (activeMatch.notes) {
+      try {
+        const n = JSON.parse(activeMatch.notes);
+        game1Finished = n.game1Finished === true;
+        game2Finished = n.game2Finished === true;
+      } catch {}
+    }
+    if (activeMatch.totalGames > 1) {
+      if ((activeMatch.scoreTeam1Game3 || 0) > 0 || (activeMatch.scoreTeam2Game3 || 0) > 0 || game2Finished) {
+        setCurGame(3);
+      } else if ((activeMatch.scoreTeam1Game2 || 0) > 0 || (activeMatch.scoreTeam2Game2 || 0) > 0 || game1Finished) {
+        setCurGame(2);
+      } else {
+        setCurGame(1);
+      }
+    } else {
+      setCurGame(1);
+    }
+  }, [activeMatch?.id, activeMatch?.totalGames]);
 
   useEffect(() => {
     if (!startedAt) return;
@@ -179,14 +218,37 @@ export default function SparingMatchPage() {
       ? (mabarSettings?.courts || (selectedMabar?.courts ? JSON.parse(selectedMabar.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []))
       : savedSettings?.courts || (selectedSparing?.courts ? JSON.parse(selectedSparing.courts).map((c: { name: string }) => ({ name: c.name, startTime: "", endTime: "" })) : []);
 
+  const getMatchFormat = (m: ApiMatch | null): string => {
+    if (!m?.notes) return "";
+    try {
+      const n = JSON.parse(m.notes);
+      if (typeof n === "string") return n;
+      if (n.text) return n.text;
+      if (n.draftGames) return n.draftGames;
+      if (n.gameMode) return n.gameMode;
+    } catch {
+      if (m.notes.startsWith("1-") || m.notes.startsWith("2-")) return m.notes.split(",")[0];
+    }
+    return "";
+  };
+
   const formatLabels: Record<string, string> = { "1x30": "1-30", "1x42": "1-42", "2x21": "2-21" };
-  const modeLabel = isTournamentMode
+  const scheduleMode = isTournamentMode
     ? (formatLabels[selectedTournament?.gameFormat || "1x30"] || "1-30")
     : isMabarMode
       ? (mabarSettings?.gameMode || "1-30")
       : savedSettings?.draftGames || "1-30";
+  const modeLabel = getMatchFormat(activeMatch) || scheduleMode;
 
   const totalRounds = isTournamentMode ? 1 : (isMabarMode ? 1 : savedSettings?.totalRounds || 1);
+
+  const cardTitle = isTournamentMode
+    ? selectedTournament?.name || "League"
+    : isMabarMode
+      ? selectedMabar?.title || "Mabar"
+      : selectedSparing?.sparingOpponent
+        ? `${pbName || "Sparing"} vs ${selectedSparing.sparingOpponent}`
+        : "Sparing";
 
   const sparingMatches = useMemo(() => {
     if (isTournamentMode) return matches.filter((m) => tournamentSchedIdsList.includes(m.scheduleId));
@@ -195,12 +257,12 @@ export default function SparingMatchPage() {
   }, [matches, selSparingId, isTournamentMode, tournamentSchedIdsList, isMabarMode, selMabarId]);
 
   const courtMatches = useMemo(() =>
-    selCourt !== null ? sparingMatches.filter((m) => m.courtNumber === selCourt && m.round === selRound) : [],
-  [sparingMatches, selCourt, selRound]);
+    selCourt !== null ? sparingMatches.filter((m) => m.courtNumber === selCourt && (isMabarMode || m.round === selRound)) : [],
+  [sparingMatches, selCourt, selRound, isMabarMode]);
 
   const unassignedMatches = useMemo(() =>
-    sparingMatches.filter((m) => !m.courtNumber && m.round === selRound),
-  [sparingMatches, selRound]);
+    sparingMatches.filter((m) => !m.courtNumber && (isMabarMode || m.round === selRound)),
+  [sparingMatches, selRound, isMabarMode]);
 
   const roundMatches = useMemo(() =>
     selCourt !== null ? sparingMatches.filter((m) => m.courtNumber === selCourt) : [],
@@ -208,11 +270,44 @@ export default function SparingMatchPage() {
 
   function getName(id: string) { return members.find((m) => m.id === id)?.name || "—"; }
 
+  const tournamentStandings = useMemo(() => {
+    const tourney = tournaments.find((t) => t.id === selTournamentId);
+    if (!selTournamentId || !tourney) return [];
+    const teamList = tourney.teams || [];
+    if (teamList.length === 0) return [];
+    const mode = tourney.standingsMode || "points";
+    const winPts = tourney.winPoints ?? 2;
+    const drawPts = tourney.drawPoints ?? 1;
+    const lossPts = tourney.lossPoints ?? 0;
+    const scheds = schedules.filter((s) => s.tournamentId === selTournamentId && s.team1Id && s.team2Id) as (ApiSchedule & { team1Id: string; team2Id: string })[];
+    const map = new Map<string, { team: ApiTeam; played: number; won: number; drawn: number; lost: number; points: number; score: number }>();
+    for (const t of teamList) map.set(t.id, { team: t, played: 0, won: 0, drawn: 0, lost: 0, points: 0, score: 0 });
+    for (const s of scheds) {
+      const t1 = map.get(s.team1Id);
+      const t2 = map.get(s.team2Id);
+      if (!t1 || !t2) continue;
+      for (const m of matches.filter((x) => x.scheduleId === s.id)) {
+        const hasResult = m.winnerTeam != null || m.status === "completed";
+        if (!hasResult) continue;
+        t1.played++;
+        t2.played++;
+        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += winPts; t2.points += lossPts; }
+        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += winPts; t1.points += lossPts; }
+        else { t1.drawn++; t2.drawn++; t1.points += drawPts; t2.points += drawPts; }
+        t1.score += (m.scoreTeam1 || 0) + (m.scoreTeam1Game2 || 0) + (m.scoreTeam1Game3 || 0);
+        t2.score += (m.scoreTeam2 || 0) + (m.scoreTeam2Game2 || 0) + (m.scoreTeam2Game3 || 0);
+      }
+    }
+    const rows = [...map.values()];
+    return mode === "score" ? rows.sort((a, b) => b.score - a.score || b.won - a.won) : rows.sort((a, b) => b.points - a.points || b.won - a.won);
+  }, [selTournamentId, tournaments, schedules, matches]);
+
+
   function setMatchOptimistic(id: string, data: Record<string, unknown>) {
     writeLiveScore(id, {
       courtNumber: activeMatch?.courtNumber ?? null,
       ...data,
-    } as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; status?: string; winnerTeam?: number });
+    } as { scoreTeam1?: number; scoreTeam2?: number; scoreTeam1Game2?: number; scoreTeam2Game2?: number; scoreTeam1Game3?: number; scoreTeam2Game3?: number; status?: string; winnerTeam?: number | null });
   }
 
   function saveToSupabase(id: string, data: Record<string, unknown>) {
@@ -224,9 +319,9 @@ export default function SparingMatchPage() {
     });
   }
 
-  function getTimeNotes(extra: Record<string, string>) {
+  function getTimeNotes(extra: Record<string, unknown>) {
     const existing = activeMatch?.notes;
-    let obj: Record<string, string> = {};
+    let obj: Record<string, unknown> = {};
     if (existing) {
       try { obj = JSON.parse(existing); } catch { obj = { text: existing }; }
     }
@@ -238,6 +333,16 @@ export default function SparingMatchPage() {
     await updateMatch(matchId, { courtNumber: courtNum });
   }
 
+  function openMatchScore(m: ApiMatch) {
+    history.pushState(null, "");
+    setActiveMatch(m);
+    setLoadingMatch(true);
+    if (m.status === "completed") { setLoadingMatch(false); return; }
+    readLiveScore(m.id).then((live) => {
+      if (live) setActiveMatch((prev) => prev ? { ...prev, scoreTeam1: (live.scoreTeam1 as number) ?? prev.scoreTeam1, scoreTeam2: (live.scoreTeam2 as number) ?? prev.scoreTeam2, scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? prev.scoreTeam1Game2, scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? prev.scoreTeam2Game2, scoreTeam1Game3: (live.scoreTeam1Game3 as number) ?? prev.scoreTeam1Game3, scoreTeam2Game3: (live.scoreTeam2Game3 as number) ?? prev.scoreTeam2Game3, status: (live.status as string) || prev.status, winnerTeam: (live.winnerTeam as number) ?? prev.winnerTeam, courtNumber: (live.courtNumber as number) ?? prev.courtNumber } : null);
+    }).catch(() => {}).finally(() => { setLoadingMatch(false); });
+  }
+
   function addScore(team: 1 | 2) {
     if (!activeMatch) return;
     const s1 = activeMatch.scoreTeam1 || 0;
@@ -247,35 +352,33 @@ export default function SparingMatchPage() {
     if (isTwoGame) {
       const g2s1 = activeMatch.scoreTeam1Game2 || 0;
       const g2s2 = activeMatch.scoreTeam2Game2 || 0;
-      const g1Done = s1 >= 21 || s2 >= 21;
+      const g3s1 = activeMatch.scoreTeam1Game3 || 0;
+      const g3s2 = activeMatch.scoreTeam2Game3 || 0;
 
-      if (!g1Done) {
+      if (curGame === 1) {
+        if (isGameWon(s1, s2)) return;
         const ns1 = team === 1 ? s1 + 1 : s1;
         const ns2 = team === 2 ? s2 + 1 : s2;
-        setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
-        setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
-      } else {
+        setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2, lastScorer: team } as unknown as ApiMatch);
+        setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2, lastScorer: team });
+      } else if (curGame === 2) {
+        if (isGameWon(g2s1, g2s2)) return;
         const ns1 = team === 1 ? g2s1 + 1 : g2s1;
         const ns2 = team === 2 ? g2s2 + 1 : g2s2;
-        setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
-        setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
-        if ((ns1 >= 21 || ns2 >= 21) && Math.abs(ns1 - ns2) >= 2) {
-          setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
-          saveToSupabase(activeMatch.id, { scoreTeam1: s1, scoreTeam2: s2, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, notes: getTimeNotes({ endedAt: new Date().toISOString() }), status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
-          setActiveMatch(null);
-        }
+        setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, lastScorer: team } as unknown as ApiMatch);
+        setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2, lastScorer: team });
+      } else {
+        if (isGameWon(g3s1, g3s2)) return;
+        const ns1 = team === 1 ? g3s1 + 1 : g3s1;
+        const ns2 = team === 2 ? g3s2 + 1 : g3s2;
+        setActiveMatch({ ...activeMatch, scoreTeam1Game3: ns1, scoreTeam2Game3: ns2, lastScorer: team } as unknown as ApiMatch);
+        setMatchOptimistic(activeMatch.id, { scoreTeam1Game3: ns1, scoreTeam2Game3: ns2, lastScorer: team });
       }
     } else {
-      const maxScore = modeLabel === "1-42" ? 42 : 30;
       const ns1 = team === 1 ? s1 + 1 : s1;
       const ns2 = team === 2 ? s2 + 1 : s2;
       setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
-      setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
-      if ((ns1 >= maxScore || ns2 >= maxScore) && Math.abs(ns1 - ns2) >= 2) {
-        setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
-        saveToSupabase(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2, status: "completed", winnerTeam: ns1 > ns2 ? 1 : 2 });
-        setActiveMatch(null);
-      }
+      setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2, lastScorer: team });
     }
   }
 
@@ -288,18 +391,24 @@ export default function SparingMatchPage() {
     if (isTwoGame) {
       const g2s1 = activeMatch.scoreTeam1Game2 || 0;
       const g2s2 = activeMatch.scoreTeam2Game2 || 0;
-      const g1Done = s1 >= 21 || s2 >= 21;
+      const g3s1 = activeMatch.scoreTeam1Game3 || 0;
+      const g3s2 = activeMatch.scoreTeam2Game3 || 0;
 
-      if (!g1Done) {
+      if (curGame === 1) {
         const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
         const ns2 = team === 2 ? Math.max(0, s2 - 1) : s2;
-        setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2 });
+        setActiveMatch({ ...activeMatch, scoreTeam1: ns1, scoreTeam2: ns2, lastScorer: team } as unknown as ApiMatch);
         setMatchOptimistic(activeMatch.id, { scoreTeam1: ns1, scoreTeam2: ns2 });
-      } else {
+      } else if (curGame === 2) {
         const ns1 = team === 1 ? Math.max(0, g2s1 - 1) : g2s1;
         const ns2 = team === 2 ? Math.max(0, g2s2 - 1) : g2s2;
         setActiveMatch({ ...activeMatch, scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
         setMatchOptimistic(activeMatch.id, { scoreTeam1Game2: ns1, scoreTeam2Game2: ns2 });
+      } else {
+        const ns1 = team === 1 ? Math.max(0, g3s1 - 1) : g3s1;
+        const ns2 = team === 2 ? Math.max(0, g3s2 - 1) : g3s2;
+        setActiveMatch({ ...activeMatch, scoreTeam1Game3: ns1, scoreTeam2Game3: ns2 });
+        setMatchOptimistic(activeMatch.id, { scoreTeam1Game3: ns1, scoreTeam2Game3: ns2 });
       }
     } else {
       const ns1 = team === 1 ? Math.max(0, s1 - 1) : s1;
@@ -312,42 +421,61 @@ export default function SparingMatchPage() {
   function swapTeams() {
     if (!activeMatch) return;
     const s = activeMatch;
+    const s1 = s.scoreTeam1 || 0;
+    const s2 = s.scoreTeam2 || 0;
+    const deducedScorer = s1 > s2 ? 1 : s2 > s1 ? 2 : null;
+    const liveScorer = (s as unknown as Record<string, unknown>).lastScorer as number | null | undefined;
+    const currentScorer = liveScorer ?? deducedScorer;
+    const swappedScorer = currentScorer === 1 ? 2 : currentScorer === 2 ? 1 : null;
     const next = {
       ...s,
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
       scoreTeam1Game2: s.scoreTeam2Game2, scoreTeam2Game2: s.scoreTeam1Game2,
+      scoreTeam1Game3: s.scoreTeam2Game3, scoreTeam2Game3: s.scoreTeam1Game3,
     };
-    setActiveMatch(next);
+    setActiveMatch({ ...next, ...(swappedScorer !== null ? { lastScorer: swappedScorer } : {}) } as unknown as ApiMatch);
     setMatchOptimistic(s.id, {
       team1Player1Id: s.team2Player1Id, team1Player2Id: s.team2Player2Id,
       team2Player1Id: s.team1Player1Id, team2Player2Id: s.team1Player2Id,
       scoreTeam1: s.scoreTeam2, scoreTeam2: s.scoreTeam1,
       scoreTeam1Game2: s.scoreTeam2Game2, scoreTeam2Game2: s.scoreTeam1Game2,
+      scoreTeam1Game3: s.scoreTeam2Game3, scoreTeam2Game3: s.scoreTeam1Game3,
+      ...(swappedScorer !== null ? { lastScorer: swappedScorer } : {}),
     });
   }
 
-  async function finishMatch() {
+  async function finishMatch(drawArg?: boolean) {
     if (!activeMatch) return;
     setSaving(true);
+    const draw = drawArg ?? finishAsDraw;
     const s1 = activeMatch.scoreTeam1 || 0;
     const s2 = activeMatch.scoreTeam2 || 0;
     const isTwoGame = modeLabel.startsWith("2-21");
-    let winner = 1;
+    let winner: number | null = null;
     if (isTwoGame) {
       const g2s1 = activeMatch.scoreTeam1Game2 || 0;
       const g2s2 = activeMatch.scoreTeam2Game2 || 0;
-      const g1Done = s1 >= 21 || s2 >= 21;
-      if (g1Done) {
-        winner = g2s1 > g2s2 ? 1 : g2s2 > g2s1 ? 2 : 1;
-      } else {
-        winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
+      const g3s1 = activeMatch.scoreTeam1Game3 || 0;
+      const g3s2 = activeMatch.scoreTeam2Game3 || 0;
+      if (!draw) {
+        const g1Winner = s1 > s2 ? 1 : s2 > s1 ? 2 : null;
+        const g2Winner = g2s1 > g2s2 ? 1 : g2s2 > g2s1 ? 2 : null;
+        const g3Winner = g3s1 > g3s2 ? 1 : g3s2 > g3s1 ? 2 : null;
+        const wins1 = (g1Winner === 1 ? 1 : 0) + (g2Winner === 1 ? 1 : 0) + (g3Winner === 1 ? 1 : 0);
+        const wins2 = (g1Winner === 2 ? 1 : 0) + (g2Winner === 2 ? 1 : 0) + (g3Winner === 2 ? 1 : 0);
+        winner = wins1 > wins2 ? 1 : wins2 > wins1 ? 2 : null;
       }
     } else {
-      winner = s1 > s2 ? 1 : s2 > s1 ? 2 : 1;
+      winner = s1 > s2 ? 1 : s2 > s1 ? 2 : null;
     }
-    setMatchOptimistic(activeMatch.id, { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 });
+    const fbData: Record<string, unknown> = { status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0 };
+    fbData.scoreTeam1Game2 = activeMatch.scoreTeam1Game2 ?? null;
+    fbData.scoreTeam2Game2 = activeMatch.scoreTeam2Game2 ?? null;
+    fbData.scoreTeam1Game3 = activeMatch.scoreTeam1Game3 ?? null;
+    fbData.scoreTeam2Game3 = activeMatch.scoreTeam2Game3 ?? null;
+    setMatchOptimistic(activeMatch.id, fbData);
     const endedIso = new Date().toISOString();
     try {
       const res = await fetch(`/api/matches/${activeMatch.id}`, {
@@ -356,6 +484,7 @@ export default function SparingMatchPage() {
         body: JSON.stringify({
           scoreTeam1: activeMatch.scoreTeam1, scoreTeam2: activeMatch.scoreTeam2,
           scoreTeam1Game2: activeMatch.scoreTeam1Game2, scoreTeam2Game2: activeMatch.scoreTeam2Game2,
+          scoreTeam1Game3: activeMatch.scoreTeam1Game3, scoreTeam2Game3: activeMatch.scoreTeam2Game3,
           notes: getTimeNotes({ endedAt: endedIso }),
           status: "completed", winnerTeam: winner, cockCount: Number(cockCount) || 0,
         }),
@@ -368,6 +497,30 @@ export default function SparingMatchPage() {
     setShowConfirmFinish(false);
     setActiveMatch(null);
     setSaving(false);
+  }
+
+  function isGameWon(s1: number, s2: number): boolean {
+    const target = modeLabel === "1-42" ? 42 : modeLabel === "1-30" ? 30 : 21;
+    if (s1 >= target && s1 - s2 >= 2) return true;
+    if (s2 >= target && s2 - s1 >= 2) return true;
+    if (s1 >= 30 || s2 >= 30) return true;
+    return false;
+  }
+
+  async function finishGame1() {
+    if (!activeMatch) return;
+    const notesStr = getTimeNotes({ game1Finished: true });
+    setActiveMatch({ ...activeMatch, notes: notesStr } as unknown as ApiMatch);
+    saveToSupabase(activeMatch.id, { notes: notesStr });
+    setCurGame(2);
+  }
+
+  async function finishGame2() {
+    if (!activeMatch) return;
+    const notesStr = getTimeNotes({ game2Finished: true });
+    setActiveMatch({ ...activeMatch, notes: notesStr } as unknown as ApiMatch);
+    saveToSupabase(activeMatch.id, { notes: notesStr });
+    setCurGame(3);
   }
 
   if (!firstDataLoaded && (!schedulesLoaded || !membersLoaded || !matchesLoaded)) return <LoadingSpinner />;
@@ -402,7 +555,18 @@ export default function SparingMatchPage() {
     const s2 = activeMatch.scoreTeam2 || 0;
     const g2s1 = activeMatch.scoreTeam1Game2 || 0;
     const g2s2 = activeMatch.scoreTeam2Game2 || 0;
-    const g1Done = isTwoGame && (s1 >= 21 || s2 >= 21);
+    const g3s1 = activeMatch.scoreTeam1Game3 || 0;
+    const g3s2 = activeMatch.scoreTeam2Game3 || 0;
+    const isEditing = activeMatch.status === "completed";
+    const dispS1 = isTwoGame ? (curGame === 1 ? s1 : curGame === 2 ? g2s1 : g3s1) : s1;
+    const dispS2 = isTwoGame ? (curGame === 1 ? s2 : curGame === 2 ? g2s2 : g3s2) : s2;
+    const scoreTarget = isTwoGame ? 21 : maxScore;
+    const g1Won = isGameWon(s1, s2);
+    const g2Won = isGameWon(g2s1, g2s2);
+    const g3Won = isGameWon(g3s1, g3s2);
+    const g1Winner = s1 > s2 ? 1 : s2 > s1 ? 2 : null;
+    const g2Winner = g2s1 > g2s2 ? 1 : g2s2 > g2s1 ? 2 : null;
+    const splitAfterG2 = isTwoGame && curGame === 2 && g1Won && g2Won && g1Winner !== null && g2Winner !== null && g1Winner !== g2Winner;
     const ci = (activeMatch.courtNumber || 1) - 1;
     const color = courtColors[ci % courtColors.length];
 
@@ -414,7 +578,13 @@ export default function SparingMatchPage() {
             <div className="absolute -top-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           </div>
-          <div className="relative mx-auto flex max-w-lg items-center justify-end px-4">
+          <div className="relative mx-auto flex max-w-lg items-center justify-end gap-2 px-4">
+            {isEditing && (
+              <button onClick={() => setCardMatch(activeMatch)}
+                className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/25">
+                <ImageIcon className="h-3.5 w-3.5" /> Buat Card
+              </button>
+            )}
             <div className="flex items-center gap-2 text-sm text-white/80">
               <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur-sm">L{activeMatch.courtNumber}</span>
               <span className="text-white/40">·</span>
@@ -431,15 +601,15 @@ export default function SparingMatchPage() {
                   <p className="text-lg font-bold text-gray-900 leading-tight">{getName(activeMatch.team1Player1Id)}</p>
                   <p className="text-lg font-bold text-gray-900 leading-tight">{getName(activeMatch.team1Player2Id)}</p>
                 </div>
-                <div className={`text-5xl font-bold tabular-nums ${color.text}`}>
-                  {isTwoGame ? (g1Done ? g2s1 : s1) : s1}
+                <div className={`text-5xl font-bold tabular-nums ${dispS1 >= scoreTarget ? "text-green-600" : color.text}`}>
+                  {dispS1}
                 </div>
                 <div className="flex flex-col items-center gap-1 px-3">
                   <span className="text-xs text-gray-300 font-bold">VS</span>
                   <button onClick={swapTeams} className="rounded-lg border border-gray-200 px-2 py-1 text-[10px] text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Tukar posisi tim">⇄</button>
                 </div>
-                <div className={`text-5xl font-bold tabular-nums ${color.text}`}>
-                  {isTwoGame ? (g1Done ? g2s2 : s2) : s2}
+                <div className={`text-5xl font-bold tabular-nums ${dispS2 >= scoreTarget ? "text-green-600" : color.text}`}>
+                  {dispS2}
                 </div>
                 <div className="flex-1 text-left pl-4">
                   <p className="text-lg font-bold text-gray-900 leading-tight">{getName(activeMatch.team2Player1Id)}</p>
@@ -447,9 +617,20 @@ export default function SparingMatchPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-3 mb-6">
-                {isTwoGame && !g1Done && <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${color.badge}`}>Game 1</span>}
-                {isTwoGame && g1Done && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">Game 2</span>}
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+                {isTwoGame && (
+                  <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1">
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${curGame === 1 ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+                      Game 1{s1 > 0 || s2 > 0 ? ` (${s1}-${s2})` : ""}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${curGame === 2 ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+                      Game 2{g2s1 > 0 || g2s2 > 0 ? ` (${g2s1}-${g2s2})` : ""}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${curGame === 3 ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+                      Game 3{g3s1 > 0 || g3s2 > 0 ? ` (${g3s1}-${g3s2})` : ""}
+                    </span>
+                  </div>
+                )}
                 {!isTwoGame && <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">1 Game {modeLabel === "1-42" ? "42" : "30"}</span>}
                 {startedAt && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
@@ -469,17 +650,40 @@ export default function SparingMatchPage() {
                 </div>
               </div>
 
-              <div className="mt-6">
-                <button onClick={() => { setShowConfirmFinish(true); setCockCount("1"); }} className={`w-full rounded-xl ${color.bg} px-6 py-3 text-sm font-semibold text-white shadow-sm hover:brightness-110`}>Selesaikan Pertandingan</button>
+              <div className="mt-6 space-y-2">
+                {isEditing ? (
+                  <button onClick={() => { setFinishAsDraw(false); setShowConfirmFinish(true); setCockCount(String(activeMatch.cockCount ?? 1)); }} className={`w-full rounded-xl ${color.bg} px-6 py-3 text-sm font-semibold text-white shadow-sm hover:brightness-110`}>
+                    Simpan Perubahan
+                  </button>
+                ) : isTwoGame && curGame === 1 && g1Won ? (
+                  <button onClick={finishGame1} className="w-full rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700">
+                    Selesai Game 1 ({dispS1}-{dispS2}) → Lanjut Game 2
+                  </button>
+                ) : splitAfterG2 ? (
+                  <>
+                    <button onClick={() => setShowConfirmGame3(true)} className="w-full rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700">
+                      Lanjut Rubber Game ({dispS1}-{dispS2}) → Game 3
+                    </button>
+                    <button onClick={() => { setFinishAsDraw(true); setShowConfirmFinish(true); setCockCount("1"); }} className="w-full rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-500 shadow-sm hover:bg-gray-50">
+                      Selesaikan Seri (Game 1 & 2 Berbeda)
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => { setFinishAsDraw(false); setShowConfirmFinish(true); setCockCount("1"); }} className={`w-full rounded-xl ${color.bg} px-6 py-3 text-sm font-semibold text-white shadow-sm hover:brightness-110`}>
+                    Selesaikan Pertandingan
+                  </button>
+                )}
               </div>
             </div>
 
             {showConfirmFinish && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowConfirmFinish(false)}>
                 <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Selesaikan Pertandingan?</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{isEditing ? "Simpan Perubahan?" : finishAsDraw ? "Selesaikan Sebagai Seri?" : "Selesaikan Pertandingan?"}</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Skor saat ini: {s1} - {s2}{isTwoGame && g1Done ? ` (Game 2: ${g2s1} - ${g2s2})` : ""}
+                    {finishAsDraw ? (
+                      <>Game 1: {s1} - {s2}  ·  Game 2: {g2s1} - {g2s2}<br/>Pemenang berbeda, hasil dicatat sebagai <b>Seri</b>.</>
+                    ) : isTwoGame ? `Game 1: ${s1} - ${s2}  ·  Game 2: ${g2s1} - ${g2s2}${curGame === 3 || g3s1 > 0 || g3s2 > 0 ? `  ·  Game 3: ${g3s1} - ${g3s2}` : ""}` : `Skor saat ini: ${s1} - ${s2}`}
                   </p>
                   <div className="mb-4 flex items-center justify-center gap-2">
                     <span className="text-sm font-bold text-gray-700">Cock dipakai:</span>
@@ -487,7 +691,7 @@ export default function SparingMatchPage() {
                   </div>
                   <div className="flex gap-3 justify-end">
                     <button onClick={() => setShowConfirmFinish(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
-                    <button disabled={saving} onClick={finishMatch} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : "Yakin, Selesai"}</button>
+                    <button disabled={saving} onClick={() => finishMatch()} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : isEditing ? "Yakin, Simpan" : finishAsDraw ? "Yakin, Seri" : "Yakin, Selesai"}</button>
                   </div>
                 </div>
               </div>
@@ -495,7 +699,23 @@ export default function SparingMatchPage() {
           </div>
         </div>
         </div>
+        {showConfirmGame3 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowConfirmGame3(false)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Lanjut Game ke 3?</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Game 1: {s1} - {s2}  ·  Game 2: {g2s1} - {g2s2}
+                <br/>Pemenang berbeda ({s1 > s2 ? 1 : 2}-{g2s1 > g2s2 ? 1 : 2}), ada rubber game.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setShowConfirmGame3(false)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">Tidak</button>
+                <button onClick={() => { setShowConfirmGame3(false); finishGame2(); }} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700">Ya, Lanjut</button>
+              </div>
+            </div>
+          </div>
+        )}
         {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+        {cardMatch && <MatchCardModal match={cardMatch} members={members} title={cardTitle} pbColor={pbColor} allowUpload onClose={() => setCardMatch(null)} />}
       </>
     );
   }
@@ -574,7 +794,7 @@ export default function SparingMatchPage() {
                     </span>
                   )}
                   <span className="text-white/30">·</span>
-                  <span>{courtMatches.filter((m) => m.round === selRound).length} pertandingan</span>
+                  <span>{courtMatches.length} pertandingan</span>
                 </div>
               </div>
             </div>
@@ -583,13 +803,15 @@ export default function SparingMatchPage() {
 
         <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-4 flex items-center gap-2">
-            <select value={selRound} onChange={(e) => setSelRound(Number(e.target.value))}
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-              {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
-                <option key={r} value={r}>Round {r}</option>
-              ))}
-            </select>
-            <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--color-primary)]">Round {selRound}</span>
+            {!isMabarMode && (
+              <select value={selRound} onChange={(e) => setSelRound(Number(e.target.value))}
+                className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r) => (
+                  <option key={r} value={r}>Round {r}</option>
+                ))}
+              </select>
+            )}
+            {!isMabarMode && <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--color-primary)]">Round {selRound}</span>}
           </div>
 
           {unassignedMatches.length > 0 && (
@@ -619,7 +841,7 @@ export default function SparingMatchPage() {
                 return (
                   <div key={m.id}
                     className={`rounded-2xl border bg-white p-5 shadow-sm transition-all ${isCompleted ? "border-gray-200" : "border-gray-200 hover:shadow-md"} ${!isCompleted ? "cursor-pointer hover:border-[var(--color-primary)]" : ""}`}
-                    onClick={() => { if (isCompleted) return; history.pushState(null, ""); setActiveMatch(m); setLoadingMatch(true); readLiveScore(m.id).then((live) => { if (live) setActiveMatch((prev) => prev ? { ...prev, scoreTeam1: (live.scoreTeam1 as number) ?? prev.scoreTeam1, scoreTeam2: (live.scoreTeam2 as number) ?? prev.scoreTeam2, scoreTeam1Game2: (live.scoreTeam1Game2 as number) ?? prev.scoreTeam1Game2, scoreTeam2Game2: (live.scoreTeam2Game2 as number) ?? prev.scoreTeam2Game2, status: (live.status as string) || prev.status, winnerTeam: (live.winnerTeam as number) ?? prev.winnerTeam, courtNumber: (live.courtNumber as number) ?? prev.courtNumber, } : null); }).catch(() => {}).finally(() => { setLoadingMatch(false); }); }}>
+                    onClick={() => { if (isCompleted) return; openMatchScore(m); }}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${matchColor.bg}`}>
@@ -637,21 +859,29 @@ export default function SparingMatchPage() {
                             <Radio className="h-2.5 w-2.5" /> LIVE
                           </span>
                         )}
-                        <button onClick={async (e) => { e.stopPropagation(); try { await updateMatch(m.id, { courtNumber: null, ...(m.status !== "completed" ? { status: "scheduled", scoreTeam1: 0, scoreTeam2: 0, scoreTeam1Game2: 0, scoreTeam2Game2: 0 } : {}) }); } catch (ex) { console.error(ex); } }}
+                        {isCompleted && (
+                          <button onClick={(e) => { e.stopPropagation(); setCardMatch(m); }}
+                            className="flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]" title="Buat Match Card"><ImageIcon className="h-3 w-3" /> Card</button>
+                        )}
+                        {isCompleted && (
+                          <button onClick={(e) => { e.stopPropagation(); openMatchScore(m); }}
+                            className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]" title="Edit skor pertandingan">Edit</button>
+                        )}
+                        <button onClick={async (e) => { e.stopPropagation(); try { await updateMatch(m.id, { courtNumber: null, ...(m.status !== "completed" ? { status: "scheduled", scoreTeam1: 0, scoreTeam2: 0, scoreTeam1Game2: 0, scoreTeam2Game2: 0, scoreTeam1Game3: 0, scoreTeam2Game3: 0 } : {}) }); } catch (ex) { console.error(ex); } }}
                           className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200" title="Lepas dari lapangan">Lepas</button>
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 text-right">
                         <p className="font-bold text-gray-900">{getName(m.team1Player1Id)} <span className="text-gray-400 font-normal">-</span> {getName(m.team1Player2Id)}</p>
-                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 1 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam1}{m.totalGames > 1 && `, ${m.scoreTeam1Game2}`}</p>}
+                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 1 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam1}{m.totalGames > 1 && `, ${m.scoreTeam1Game2}`}{m.scoreTeam1Game3 !== null && m.scoreTeam1Game3 !== undefined ? `, ${m.scoreTeam1Game3}` : ""}{m.winnerTeam === null && <span className="ml-1 text-xs font-medium text-amber-500">Seri</span>}</p>}
                       </div>
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="text-xs text-gray-300 font-bold">VS</span>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="font-bold text-gray-900">{getName(m.team2Player1Id)} <span className="text-gray-400 font-normal">-</span> {getName(m.team2Player2Id)}</p>
-                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 2 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam2}{m.totalGames > 1 && `, ${m.scoreTeam2Game2}`}</p>}
+                        {isCompleted && <p className="text-lg font-bold mt-1" style={{ color: m.winnerTeam === 2 ? "var(--color-primary)" : "#6b7280" }}>{m.scoreTeam2}{m.totalGames > 1 && `, ${m.scoreTeam2Game2}`}{m.scoreTeam2Game3 !== null && m.scoreTeam2Game3 !== undefined ? `, ${m.scoreTeam2Game3}` : ""}</p>}
                       </div>
                     </div>
                     {!isCompleted && (
@@ -669,6 +899,7 @@ export default function SparingMatchPage() {
         </div>
       </div>
         {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
+        {cardMatch && <MatchCardModal match={cardMatch} members={members} title={cardTitle} pbColor={pbColor} allowUpload onClose={() => setCardMatch(null)} />}
       </>
     );
   }
@@ -722,6 +953,49 @@ export default function SparingMatchPage() {
 
       {/* Content */}
       <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
+        {isTournamentMode && selectedTournament && (selectedTournament.teams?.length || 0) > 0 && (
+          <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700">Klasemen League</h2>
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-500">
+                {(selectedTournament.standingsMode || "points") === "score" ? "Total Skor" : "Poin Kemenangan"}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100 text-gray-500">
+                    <th className="pb-2 pr-2">#</th>
+                    <th className="pb-2 pr-2">Tim</th>
+                    <th className="pb-2 pr-2 text-center">M</th>
+                    <th className="pb-2 pr-2 text-center">W</th>
+                    <th className="pb-2 pr-2 text-center">D</th>
+                    <th className="pb-2 pr-2 text-center">L</th>
+                    <th className="pb-2 text-center font-bold">{(selectedTournament.standingsMode || "points") === "score" ? "Skor" : "Pts"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tournamentStandings.map((s, i) => (
+                    <tr key={s.team.id} className="border-b border-gray-50">
+                      <td className="py-2 pr-2 text-gray-400">{i + 1}</td>
+                      <td className="py-2 pr-2 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.team.color }} />
+                          {s.team.name}
+                        </div>
+                      </td>
+                      <td className="py-2 pr-2 text-center">{s.played}</td>
+                      <td className="py-2 pr-2 text-center text-green-600">{s.won}</td>
+                      <td className="py-2 pr-2 text-center text-gray-500">{s.drawn}</td>
+                      <td className="py-2 pr-2 text-center text-red-500">{s.lost}</td>
+                      <td className="py-2 text-center font-bold text-lg">{(selectedTournament.standingsMode || "points") === "score" ? s.score : s.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         {courts.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm">
             <Swords className="mx-auto h-10 w-10 text-gray-300" />
@@ -844,6 +1118,16 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
     return cards;
   }, [schedules, tournaments, tournamentSchedIds, matches]);
 
+  const [filter, setFilter] = useState<"today" | "all">("today");
+  const todayStr = new Date().toISOString().split("T")[0];
+  const isToday = (s: ApiSchedule) => s.date.split("T")[0] === todayStr;
+  const visibleSparings = filter === "all" ? sparings : sparings.filter(isToday);
+  const visibleMabar = filter === "all" ? mabarSchedules : mabarSchedules.filter(isToday);
+  const visibleTournamentCards =
+    filter === "all"
+      ? tournamentCards
+      : tournamentCards.filter((tc) => tc.schedIds.some((id) => schedules.some((s) => s.id === id && isToday(s))));
+
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)]">
       <div className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] pb-6 pt-4 sm:pb-8 sm:pt-6">
@@ -857,11 +1141,18 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
         </div>
       </div>
       <div className="relative mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
-        {tournamentCards.length > 0 && (
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">Pilih jadwal</h2>
+          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+            <button onClick={() => setFilter("today")} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${filter === "today" ? "bg-[var(--color-primary)] text-white" : "text-gray-500 hover:text-gray-700"}`}>Hari Ini</button>
+            <button onClick={() => setFilter("all")} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${filter === "all" ? "bg-[var(--color-primary)] text-white" : "text-gray-500 hover:text-gray-700"}`}>Semua</button>
+          </div>
+        </div>
+        {visibleTournamentCards.length > 0 && (
           <>
             <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">League</h2>
             <div className="mb-6 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-              {tournamentCards.map((tc, i) => {
+              {visibleTournamentCards.map((tc, i) => {
                 const color = courtColors[i % courtColors.length];
                 return (
                   <button key={tc.tournamentId} onClick={() => onSelectTournament(tc.tournamentId)}
@@ -893,9 +1184,11 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
             </div>
           </>
         )}
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Sparing</h2>
-        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-          {sparings.map((s, i) => {
+        {visibleSparings.length > 0 && (
+          <>
+            <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Sparing</h2>
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {visibleSparings.map((s, i) => {
             const cMatches = matches.filter((m) => m.scheduleId === s.id);
             const hasLive = cMatches.some((m) => m.status !== "completed" && m.courtNumber);
             const color = courtColors[i % courtColors.length];
@@ -925,15 +1218,18 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
                 </div>
               </button>
             );
-          })}
-          {sparings.length === 0 && tournamentCards.length === 0 && mabarSchedules.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">Belum ada sparing, league, atau mabar</p>}
-        </div>
+              })}
+            </div>
+          </>
+        )}
 
-        {mabarSchedules.length > 0 && (
+        {visibleSparings.length === 0 && visibleTournamentCards.length === 0 && visibleMabar.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-10">{filter === "today" ? "Tidak ada jadwal hari ini" : "Belum ada sparing, league, atau mabar"}</p>}
+
+        {visibleMabar.length > 0 && (
           <>
             <h2 className="mb-3 mt-6 text-xs font-bold uppercase tracking-wider text-gray-500">Mabar</h2>
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-              {mabarSchedules.map((s, i) => {
+              {visibleMabar.map((s, i) => {
                 const cMatches = matches.filter((m) => m.scheduleId === s.id);
                 const hasLive = cMatches.some((m) => m.status !== "completed" && m.courtNumber);
                 const color = courtColors[i % courtColors.length];

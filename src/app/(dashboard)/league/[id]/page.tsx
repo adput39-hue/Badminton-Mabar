@@ -8,8 +8,9 @@ import type { ApiTournament, ApiTeam, ApiTeamPlayer, ApiMember, ApiSchedule, Api
 import { Trophy, Plus, Trash2, ChevronLeft, Swords } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { compressImage } from "@/lib/compress-image";
 
-function getName(id: string, members: ApiMember[]) { return members.find((m) => m.id === id)?.name || "G��"; }
+function getName(id: string, members: ApiMember[]) { return members.find((m) => m.id === id)?.name || "—"; }
 
 export default function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,10 @@ export default function LeagueDetailPage() {
   const [settingsMax, setSettingsMax] = useState("");
   const [settingsFormat, setSettingsFormat] = useState("");
   const [settingsCourts, setSettingsCourts] = useState<{ name: string }[]>([]);
+  const [settingsStandingsMode, setSettingsStandingsMode] = useState("points");
+  const [settingsWinPoints, setSettingsWinPoints] = useState("");
+  const [settingsDrawPoints, setSettingsDrawPoints] = useState("");
+  const [settingsLossPoints, setSettingsLossPoints] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Player selection for match creation (sparing-style)
@@ -96,7 +101,7 @@ export default function LeagueDetailPage() {
     return map;
   }, [allTourneyMatches, teams]);
 
-  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || "G��"; }
+  function getTeamName(teamId: string) { return teams.find((t) => t.id === teamId)?.name || "—"; }
   function getTeamColor(teamId: string) { return teams.find((t) => t.id === teamId)?.color || "#0d9488"; }
 
   function renderScheduleItem(s: ApiSchedule & { team1Id: string; team2Id: string }, i: number) {
@@ -122,7 +127,7 @@ export default function LeagueDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {!isCompleted && <button onClick={() => { if (confirm("Hapus pertandingan ini?")) deleteSchedule(s.id); }} className="rounded-lg p-1 text-gray-300 hover:text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>}
-          <Link href={`/sparing/match`} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"><Swords className="h-3 w-3 inline" /> Score</Link>
+          <Link href={`/sparing/match?tournamentId=${id}`} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"><Swords className="h-3 w-3 inline" /> Score</Link>
         </div>
       </div>
     );
@@ -133,25 +138,46 @@ export default function LeagueDetailPage() {
     return map[cls] || "bg-gray-100 text-gray-600";
   }
 
+  function teamTotalScore(m: ApiMatch, team: 1 | 2) {
+    const g1 = team === 1 ? (m.scoreTeam1 || 0) : (m.scoreTeam2 || 0);
+    const g2 = team === 1 ? (m.scoreTeam1Game2 || 0) : (m.scoreTeam2Game2 || 0);
+    const g3 = team === 1 ? (m.scoreTeam1Game3 || 0) : (m.scoreTeam2Game3 || 0);
+    return g1 + g2 + g3;
+  }
+
   const standings = useMemo(() => {
-    const map = new Map<string, { team: ApiTeam; played: number; won: number; lost: number; points: number }>();
+    const mode = tournament?.standingsMode || "points";
+    const winPts = tournament?.winPoints ?? 2;
+    const drawPts = tournament?.drawPoints ?? 1;
+    const lossPts = tournament?.lossPoints ?? 0;
+    const map = new Map<string, { team: ApiTeam; played: number; won: number; drawn: number; lost: number; points: number; score: number }>();
     for (const t of teams) {
-      map.set(t.id, { team: t, played: 0, won: 0, lost: 0, points: 0 });
+      map.set(t.id, { team: t, played: 0, won: 0, drawn: 0, lost: 0, points: 0, score: 0 });
     }
     for (const s of schedules) {
-      const schedMatches = matches.filter((m) => m.scheduleId === s.id);
-      for (const m of schedMatches) {
-        if (m.winnerTeam == null) continue;
-        const t1 = map.get(s.team1Id);
-        const t2 = map.get(s.team2Id);
-        if (!t1 || !t2) continue;
-        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += 1; t2.points -= 1; }
-        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += 1; t1.points -= 1; }
-        t1.played++; t2.played++;
+      const t1 = map.get(s.team1Id);
+      const t2 = map.get(s.team2Id);
+      if (!t1 || !t2) continue;
+      for (const m of matches.filter((x) => x.scheduleId === s.id)) {
+        const hasResult = m.winnerTeam != null || m.status === "completed";
+        if (!hasResult) continue;
+        t1.played++;
+        t2.played++;
+        if (m.winnerTeam === 1) { t1.won++; t2.lost++; t1.points += winPts; t2.points += lossPts; }
+        else if (m.winnerTeam === 2) { t2.won++; t1.lost++; t2.points += winPts; t1.points += lossPts; }
+        else { t1.drawn++; t2.drawn++; t1.points += drawPts; t2.points += drawPts; }
+        t1.score += teamTotalScore(m, 1);
+        t2.score += teamTotalScore(m, 2);
       }
     }
-    return [...map.values()].sort((a, b) => b.points - a.points || b.won - a.won);
-  }, [teams, schedules, matches]);
+    const rows = [...map.values()];
+    if (mode === "score") {
+      return rows.sort((a, b) => b.score - a.score || b.won - a.won);
+    }
+    return rows.sort((a, b) => b.points - a.points || b.won - a.won);
+  }, [teams, schedules, matches, tournament?.standingsMode, tournament?.winPoints, tournament?.drawPoints, tournament?.lossPoints]);
+
+  const standingsModeLabel = (tournament?.standingsMode || "points") === "score" ? "Total Skor" : "Poin Kemenangan";
 
   async function addTeam() {
     if (!teamName.trim()) return;
@@ -238,7 +264,7 @@ export default function LeagueDetailPage() {
       const res = await fetch(`/api/tournaments/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalMatchGoal: settingsGoal ? Number(settingsGoal) : null, maxMatchPerTeam: settingsMax ? Number(settingsMax) : null, gameFormat: settingsFormat, courts: settingsCourts.length ? JSON.stringify(settingsCourts) : null }),
+        body: JSON.stringify({ totalMatchGoal: settingsGoal ? Number(settingsGoal) : null, maxMatchPerTeam: settingsMax ? Number(settingsMax) : null, gameFormat: settingsFormat, courts: settingsCourts.length ? JSON.stringify(settingsCourts) : null, standingsMode: settingsStandingsMode, winPoints: settingsStandingsMode === "points" ? Number(settingsWinPoints) || 0 : null, drawPoints: settingsStandingsMode === "points" ? Number(settingsDrawPoints) || 0 : null, lossPoints: settingsStandingsMode === "points" ? Number(settingsLossPoints) || 0 : null }),
       });
       if (!res.ok) throw new Error(await res.text());
       await load();
@@ -256,8 +282,8 @@ export default function LeagueDetailPage() {
 
   const colors = ["#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6","#ec4899","#14b8a6"];
   const internalMembers = members.filter((m) => m.type === "1" || !m.type);
-  const formatLabels: Record<string, string> = { "1x30": "1+�30", "1x42": "1+�42", "2x21": "2+�21" };
-  const draftFormatLabel = formatLabels[tournament.gameFormat || "1x30"] || "1+�30";
+  const formatLabels: Record<string, string> = { "1x30": "1 × 30", "1x42": "1 × 42", "2x21": "2 × 21" };
+  const draftFormatLabel = formatLabels[tournament.gameFormat || "1x30"] || "1 × 30";
   const courtList: { name: string }[] = tournament.courts ? JSON.parse(tournament.courts) : [];
 
   return (
@@ -272,7 +298,7 @@ export default function LeagueDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setSettingsGoal(String(tournament.totalMatchGoal ?? "")); setSettingsMax(String(tournament.maxMatchPerTeam ?? "")); setSettingsFormat(tournament.gameFormat || "1x30"); setSettingsCourts(tournament.courts ? JSON.parse(tournament.courts) : []); setShowSettings(true); }}
+          <button onClick={() => { setSettingsGoal(String(tournament.totalMatchGoal ?? "")); setSettingsMax(String(tournament.maxMatchPerTeam ?? "")); setSettingsFormat(tournament.gameFormat || "1x30"); setSettingsCourts(tournament.courts ? JSON.parse(tournament.courts) : []); setSettingsStandingsMode(tournament.standingsMode || "points"); setSettingsWinPoints(String(tournament.winPoints ?? 2)); setSettingsDrawPoints(String(tournament.drawPoints ?? 1)); setSettingsLossPoints(String(tournament.lossPoints ?? 0)); setShowSettings(true); }}
             className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50">
             Pengaturan
           </button>
@@ -341,7 +367,7 @@ export default function LeagueDetailPage() {
                           <button key={c} type="button" onClick={() => { setTeamColor(c); }}
                             className="h-7 w-7 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1"
                             style={{ backgroundColor: c }}>
-                            {teamColor === c && <span className="flex items-center justify-center text-xs text-white">G��</span>}
+                            {teamColor === c && <span className="flex items-center justify-center text-xs text-white">✓</span>}
                           </button>
                         ))}
                       </div>
@@ -367,9 +393,7 @@ export default function LeagueDetailPage() {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             if (file.size > 2 * 1024 * 1024) { toast("error", "Maksimal 2MB"); return; }
-                            const reader = new FileReader();
-                            reader.onload = () => setTeamIcon(reader.result as string);
-                            reader.readAsDataURL(file);
+                            compressImage(file, 512).then(setTeamIcon).catch(() => {});
                           }} />
                       </div>
                     </div>
@@ -386,7 +410,7 @@ export default function LeagueDetailPage() {
                         return m ? (
                           <span key={mid} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]">
                             {m.name}
-                            <span className={`rounded px-1 py-0 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "G��"}</span>
+                            <span className={`rounded px-1 py-0 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "—"}</span>
                             <button onClick={() => setTeamMemberIds((prev) => prev.filter((x) => x !== mid))} className="hover:text-red-500 ml-0.5">&times;</button>
                           </span>
                         ) : null;
@@ -403,7 +427,7 @@ export default function LeagueDetailPage() {
                             <label key={m.id} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50">
                               <input type="checkbox" checked={teamMemberIds.includes(m.id)} onChange={() => { setTeamMemberIds((prev) => prev.includes(m.id) ? prev.filter((x) => x !== m.id) : [...prev, m.id]); setSearchQuery(""); }}
                                 className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-                              {m.name} <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "G��"}</span>
+                              {m.name} <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${classColor(m.class || "")}`}>{m.class || "—"}</span>
                             </label>
                           );
                         })
@@ -422,7 +446,10 @@ export default function LeagueDetailPage() {
 
         {/* Standings */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-700 mb-4">Klasemen</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-700">Klasemen</h2>
+            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-500">{standingsModeLabel}</span>
+          </div>
           {standings.length === 0 ? (
             <p className="py-6 text-center text-xs text-gray-400">Belum ada pertandingan</p>
           ) : (
@@ -434,8 +461,9 @@ export default function LeagueDetailPage() {
                     <th className="pb-2 pr-2">Tim</th>
                     <th className="pb-2 pr-2 text-center">M</th>
                     <th className="pb-2 pr-2 text-center">W</th>
+                    <th className="pb-2 pr-2 text-center">D</th>
                     <th className="pb-2 pr-2 text-center">L</th>
-                    <th className="pb-2 text-center font-bold">Pts</th>
+                    <th className="pb-2 text-center font-bold">{standingsModeLabel === "Total Skor" ? "Skor" : "Pts"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -450,8 +478,9 @@ export default function LeagueDetailPage() {
                       </td>
                       <td className="py-2 pr-2 text-center">{s.played}</td>
                       <td className="py-2 pr-2 text-center text-green-600">{s.won}</td>
+                      <td className="py-2 pr-2 text-center text-gray-500">{s.drawn}</td>
                       <td className="py-2 pr-2 text-center text-red-500">{s.lost}</td>
-                      <td className="py-2 text-center font-bold text-lg">{s.points}</td>
+                      <td className="py-2 text-center font-bold text-lg">{standingsModeLabel === "Total Skor" ? s.score : s.points}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -497,7 +526,7 @@ export default function LeagueDetailPage() {
                 <label className="mb-2 block text-xs font-medium text-gray-500">Tim A</label>
                 <select value={draftTeam1} onChange={(e) => { setDraftTeam1(e.target.value); setDraftTeam1P1(""); setDraftTeam1P2(""); }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="">G��</option>
+                  <option value="">—</option>
                   {teams.filter((t) => t.id !== draftTeam2).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 {draftTeam1 && (
@@ -526,7 +555,7 @@ export default function LeagueDetailPage() {
                 <label className="mb-2 block text-xs font-medium text-gray-500">Tim B</label>
                 <select value={draftTeam2} onChange={(e) => { setDraftTeam2(e.target.value); setDraftTeam2P1(""); setDraftTeam2P2(""); }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="">G��</option>
+                  <option value="">—</option>
                   {teams.filter((t) => t.id !== draftTeam1).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 {draftTeam2 && (
@@ -594,11 +623,38 @@ export default function LeagueDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Format Game</label>
                 <select value={settingsFormat} onChange={(e) => setSettingsFormat(e.target.value)}
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-                  <option value="1x30">1+�30</option>
-                  <option value="1x42">1+�42</option>
-                  <option value="2x21">2+�21</option>
+                  <option value="1x30">1 × 30</option>
+                  <option value="1x42">1 × 42</option>
+                  <option value="2x21">2 × 21</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Klasemen Berdasarkan</label>
+                <select value={settingsStandingsMode} onChange={(e) => setSettingsStandingsMode(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                  <option value="points">Poin Kemenangan</option>
+                  <option value="score">Total Skor</option>
+                </select>
+              </div>
+              {settingsStandingsMode === "points" && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Menang</label>
+                    <input type="number" min="0" value={settingsWinPoints} onChange={(e) => setSettingsWinPoints(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Seri</label>
+                    <input type="number" min="0" value={settingsDrawPoints} onChange={(e) => setSettingsDrawPoints(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Kalah</label>
+                    <input type="number" min="0" value={settingsLossPoints} onChange={(e) => setSettingsLossPoints(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Lapangan</label>
                 <div className="space-y-2">

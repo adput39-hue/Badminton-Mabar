@@ -1,15 +1,16 @@
 export interface ApiMember {
   id: string; pbId: string; name: string; phone: string | null;
   photo: string | null; address: string | null;
-  class: string; type: string; isActive: boolean; joinedAt: string;
+  class: string; type: string; memberType: string; isActive: boolean; joinedAt: string;
   gender: string | null; saldoAwalHutang: number | null;
   createdAt: string; updatedAt: string;
+  hasPhoto?: boolean; photoVersion?: string | null;
 }
 
 export interface ApiSchedule {
   id: string; pbId: string; title: string; date: string;
   startTime: string | null; endTime: string | null; location: string | null;
-  maxParticipants: number; htm: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null; logoUrl: string | null;
+  maxParticipants: number; htm: number | null; htmInsidentil: number | null; cockPrice: number | null; courts: string | null; sparingOpponent: string | null; logoUrl: string | null;
   tournamentId: string | null; team1Id: string | null; team2Id: string | null;
   notes: string | null; status: string;
   createdBy: string | null; createdAt: string; updatedAt: string;
@@ -28,6 +29,7 @@ export interface ApiMatch {
   team2Player1Id: string; team2Player2Id: string;
   scoreTeam1: number | null; scoreTeam2: number | null;
   scoreTeam1Game2: number | null; scoreTeam2Game2: number | null;
+  scoreTeam1Game3: number | null; scoreTeam2Game3: number | null;
   totalGames: number; winnerTeam: number | null; cockCount: number | null;
   status: string; notes: string | null; createdAt: string; updatedAt: string;
 }
@@ -97,6 +99,8 @@ export interface ApiTournament {
   id: string; pbId: string; name: string; status: string;
   totalMatchGoal?: number | null; maxMatchPerTeam?: number | null;
   gameFormat?: string | null; courts?: string | null;
+  standingsMode?: string | null; winPoints?: number | null;
+  drawPoints?: number | null; lossPoints?: number | null;
   createdAt: string; updatedAt: string;
   teams?: ApiTeam[]; schedules?: ApiTournamentSchedule[];
   _count?: { schedules: number };

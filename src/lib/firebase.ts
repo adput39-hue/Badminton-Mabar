@@ -28,6 +28,8 @@ export function writeLiveScore(matchId: string, data: {
   scoreTeam2?: number | null;
   scoreTeam1Game2?: number | null;
   scoreTeam2Game2?: number | null;
+  scoreTeam1Game3?: number | null;
+  scoreTeam2Game3?: number | null;
   status?: string | null;
   winnerTeam?: number | null;
 }) {
@@ -48,17 +50,23 @@ export async function readLiveScore(matchId: string): Promise<Record<string, unk
   return snap.exists() ? snap.data() : null;
 }
 
-export function listenAllLiveScores(callback: (scores: Record<string, Record<string, unknown>>) => void): Unsubscribe | null {
+export function listenAllLiveScores(callback: (scores: Record<string, Record<string, unknown>>) => void, onError?: (error: Error) => void): Unsubscribe | null {
   if (!isFirebaseConfigured()) return null;
   const a = getApp();
   if (!a) return null;
   const db = getFirestore(a);
   const colRef = collection(db, "live");
-  return onSnapshot(colRef, (snapshot) => {
-    const scores: Record<string, Record<string, unknown>> = {};
-    snapshot.forEach((doc) => {
-      scores[doc.id] = doc.data();
-    });
-    callback(scores);
-  });
+  return onSnapshot(colRef,
+    (snapshot) => {
+      const scores: Record<string, Record<string, unknown>> = {};
+      snapshot.forEach((doc) => {
+        scores[doc.id] = doc.data();
+      });
+      callback(scores);
+    },
+    (error) => {
+      console.error("Firebase live listener error:", error);
+      if (onError) onError(error);
+    },
+  );
 }

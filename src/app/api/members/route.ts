@@ -7,7 +7,8 @@ export async function GET(request: Request) {
   const pbId = queryPbId || request.headers.get("x-pb-id");
   const where = pbId ? { pbId } : {};
   const members = await prisma.member.findMany({ where, orderBy: { createdAt: "desc" } });
-  return NextResponse.json(members);
+  const safe = members.map(({ photo, ...m }) => ({ ...m, hasPhoto: !!photo, photoVersion: photo ? m.updatedAt : null }));
+  return NextResponse.json(safe);
 }
 
 export async function POST(request: Request) {
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
         address: body.address || null,
         class: body.class,
         type: body.type || "1",
+        memberType: body.memberType || "member",
         isActive: body.isActive ?? true,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : new Date(),
       },

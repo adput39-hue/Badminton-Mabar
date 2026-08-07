@@ -4,9 +4,11 @@ import { useState, useRef, useMemo } from "react";
 import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiMember as Member, ApiAttendance, ApiMatch, ApiMatchHistory } from "@/lib/api-types";
-import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin, Venus, Mars } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin, Venus, Mars, FileSpreadsheet, Upload } from "lucide-react";
 import { toTitleCase } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { compressImage } from "@/lib/compress-image";
+import { getClientPbId } from "@/lib/tenant";
 
 type MemberClass = "A" | "B" | "C" | "D" | "E" | "F";
 const CLASSES: MemberClass[] = ["A", "B", "C", "D", "E", "F"];
@@ -24,16 +26,11 @@ const classBadge: Record<MemberClass, string> = {
 };
 
 function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  return compressImage(file, 400);
 }
 
 export default function MembersPage() {
-  const { items: members, add, update, remove, loaded: membersLoaded } = useApi<Member>("members");
+  const { items: members, add, update, remove, refresh, loaded: membersLoaded } = useApi<Member>("members");
   const { items: attendances, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
   const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
   const { items: matchHistory, loaded: matchHistoryLoaded } = useApi<ApiMatchHistory>("match-history");
@@ -60,12 +57,81 @@ export default function MembersPage() {
   const [sortBy, setSortBy] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "name", dir: "asc" });
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", photo: "", address: "", class: "A" as MemberClass, gender: "" });
+  const [form, setForm] = useState({ name: "", phone: "", photo: "", address: "", class: "A" as MemberClass, gender: "", memberType: "member" });
+  const [existingPhoto, setExistingPhoto] = useState(false);
+  const [editPhotoVersion, setEditPhotoVersion] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
+
+  async function downloadTemplate() {
+    try {
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.aoa_to_sheet([
+        ["Nama", "Telepon", "Alamat", "Kelas", "Jenis Kelamin"],
+        ["Budi Santoso", "081234567890", "Jl. Merdeka No.1", "A", "L"],
+        ["Siti Aminah", "081298765432", "Jl. Sudirman No.2", "B", "P"],
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Anggota");
+      XLSX.writeFile(wb, "template-import-anggota.xlsx");
+    } catch (e) {
+      toast("error", "Gagal membuat template: " + (e as Error).message);
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      const membersToImport = rows
+        .map((r) => {
+          const n: Record<string, unknown> = {};
+          Object.keys(r).forEach((k) => { n[k.trim().toLowerCase().replace(/\s+/g, "")] = r[k]; });
+          return {
+            name: String(n["nama"] ?? n["name"] ?? "").trim(),
+            phone: String(n["telepon"] ?? n["phone"] ?? n["hp"] ?? "").trim(),
+            address: String(n["alamat"] ?? n["address"] ?? "").trim(),
+            class: String(n["kelas"] ?? n["class"] ?? "").trim(),
+            gender: String(n["jeniskelamin"] ?? n["gender"] ?? n["jk"] ?? "").trim(),
+          };
+        })
+        .filter((m) => m.name);
+      if (membersToImport.length === 0) {
+        toast("error", "Tidak ada data valid. Pastikan ada baris header: Nama, Telepon, Alamat, Kelas, Jenis Kelamin");
+        return;
+      }
+      const pbId = getClientPbId() || "";
+      const res = await fetch("/api/members/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-pb-id": pbId },
+        body: JSON.stringify({ members: membersToImport }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal mengimpor");
+      if (data.errors?.length) {
+        toast("error", `${data.imported} diimpor. ${data.errors.slice(0, 4).join(" | ")}`);
+      } else {
+        toast("success", `${data.imported} anggota berhasil diimpor`);
+      }
+      refresh();
+    } catch (err) {
+      toast("error", "Gagal import: " + (err as Error).message);
+    } finally {
+      setImporting(false);
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -94,11 +160,13 @@ export default function MembersPage() {
   const totalPages = Math.ceil(sorted.length / perPage);
   const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 
-  function openAdd() { setEditId(null); setForm({ name: "", phone: "", photo: "", address: "", class: "A", gender: "" }); setShowForm(true); }
+  function openAdd() { setEditId(null); setExistingPhoto(false); setEditPhotoVersion(""); setForm({ name: "", phone: "", photo: "", address: "", class: "A", gender: "", memberType: "member" }); setShowForm(true); }
 
   function openEdit(m: Member) {
     setEditId(m.id);
-    setForm({ name: m.name, phone: m.phone || "", photo: m.photo || "", address: m.address || "", class: m.class as MemberClass, gender: m.gender || "" });
+    setExistingPhoto(!!m.hasPhoto);
+    setEditPhotoVersion(m.photoVersion || m.updatedAt || "");
+    setForm({ name: m.name, phone: m.phone || "", photo: m.hasPhoto ? "__keep__" : "", address: m.address || "", class: m.class as MemberClass, gender: m.gender || "", memberType: m.memberType || "member" });
     setShowForm(true);
   }
 
@@ -115,7 +183,8 @@ export default function MembersPage() {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, photo: form.photo || null, address: form.address || null, class: form.class, gender: form.gender || null };
+      const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, address: form.address || null, class: form.class, gender: form.gender || null, memberType: form.memberType || "member" };
+      if (form.photo !== "__keep__") payload.photo = form.photo || null;
       if (editId) await update(editId, payload);
       else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
       toast("success", editId ? "Anggota berhasil diperbarui" : "Anggota berhasil ditambahkan");
@@ -139,9 +208,18 @@ export default function MembersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Anggota</h1>
           <p className="mt-0.5 text-sm text-gray-500">{internalMembers.length} total anggota</p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
-          <Plus className="h-4 w-4" /> Tambah Anggota
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50">
+            <FileSpreadsheet className="h-4 w-4" /> Template
+          </button>
+          <button onClick={() => importFileRef.current?.click()} disabled={importing} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            {importing ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" /> Mengimpor...</> : <><Upload className="h-4 w-4" /> Import Excel</>}
+          </button>
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-md">
+            <Plus className="h-4 w-4" /> Tambah Anggota
+          </button>
+          <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImportFile} className="hidden" />
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -184,8 +262,8 @@ export default function MembersPage() {
                 <tr key={m.id} className={`transition-colors hover:bg-gray-50/50 ${!m.isActive ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      {m.photo ? (
-                        <img src={m.photo} alt={m.name} className="h-9 w-9 rounded-lg object-cover shadow-sm" />
+                      {m.hasPhoto ? (
+                        <img src={`/api/members/${m.id}/photo?v=${m.photoVersion || ""}`} alt={m.name} className="h-9 w-9 rounded-lg object-cover shadow-sm" loading="lazy" />
                       ) : (
                         <div className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white shadow-sm ${classColors[m.class as MemberClass] || "bg-gray-400"}`}>
                           {m.name.charAt(0).toUpperCase()}
@@ -206,6 +284,7 @@ export default function MembersPage() {
                   <td className="px-4 py-3 text-gray-600">{m.phone || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${classBadge[m.class as MemberClass] || "bg-gray-100 text-gray-600"}`}>{m.class}</span>
+                    {m.memberType === "insidentil" && <span className="ml-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">Insidentil</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell max-w-[200px] truncate">
                     {m.address ? <><MapPin className="mr-1 inline h-3 w-3" />{m.address}</> : "—"}
@@ -258,7 +337,12 @@ export default function MembersPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Foto</label>
                 <div className="mt-1.5 flex items-center gap-4">
-                  {form.photo ? (
+                  {form.photo === "__keep__" ? (
+                    <div className="relative">
+                      <img src={`/api/members/${editId}/photo?v=${editPhotoVersion || ""}`} alt="Preview" className="h-16 w-16 rounded-xl object-cover shadow-sm" />
+                      <button type="button" onClick={removePhoto} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600"><X className="h-3 w-3" /></button>
+                    </div>
+                  ) : form.photo ? (
                     <div className="relative">
                       <img src={form.photo} alt="Preview" className="h-16 w-16 rounded-xl object-cover shadow-sm" />
                       <button type="button" onClick={removePhoto} className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600"><X className="h-3 w-3" /></button>
@@ -283,6 +367,13 @@ export default function MembersPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Alamat</label>
                 <textarea value={form.address} onChange={(e) => setForm({ ...form, address: toTitleCase(e.target.value) })} rows={2} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" placeholder="Alamat anggota" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Jenis</label>
+                <select value={form.memberType} onChange={(e) => setForm({ ...form, memberType: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+                  <option value="member">Member</option>
+                  <option value="insidentil">Insidentil</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Kelas</label>

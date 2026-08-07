@@ -33,7 +33,7 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API error: ${res.status}${text ? ` - ${text}` : ""}`);
+    throw new Error(`API error: ${res.status} ${options?.method || "GET"} ${url}${text ? ` - ${text}` : ""}`);
   }
   return res.json();
 }
@@ -60,21 +60,12 @@ export function useApi<T extends { id: string }>(resource: string, query = "", r
     fetchData();
     if (refreshMs <= 0) return;
     const poll = setInterval(fetchData, refreshMs);
-    let lastFetch = Date.now();
-    let rafId: number;
-    function rafLoop() {
-      const now = Date.now();
-      if (now - lastFetch >= refreshMs) { lastFetch = now; fetchData(); }
-      rafId = requestAnimationFrame(rafLoop);
-    }
-    rafId = requestAnimationFrame(rafLoop);
     const onVisible = () => { if (document.visibilityState === "visible") fetchData(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => { clearInterval(poll); cancelAnimationFrame(rafId); document.removeEventListener("visibilitychange", onVisible); };
+    return () => { clearInterval(poll); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchData, refreshMs]);
 
   const refresh = useCallback(async () => {
-    setLoaded(false);
     return fetchData();
   }, [fetchData]);
 

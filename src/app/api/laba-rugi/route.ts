@@ -41,13 +41,19 @@ export async function POST(request: Request) {
         if (Array.isArray(parsed.paidMembers)) paidMembers = parsed.paidMembers;
       }
     } catch {}
-    const totalIncome = htm * paidMembers.length;
 
-    // Auto-calculate costs from kas_mutasi linked to this schedule
+    // Auto-calculate income from actual "Bayar HTM" kas entries (per-member rate already applied)
     const mutations = await prisma.kasMutasi.findMany({
-      where: { scheduleId, void: 0 },
+      where: { OR: [{ scheduleId }, { reference: scheduleId }], void: 0 },
       include: { biaya: true },
     });
+
+    const bayarIncome = mutations
+      .filter((m) => m.type === "masuk" && m.description?.startsWith("Bayar HTM"))
+      .reduce((sum, m) => sum + (m.amount || 0), 0);
+
+    // Fallback estimate for legacy schedules without kas entries
+    const totalIncome = bayarIncome > 0 ? bayarIncome : htm * paidMembers.length;
 
     let autoCockCost = 0;
     let autoCourtCost = 0;

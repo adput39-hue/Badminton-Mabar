@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         maxParticipants: body.maxParticipants ?? 20,
         courts: body.courts || null,
         htm: body.htm ?? null,
+        htmInsidentil: body.htmInsidentil ?? null,
         cockPrice: body.cockPrice ?? 0,
         notes: body.notes || null,
         sparingOpponent: body.sparingOpponent || null,

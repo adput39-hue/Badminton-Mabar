@@ -49,6 +49,10 @@ model Tournament {
   maxMatchPerTeam  Int?     @map("max_match_per_team")
   gameFormat       String?  @default("1x30") @map("game_format")
   courts           String?
+  standingsMode    String?  @default("points") @map("standings_mode")
+  winPoints        Int?     @map("win_points")
+  drawPoints       Int?     @map("draw_points")
+  lossPoints       Int?     @map("loss_points")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
   pb        Pb       @relation(fields: [pbId], references: [id], onDelete: Cascade)
@@ -132,6 +136,7 @@ model Member {
   address   String?
   class     String
   type      String   @default("internal")
+  memberType String  @default("member") @map("member_type")
   isActive  Boolean  @default(true) @map("is_active")
   joinedAt  DateTime @default(now()) @map("joined_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -160,6 +165,7 @@ model Schedule {
   maxParticipants Int          @default(20) @map("max_participants")
   courts         String?
   htm            Int?
+  htmInsidentil  Int?    @map("htm_insidentil")
   cockPrice      Int?    @default(0) @map("cock_price")
   sparingOpponent String?  @map("sparing_opponent")
   logoUrl        String?  @map("logo_url")
@@ -177,6 +183,7 @@ model Schedule {
   matches         Match[]
   labaRugi        LabaRugi?
   kasMutasis      KasMutasi[]
+  photoBox        PhotoBox?
   tournament      Tournament?  @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
   team1           Team?        @relation("team1", fields: [team1Id], references: [id], onDelete: SetNull)
   team2           Team?        @relation("team2", fields: [team2Id], references: [id], onDelete: SetNull)
@@ -215,6 +222,8 @@ model Match {
   scoreTeam2     Int?          @map("score_team2")
   scoreTeam1Game2 Int?         @map("score_team1_game2")
   scoreTeam2Game2 Int?         @map("score_team2_game2")
+  scoreTeam1Game3 Int?         @map("score_team1_game3")
+  scoreTeam2Game3 Int?         @map("score_team2_game3")
   totalGames     Int           @default(1) @map("total_games")
   winnerTeam     Int?          @map("winner_team")
   cockCount      Int?          @map("cock_count")
@@ -229,10 +238,63 @@ model Match {
   team2Player1   Member        @relation("match_team2_player1", fields: [team2Player1Id], references: [id])
   team2Player2   Member        @relation("match_team2_player2", fields: [team2Player2Id], references: [id])
   histories      MatchHistory[]
+  matchCard      MatchCard?
 
   @@index([scheduleId])
   @@index([pbId])
   @@map("matches")
+}
+
+model MatchCard {
+  id        String   @id @default(uuid())
+  matchId   String   @unique @map("match_id")
+  pbId      String   @map("pb_id")
+  photo     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([pbId])
+  @@index([createdAt])
+  @@map("match_cards")
+}
+
+model PhotoBox {
+  id         String   @id @default(uuid())
+  scheduleId String   @unique @map("schedule_id")
+  pbId       String   @map("pb_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  items      PhotoBoxItem[]
+
+  @@index([pbId])
+  @@index([createdAt])
+  @@map("photo_boxes")
+}
+
+model PhotoBoxItem {
+  id        String    @id @default(uuid())
+  photoBoxId String   @map("photo_box_id")
+  frameId   String    @map("frame_id")
+  photo     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  photoBox  PhotoBox  @relation(fields: [photoBoxId], references: [id], onDelete: Cascade)
+
+  @@index([photoBoxId])
+  @@map("photo_box_items")
+}
+
+model CustomFrame {
+  id        String   @id @default(uuid())
+  pbId      String   @map("pb_id")
+  slot      Int
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([pbId, slot])
+  @@index([pbId])
+  @@map("custom_frames")
 }
 
 model MatchHistory {

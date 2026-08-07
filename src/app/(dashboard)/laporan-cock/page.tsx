@@ -142,7 +142,7 @@ export default function LaporanCockPage() {
                       <div className="text-right">
                         <p className="text-sm font-bold text-gray-900">{m.cockCount} cock</p>
                         <p className="text-xs text-orange-600">{formatRupiah(4 * (g.schedule.cockPrice || 0))}</p>
-                        <p className="text-xs text-gray-500">{m.scoreTeam1}-{m.scoreTeam2}{m.totalGames === 2 && m.scoreTeam1Game2 !== null ? `, ${m.scoreTeam1Game2}-${m.scoreTeam2Game2}` : ""}</p>
+                        <p className="text-xs text-gray-500">{m.scoreTeam1}-{m.scoreTeam2}{m.totalGames === 2 && m.scoreTeam1Game2 !== null ? `, ${m.scoreTeam1Game2}-${m.scoreTeam2Game2}` : ""}{m.scoreTeam1Game3 !== null && m.scoreTeam1Game3 !== undefined ? `, ${m.scoreTeam1Game3}-${m.scoreTeam2Game3}` : ""}{m.winnerTeam === null ? "  (Seri)" : ""}</p>
                       </div>
                     </div>
                   ))}

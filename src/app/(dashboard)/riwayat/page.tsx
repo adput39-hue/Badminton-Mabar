@@ -3,8 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
-import { Filter, ChevronLeft, ChevronRight, Calendar, Swords } from "lucide-react";
+import { Filter, ChevronLeft, ChevronRight, Calendar, Swords, User, ImageIcon } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import ShuttlecockIcon from "@/components/shuttlecock-icon";
+import { MatchCardModal } from "@/components/match-card-modal";
+import { getNotesText, getGameTarget, getGameWinner } from "@/lib/utils";
 
 const courtColors = [
   { bg: "bg-green-500", light: "bg-green-50", border: "border-green-500" },
@@ -33,6 +36,7 @@ export default function RiwayatPage() {
   const [filterSchedule, setFilterSchedule] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 12;
+  const [cardMatch, setCardMatch] = useState<ApiMatch | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => refreshMatches(), 5000);
@@ -109,9 +113,18 @@ export default function RiwayatPage() {
             const color = courtColors[courtIdx % courtColors.length];
             const t1s = m.scoreTeam1 || 0;
             const t2s = m.scoreTeam2 || 0;
-            const t1g2 = m.scoreTeam1Game2 || 0;
-            const t2g2 = m.scoreTeam2Game2 || 0;
-            const isTwoGame = (m.notes || "").startsWith("2-21");
+            const t1g2 = m.scoreTeam1Game2 ?? 0;
+            const t2g2 = m.scoreTeam2Game2 ?? 0;
+            const t1g3 = m.scoreTeam1Game3 ?? 0;
+            const t2g3 = m.scoreTeam2Game3 ?? 0;
+            const isTwoGame = getNotesText(m.notes).startsWith("2-21");
+            const hasG2 = isTwoGame && (m.scoreTeam1Game2 != null || m.scoreTeam2Game2 != null);
+            const hasG3 = isTwoGame && (m.scoreTeam1Game3 != null || m.scoreTeam2Game3 != null);
+            const gameCols = 1 + (hasG2 ? 1 : 0) + (hasG3 ? 1 : 0);
+            const target = getGameTarget(getNotesText(m.notes));
+            const g1w = getGameWinner(t1s, t2s, target);
+            const g2w = hasG2 ? getGameWinner(t1g2, t2g2, target) : null;
+            const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
 
             return (
               <div key={m.id} className="relative rounded-xl border border-gray-200 bg-white p-3 shadow-sm ring-1 ring-gray-50 transition-all hover:shadow-md sm:p-3">
@@ -121,6 +134,8 @@ export default function RiwayatPage() {
                     <span className={`flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-black text-white sm:text-[10px] ${color.bg}`}>{m.courtNumber || "-"}</span>
                     {m.winnerTeam === 1 || m.winnerTeam === 2 ? (
                       <span className="text-green-600">✓</span>
+                    ) : m.status === "completed" ? (
+                      <span className="text-amber-500">SERI</span>
                     ) : (
                       <span className="text-gray-400">⏳</span>
                     )}
@@ -131,33 +146,83 @@ export default function RiwayatPage() {
                   </span>
                 </div>
 
-                {/* Teams */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
+                {/* Score chart */}
+                <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
+                  <div className="text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">PASANGAN</div>
+                  <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G1</div>
+                  {hasG2 && <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G2</div>}
+                  {hasG3 && <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G3</div>}
+                  <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                  {/* Team 1 */}
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-[11px] sm:text-xs ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player1Id)}</p>
-                      <p className={`truncate text-[11px] sm:text-xs ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team1Player2Id)}</p>
+                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
                     </div>
-                    <span className={`shrink-0 text-sm font-bold tabular-nums sm:text-base ${m.winnerTeam === 1 ? "text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-800"}`}>{t1s}{isTwoGame ? `, ${t1g2}` : ""}</span>
                   </div>
-                  <hr className="border-black/10" />
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-center">
+                    <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1s}</span>
+                  </div>
+                  {hasG2 && (
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g2}</span>
+                    </div>
+                  )}
+                  {hasG3 && (
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g3}</span>
+                    </div>
+                  )}
+                  <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
+                  {/* Team 2 */}
+                  <div className="flex items-center gap-1 sm:gap-1.5">
+                    <User size={14} className="shrink-0 text-blue-500" />
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-[11px] sm:text-xs ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player1Id)}</p>
-                      <p className={`truncate text-[11px] sm:text-xs ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{getName(m.team2Player2Id)}</p>
+                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
                     </div>
-                    <span className={`shrink-0 text-sm font-bold tabular-nums sm:text-base ${m.winnerTeam === 2 ? "text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-800"}`}>{t2s}{isTwoGame ? `, ${t2g2}` : ""}</span>
                   </div>
+                  <div className="flex items-center justify-center">
+                    <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2s}</span>
+                  </div>
+                  {hasG2 && (
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g2}</span>
+                    </div>
+                  )}
+                  {hasG3 && (
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g3}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Round & mode */}
-                <p className="mt-1.5 text-center text-[9px] text-gray-400 sm:text-[10px]">
-                  R{m.round} · {s?.sparingOpponent ? `${pbName || "PB"} vs ${s.sparingOpponent}` : s?.title || ""}
-                </p>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">
+                    R{m.round} · {s?.sparingOpponent ? `${pbName || "PB"} vs ${s.sparingOpponent}` : s?.title || ""}
+                  </p>
+                  <button onClick={() => setCardMatch(m)} title="Buat Match Card"
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-[9px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[10px]">
+                    <ImageIcon className="h-3 w-3" /> Card
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {cardMatch && (
+        <MatchCardModal
+          match={cardMatch}
+          members={members}
+          title={(() => {
+            const s = getSchedule(cardMatch.scheduleId);
+            return s?.sparingOpponent ? `${pbName || "PB"} vs ${s.sparingOpponent}` : s?.title || "Pertandingan";
+          })()}
+          onClose={() => setCardMatch(null)} />
       )}
     </div>
   );
