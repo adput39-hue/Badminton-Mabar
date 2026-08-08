@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { toPng } from "html-to-image";
 import { Loader2, Upload, Download, X, Check, ImageIcon, RotateCcw } from "lucide-react";
 import { compressImage } from "@/lib/compress-image";
 import { getGameTarget, getGameWinner, getNotesText } from "@/lib/utils";
 import type { ApiMatch, ApiMember } from "@/lib/api-types";
 
-const PAN_ZOOM = 1.35;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.05;
+const DEFAULT_ZOOM = 1;
+const CARD_RATIO = 2 / 3;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+// zoom yang membuat foto pas mengisi kartu (cover) berdasarkan rasio foto
+function coverZoomFor(ratio: number): number {
+  return ratio >= CARD_RATIO ? ratio / CARD_RATIO : CARD_RATIO / ratio;
+}
 
 interface MatchCardModalProps {
   match: ApiMatch;
@@ -44,9 +53,13 @@ export function MatchCardModal({ match, members, title, pbColor, onClose, onSave
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [autoZoom, setAutoZoom] = useState<number>(DEFAULT_ZOOM);
   const [dragging, setDragging] = useState(false);
   const photoBoxRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const ratioRef = useRef<number>(1);
+  const touchedRef = useRef(false);
 
   const g1 = `#${(pbColor || "#0d9488").replace(/^#/, "")}`;
   const g2 = g1;
@@ -89,13 +102,33 @@ export function MatchCardModal({ match, members, title, pbColor, onClose, onSave
     try {
       setLoading(true);
       const data = await compressImage(file, 1200);
+      const r = await new Promise<number>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1);
+        img.onerror = () => resolve(1);
+        img.src = data;
+      });
+      ratioRef.current = r;
+      const az = clamp(Number(coverZoomFor(r).toFixed(2)), ZOOM_MIN, ZOOM_MAX);
+      setAutoZoom(az);
+      touchedRef.current = false;
       setPhoto(data);
       setPan({ x: 0, y: 0 });
+      setZoom(az);
     } catch (e) {
       setError((e as Error).message || "Gagal memproses foto");
     } finally {
       setLoading(false);
     }
+  }
+
+  function onImgLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    const r = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : ratioRef.current;
+    ratioRef.current = r;
+    const az = clamp(coverZoomFor(r), ZOOM_MIN, ZOOM_MAX);
+    setAutoZoom(az);
+    if (!touchedRef.current) setZoom(az);
   }
 
   async function handleSave() {
@@ -149,18 +182,34 @@ export function MatchCardModal({ match, members, title, pbColor, onClose, onSave
   function onPanMove(e: ReactPointerEvent<HTMLDivElement>) {
     const s = dragStart.current;
     if (!s || !photoBoxRef.current) return;
+    touchedRef.current = true;
     const rect = photoBoxRef.current.getBoundingClientRect();
-    const maxX = ((PAN_ZOOM - 1) * rect.width) / 2;
-    const maxY = ((PAN_ZOOM - 1) * rect.height) / 2;
+    const r = ratioRef.current;
+    const containW = Math.min(rect.width, rect.height * r);
+    const containH = Math.min(rect.height, rect.width / r);
+    const cx = Math.max(0, (containW * zoom - rect.width) / 2);
+    const cy = Math.max(0, (containH * zoom - rect.height) / 2);
     setPan({
-      x: clamp(s.x + (e.clientX - s.px), -maxX, maxX),
-      y: clamp(s.y + (e.clientY - s.py), -maxY, maxY),
+      x: clamp(s.x + (e.clientX - s.px), -cx, cx),
+      y: clamp(s.y + (e.clientY - s.py), -cy, cy),
     });
   }
 
   function onPanEnd() {
     dragStart.current = null;
     setDragging(false);
+  }
+
+  function onWheelZoom(e: ReactWheelEvent<HTMLDivElement>) {
+    if (!photo || !allowUpload) return;
+    e.preventDefault();
+    touchedRef.current = true;
+    setZoom(clamp(Number((zoom * (e.deltaY < 0 ? 1.08 : 0.92)).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
+  }
+
+  function changeZoom(v: number) {
+    touchedRef.current = true;
+    setZoom(clamp(Number(v.toFixed(2)), ZOOM_MIN, ZOOM_MAX));
   }
 
   return (
@@ -188,13 +237,15 @@ export function MatchCardModal({ match, members, title, pbColor, onClose, onSave
                   onPointerMove={onPanMove}
                   onPointerUp={onPanEnd}
                   onPointerCancel={onPanEnd}
+                  onWheel={onWheelZoom}
                 >
                   <img
                     src={photo}
                     alt="Foto pertandingan"
                     draggable={false}
-                    className={`h-full w-full object-cover select-none ${allowUpload ? "pointer-events-none" : ""}`}
-                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${PAN_ZOOM})` }}
+                    onLoad={onImgLoad}
+                    className={`h-full w-full object-contain select-none ${allowUpload ? "pointer-events-none" : ""}`}
+                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
                   />
                   {dragging && <div className="absolute inset-0 bg-black/10" />}
                 </div>
@@ -250,17 +301,37 @@ export function MatchCardModal({ match, members, title, pbColor, onClose, onSave
                 }} />
               </label>
             )}
-            {photo && allowUpload && <p className="text-center text-[10px] text-gray-400">Geser pada foto card untuk mengatur posisinya (crop)</p>}
-
+            {photo && allowUpload && (
+              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-600">Zoom</span>
+                  <span className="text-xs font-bold text-gray-500">{Math.round(zoom * 100)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => changeZoom(zoom - ZOOM_STEP)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40" disabled={zoom <= ZOOM_MIN}>
+                    <span className="text-sm font-bold">−</span>
+                  </button>
+                  <input type="range" min={ZOOM_MIN} max={ZOOM_MAX} step={ZOOM_STEP} value={zoom}
+                    onChange={(e) => changeZoom(Number(e.target.value))}
+                    className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gray-200 accent-[var(--color-primary)]" />
+                  <button onClick={() => changeZoom(zoom + ZOOM_STEP)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40" disabled={zoom >= ZOOM_MAX}>
+                    <span className="text-sm font-bold">+</span>
+                  </button>
+                </div>
+                <p className="mt-2 text-center text-[10px] text-gray-400">Geser foto untuk posisi &middot; zoom untuk perbesar/perkecil</p>
+              </div>
+            )}
             {loading && <p className="flex items-center gap-2 text-xs text-gray-500"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Memproses foto...</p>}
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
 
             <div className="mt-auto space-y-2">
-              {photo && allowUpload && (pan.x !== 0 || pan.y !== 0) && (
-                <button onClick={() => setPan({ x: 0, y: 0 })}
+              {photo && allowUpload && (pan.x !== 0 || pan.y !== 0 || Math.abs(zoom - autoZoom) > 0.001) && (
+                <button onClick={() => { touchedRef.current = false; setPan({ x: 0, y: 0 }); setZoom(autoZoom); }}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50">
                   <RotateCcw className="h-3.5 w-3.5" />
-                  Reset Posisi Foto
+                  Reset Posisi &amp; Zoom
                 </button>
               )}
               <button onClick={handleDownload} disabled={!photo || downloading}
