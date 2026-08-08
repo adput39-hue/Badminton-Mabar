@@ -49,9 +49,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[var(--color-bg)]">
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />}
+{mobileOpen && <div className="fixed inset-0 z-40 bg-black opacity-40 lg:hidden" onClick={() => setMobileOpen(false)} />}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "w-16" : "w-60"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static ${mobileOpen ? "max-lg:[transform:translateX(0%)]" : "max-lg:[transform:translateX(-100%)]"} ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 min-h-[68px]">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)] text-xl shrink-0">🏸</div>
           {!collapsed && (
