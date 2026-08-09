@@ -12,6 +12,8 @@ const allMenus = [
   { key: "members", label: "Anggota" },
   { key: "schedules", label: "Jadwal" },
   { key: "mabar", label: "Mabar" },
+  { key: "qr-absen", label: "QR Absen" },
+  { key: "papan-lapangan", label: "Papan Lapangan" },
   { key: "sparing", label: "Sparing" },
   { key: "turnamen", label: "League" },
   { key: "riwayat", label: "Riwayat" },

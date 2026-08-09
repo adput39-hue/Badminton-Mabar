@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import {
-  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag, BookOpen, TrendingUp, Target,
+  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag, BookOpen, TrendingUp, Target, Grid3X3, QrCode,
 } from "lucide-react";
 
 const allNavItems = [
@@ -13,6 +13,8 @@ const allNavItems = [
   { href: "/members", label: "Anggota", icon: Users, menuKey: "members" },
   { href: "/schedules", label: "Jadwal", icon: Calendar, menuKey: "schedules" },
   { href: "/mabar", label: "Mabar", icon: Heart, menuKey: "mabar" },
+  { href: "/qr-absen", label: "QR Absen", icon: QrCode, menuKey: "qr-absen" },
+  { href: "/papan-lapangan", label: "Papan Lapangan", icon: Grid3X3, menuKey: "papan-lapangan" },
   { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
   { href: "/league", label: "League", icon: Trophy, menuKey: "turnamen" },
   { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },

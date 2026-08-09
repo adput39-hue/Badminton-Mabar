@@ -60,6 +60,7 @@ export default function SparingMatchPage() {
   const [pbName, setPbName] = useState("");
   const [pbColor, setPbColor] = useState<string | null>(null);
   const [cardMatch, setCardMatch] = useState<ApiMatch | null>(null);
+  const [editPlayersFor, setEditPlayersFor] = useState<ApiMatch | null>(null);
   const [firstDataLoaded, setFirstDataLoaded] = useState(false);
   useEffect(() => {
     if (schedulesLoaded && membersLoaded && matchesLoaded) setFirstDataLoaded(true);
@@ -867,6 +868,10 @@ export default function SparingMatchPage() {
                           <button onClick={(e) => { e.stopPropagation(); openMatchScore(m); }}
                             className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]" title="Edit skor pertandingan">Edit</button>
                         )}
+                        {!isCompleted && (m.scoreTeam1 || 0) === 0 && (m.scoreTeam2 || 0) === 0 && (
+                          <button onClick={(e) => { e.stopPropagation(); setEditPlayersFor(m); }}
+                            className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]" title="Edit pemain sebelum skor diinput">Edit Pemain</button>
+                        )}
                         <button onClick={async (e) => { e.stopPropagation(); try { await updateMatch(m.id, { courtNumber: null, ...(m.status !== "completed" ? { status: "scheduled", scoreTeam1: 0, scoreTeam2: 0, scoreTeam1Game2: 0, scoreTeam2Game2: 0, scoreTeam1Game3: 0, scoreTeam2Game3: 0 } : {}) }); } catch (ex) { console.error(ex); } }}
                           className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200" title="Lepas dari lapangan">Lepas</button>
                       </div>
@@ -900,6 +905,7 @@ export default function SparingMatchPage() {
       </div>
         {showCompletedPopup && <CompletedSparingModal name={completedSparingName} onClose={() => setShowCompletedPopup(false)} />}
         {cardMatch && <MatchCardModal match={cardMatch} members={members} title={cardTitle} pbColor={pbColor} allowUpload onClose={() => setCardMatch(null)} />}
+        {editPlayersFor && <EditPlayersModal match={editPlayersFor} members={members} onSave={updateMatch} onClose={() => setEditPlayersFor(null)} />}
       </>
     );
   }
@@ -1268,4 +1274,106 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
   );
 }
 
+function EditPlayersModal({ match, members, onSave, onClose }: {
+  match: ApiMatch; members: ApiMember[];
+  onSave: (id: string, data: Record<string, unknown>) => Promise<ApiMatch>; onClose: () => void;
+}) {
+  const [team1, setTeam1] = useState<[string | null, string | null]>([match.team1Player1Id, match.team1Player2Id]);
+  const [team2, setTeam2] = useState<[string | null, string | null]>([match.team2Player1Id, match.team2Player2Id]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
+  const selected = [team1[0], team1[1], team2[0], team2[1]].filter(Boolean) as string[];
+
+  function availableFor(slotTeam: [string | null, string | null], slotIdx: 0 | 1): ApiMember[] {
+    return members.filter((p) => !selected.includes(p.id) || p.id === slotTeam[slotIdx]);
+  }
+
+  function select(slotTeam: "t1" | "t2", idx: 0 | 1, id: string) {
+    if (slotTeam === "t1") { const t: [string | null, string | null] = [...team1]; t[idx] = id; setTeam1(t); }
+    else { const t: [string | null, string | null] = [...team2]; t[idx] = id; setTeam2(t); }
+  }
+
+  async function handleSave() {
+    if (!team1[0] || !team1[1] || !team2[0] || !team2[1]) { setError("Semua slot pemain harus diisi"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(match.id, { team1Player1Id: team1[0], team1Player2Id: team1[1], team2Player1Id: team2[0], team2Player2Id: team2[1] });
+      onClose();
+    } catch (e) {
+      setError((e as Error).message || "Gagal menyimpan pemain");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex max-h-[92vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="text-lg font-bold text-gray-900">Edit Pemain</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-4 p-6">
+          {[{ label: "Tim 1", team: team1, key: "t1" as const }, { label: "Tim 2", team: team2, key: "t2" as const }].map(({ label, team, key }) => (
+            <div key={key} className="rounded-xl border border-gray-200 p-4">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">{label}</p>
+              <div className="space-y-2">
+                {([0, 1] as const).map((idx) => (
+                  <SelectOne key={idx} players={availableFor(team, idx)} value={team[idx]} onSelect={(id) => select(key, idx, id)} placeholder={`Pemain ${idx + 1}`} />
+                ))}
+              </div>
+            </div>
+          ))}
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
+        </div>
+        <div className="border-t border-gray-100 px-6 py-4">
+          <button onClick={handleSave} disabled={saving}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {saving ? "Menyimpan..." : "Simpan Pemain"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectOne({ players, value, onSelect, placeholder }: {
+  players: ApiMember[]; value: string | null; onSelect: (id: string) => void; placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = players.find((p) => p.id === value);
+  const filtered = query
+    ? players.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || (p.class || "").toLowerCase().includes(query.toLowerCase()))
+    : players;
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => { setOpen(!open); setQuery(""); }}
+        className="w-full overflow-hidden rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+        {selected ? <span className="truncate block">{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 z-20 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg">
+            <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus placeholder="Ketik untuk cari..."
+              className="w-full rounded-t-xl border-b border-gray-200 px-3 py-2 text-sm focus:outline-none" />
+            <div className="max-h-48 overflow-y-auto">
+              {filtered.map((p) => (
+                <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); setQuery(""); }}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-primary-light)]">
+                  <span className="flex-1 truncate text-left">{p.name}</span>
+                  <span className="shrink-0 text-xs text-gray-400">Kelas {p.class}</span>
+                </button>
+              ))}
+              {filtered.length === 0 && <p className="px-3 py-3 text-center text-xs text-gray-400">Tidak ditemukan</p>}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

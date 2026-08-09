@@ -18,7 +18,7 @@ const courtColors = [
 ];
 
 export default function RiwayatPage() {
-  const { items: matches, refresh: refreshMatches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
+  const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
   const { items: schedules, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
   const [pbName, setPbName] = useState("");
@@ -37,11 +37,6 @@ export default function RiwayatPage() {
   const [page, setPage] = useState(1);
   const perPage = 12;
   const [cardMatch, setCardMatch] = useState<ApiMatch | null>(null);
-
-  useEffect(() => {
-    const id = setInterval(() => refreshMatches(), 5000);
-    return () => clearInterval(id);
-  }, [refreshMatches]);
 
   const completed = useMemo(() =>
     matches.filter((m) => m.status === "completed")

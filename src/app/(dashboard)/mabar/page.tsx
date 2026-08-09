@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
 import { useToast } from "@/components/toast";
@@ -20,7 +20,7 @@ const courtColors = [
 export default function MabarPage() {
   const { items: schedules, update: updateSchedule, loaded: schedulesLoaded } = useApi<ApiSchedule>("schedules");
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
-  const { items: attendances, update: updateAtt, add: addAtt, remove: removeAtt, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances");
+  const { items: attendances, update: updateAtt, add: addAtt, remove: removeAtt, loaded: attendancesLoaded } = useApi<ApiAttendance>("attendances", "", 60000);
   const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
   const { items: history, add: addHistory, loaded: historyLoaded } = useApi<ApiMatchHistory>("match-history");
 
@@ -172,7 +172,7 @@ export default function MabarPage() {
     await addMatch({ scheduleId: selId, courtNumber: null, round: draftMatches.length + liveMatches.length + 1, team1Player1Id: team1[0], team1Player2Id: team1[1], team2Player1Id: team2[0], team2Player2Id: team2[1], totalGames: gameMode.startsWith("2") ? 2 : 1, notes: gameMode || undefined, status: "scheduled" });
   }
 
-  const notInvited = members.filter((m) => !invitedIds.includes(m.id) && m.isActive !== false);
+  const notInvited = members.filter((m) => (m.type === "1" || !m.type) && !invitedIds.includes(m.id) && m.isActive !== false);
   const filteredSearch = searchQ ? notInvited.filter((m) => m.name.toLowerCase().includes(searchQ.toLowerCase())) : notInvited;
 
   if (!schedulesLoaded || !membersLoaded || !attendancesLoaded || !matchesLoaded || !historyLoaded) return <LoadingSpinner />;
@@ -242,7 +242,10 @@ export default function MabarPage() {
 
             {showSearch && (
               <div className="mt-4">
-                <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                <div className="flex items-center gap-2">
+                  <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Cari anggota..." className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                  <button onClick={() => { setShowSearch(false); setSearchQ(""); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600" title="Tutup"><XIcon className="h-4 w-4" /></button>
+                </div>
                 {filteredSearch.length > 0 && (
                   <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                     {filteredSearch.map((m) => (
@@ -339,7 +342,7 @@ export default function MabarPage() {
                       {cMatches.length === 0 ? (
                         <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
                       ) : (
-                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, cc, s1g2, s2g2, s1g3, s2g3)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} />)
+                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, cc, s1g2, s2g2, s1g3, s2g3)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} onEdit={() => { setEditMatch(m); setShowCreate(true); }} />)
                       )}
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -387,7 +390,6 @@ export default function MabarPage() {
           selId={selId}
           addAtt={addAtt}
           updateAtt={updateAtt}
-          removeAtt={removeAtt}
           onClose={() => setShowAbsen(false)}
         />
       )}
@@ -406,8 +408,8 @@ export default function MabarPage() {
   );
 }
 
-function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
-  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void; onFinish: () => void;
+function MatchCard({ match, getName, onScore, onDelete, onFinish, onEdit }: {
+  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void; onFinish: () => void; onEdit: () => void;
 }) {
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
@@ -437,6 +439,9 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
         </div>
         {match.status === "scheduled" && (
           <div className="flex items-center gap-1">
+            {(match.scoreTeam1 || 0) === 0 && (match.scoreTeam2 || 0) === 0 && (
+              <button onClick={onEdit} className="rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-medium hover:bg-gray-50">Edit Pemain</button>
+            )}
             <button onClick={() => setShowScore(!showScore)} className="rounded-lg border border-gray-200 px-2.5 py-1 text-[10px] font-medium hover:bg-gray-50">Input Skor</button>
             <button onClick={onFinish} className="rounded-lg bg-green-100 px-2.5 py-1 text-[10px] font-medium text-green-700 hover:bg-green-200">Selesai</button>
           </div>
@@ -498,18 +503,33 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish }: {
   );
 }
 
-function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt, removeAtt, onClose }: {
+function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt, onClose }: {
   members: ApiMember[]; attendances: ApiAttendance[]; selId: string;
   addAtt: (d: Record<string, unknown>) => Promise<ApiAttendance>;
   updateAtt: (id: string, d: Record<string, unknown>) => Promise<ApiAttendance>;
-  removeAtt: (id: string) => Promise<void>; onClose: () => void;
+  onClose: () => void;
 }) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<Set<string>>(() =>
     new Set(atts.filter((a) => a.status === "hadir").map((a) => a.memberId))
   );
+  const touchedRef = useRef<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [searchAbsen, setSearchAbsen] = useState("");
+
+  useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      atts.forEach((a) => {
+        if (touchedRef.current.has(a.memberId)) return;
+        const shouldCheck = a.status === "hadir";
+        if (shouldCheck && !next.has(a.memberId)) { next.add(a.memberId); changed = true; }
+        else if (!shouldCheck && next.has(a.memberId)) { next.delete(a.memberId); changed = true; }
+      });
+      return changed ? next : prev;
+    });
+  }, [atts]);
 
   const hadirCount = selected.size;
   const totalCount = atts.length;
@@ -522,6 +542,7 @@ function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt,
     : atts;
 
   function toggle(memberId: string) {
+    touchedRef.current.add(memberId);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(memberId)) next.delete(memberId);
@@ -538,8 +559,7 @@ function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt,
         if (selected.has(att.memberId)) {
           if (att.status !== "hadir") ops.push(updateAtt(att.id, { status: "hadir" }));
         } else {
-          if (att.status === "hadir") ops.push(removeAtt(att.id));
-          else if (att.status === "undangan") ops.push(removeAtt(att.id));
+          if (att.status === "hadir") ops.push(updateAtt(att.id, { status: "undangan" }));
         }
       }
       for (const memberId of selected) {
@@ -548,6 +568,7 @@ function AttendanceModal({ members, attendances: atts, selId, addAtt, updateAtt,
         }
       }
       await Promise.all(ops);
+      touchedRef.current.clear();
       toast("success", "Absensi berhasil disimpan");
       onClose();
     } catch {
@@ -660,28 +681,37 @@ function PlayerSelect({ players, selectedId, onSelect, placeholder, playerMatchC
   placeholder: string; playerMatchCounts: Map<string, number>;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const selected = players.find((p) => p.id === selectedId);
+  const filtered = query
+    ? players.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || (p.class || "").toLowerCase().includes(query.toLowerCase()))
+    : players;
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen(!open)}
+      <button type="button" onClick={() => { setOpen(!open); setQuery(""); }}
         className="w-full overflow-hidden rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
         {selected ? <span className="truncate block">{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-            {players.map((p) => {
-              const count = playerMatchCounts.get(p.id) || 0;
-              return (
-                <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-primary-light)]">
-                  <span className="flex-1 truncate text-left">{p.name}</span>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadgeStyle[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span>
-                  <span className="w-8 shrink-0 text-right text-xs text-gray-400">({count})</span>
-                </button>
-              );
-            })}
+          <div className="absolute left-0 right-0 z-20 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg">
+            <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus placeholder="Ketik untuk cari..."
+              className="w-full rounded-t-xl border-b border-gray-200 px-3 py-2 text-sm focus:outline-none" />
+            <div className="max-h-48 overflow-y-auto">
+              {filtered.map((p) => {
+                const count = playerMatchCounts.get(p.id) || 0;
+                return (
+                  <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); setQuery(""); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-primary-light)]">
+                    <span className="flex-1 truncate text-left">{p.name}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadgeStyle[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span>
+                    <span className="w-8 shrink-0 text-right text-xs text-gray-400">({count})</span>
+                  </button>
+                );
+              })}
+              {filtered.length === 0 && <p className="px-3 py-3 text-center text-xs text-gray-400">Tidak ditemukan</p>}
+            </div>
           </div>
         </>
       )}

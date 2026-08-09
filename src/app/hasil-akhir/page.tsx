@@ -107,9 +107,8 @@ export default function HasilAkhirPage() {
       });
       return () => { if (unsub) unsub(); };
     }
-    const es = new EventSource(`/api/matches/stream${pbId ? `?pbId=${pbId}` : ""}`);
-    es.onmessage = fetchMatches;
-    return () => { es.close(); };
+    const poll = setInterval(fetchMatches, 60000);
+    return () => clearInterval(poll);
   }, [pbId]);
 
   useEffect(() => {

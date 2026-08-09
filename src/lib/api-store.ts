@@ -16,10 +16,6 @@ const TABLE_MAP: Record<string, string> = {
   "laba-rugi": "laba_rugi",
 };
 
-const SSE_MAP: Record<string, string> = {
-  matches: "/api/matches/stream",
-};
-
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const pbId = getClientPbId();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -38,7 +34,7 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export function useApi<T extends { id: string }>(resource: string, query = "", refreshMs = 15000) {
+export function useApi<T extends { id: string }>(resource: string, query = "", refreshMs = 60000) {
   const [items, setItems] = useState<T[]>([]);
   const [loaded, setLoaded] = useState(false);
   const url = `/api/${resource}${query}`;
@@ -81,14 +77,6 @@ export function useApi<T extends { id: string }>(resource: string, query = "", r
       .subscribe();
     return () => { sb.removeChannel(channel); };
   }, [resource, realtimeTable, refresh]);
-
-  const sseUrl = SSE_MAP[resource];
-  useEffect(() => {
-    if (!sseUrl) return;
-    const es = new EventSource(sseUrl);
-    es.onmessage = () => { refresh(); };
-    return () => es.close();
-  }, [sseUrl, refresh]);
 
   const add = useCallback(
     async (data: Record<string, unknown>) => {
@@ -145,7 +133,7 @@ export interface ControlData {
   teams: import("./api-types").ApiTeam[];
 }
 
-export function useControlData(refreshMs = 15000) {
+export function useControlData(refreshMs = 60000) {
   const [data, setData] = useState<ControlData>({ schedules: [], members: [], matches: [], tournaments: [], teams: [] });
   const [loaded, setLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);

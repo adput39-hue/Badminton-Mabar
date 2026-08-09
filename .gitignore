@@ -45,3 +45,11 @@ next-env.d.ts
 
 .vercel
 /Icon
+
+# local dev & backup artifacts (do not commit)
+dev-server.log
+supabase_backup.dump
+scripts/sync-db.ts
+scripts/supabase_data.json
+open-firewall-3002.bat
+
