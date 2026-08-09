@@ -48,7 +48,7 @@ export default function AbsenPage() {
         const [sRes, mRes, aRes] = await Promise.all([
           fetch(`/api/schedules?pbId=${encodeURIComponent(pbId)}`),
           fetch(`/api/members?pbId=${encodeURIComponent(pbId)}`),
-          fetch("/api/attendances"),
+          fetch(`/api/attendances?pbId=${encodeURIComponent(pbId)}`),
         ]);
         const scheds = await sRes.json() as ApiSchedule[];
         const mems = await mRes.json() as ApiMember[];
@@ -72,6 +72,18 @@ export default function AbsenPage() {
     () => schedules.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled"),
     [schedules, today]
   );
+
+  useEffect(() => {
+    if (!pbId) return;
+    const poll = setInterval(async () => {
+      try {
+        const aRes = await fetch(`/api/attendances?pbId=${encodeURIComponent(pbId)}`);
+        const atts = await aRes.json() as ApiAttendance[];
+        setAttendances(atts);
+      } catch {}
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [pbId]);
 
   useEffect(() => {
     const pb = schedules.find((s) => s.pbId === pbId);
@@ -122,26 +134,27 @@ export default function AbsenPage() {
     setError("");
     try {
       const existing = participants.find((p) => p.member!.id === memberId)?.att;
-      if (existing) {
-        const res = await fetch(`/api/attendances/${existing.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "hadir", confirmedAt: new Date().toISOString() }),
-        });
-        if (!res.ok) throw new Error("gagal update");
-      } else {
-        const res = await fetch("/api/attendances", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scheduleId: selected.id, memberId, status: "hadir", confirmedAt: new Date().toISOString() }),
-        });
-        if (!res.ok) throw new Error("gagal tambah");
-      }
-      const aRes = await fetch("/api/attendances");
-      setAttendances(await aRes.json());
-      setDoneId(memberId);
-      setTimeout(() => setDoneId(""), 1500);
-      setThanksOpen(true);
+      const res = existing
+        ? await fetch(`/api/attendances/${existing.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "hadir", confirmedAt: new Date().toISOString() }),
+          })
+        : await fetch("/api/attendances", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduleId: selected.id, memberId, status: "hadir", confirmedAt: new Date().toISOString() }),
+          });
+        if (!res.ok) throw new Error("gagal simpan");
+        const updated = await res.json() as ApiAttendance;
+        setAttendances((prev) =>
+          prev.some((a) => a.id === updated.id)
+            ? prev.map((a) => (a.id === updated.id ? updated : a))
+            : [updated, ...prev]
+        );
+        setDoneId(memberId);
+        setTimeout(() => setDoneId(""), 1500);
+        setThanksOpen(true);
     } catch {
       setError("Gagal menandai hadir. Coba lagi.");
     } finally {
