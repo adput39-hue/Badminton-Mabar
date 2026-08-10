@@ -7,6 +7,7 @@ import { Save, Upload, ImageIcon, Palette, Type, X } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { compressImage } from "@/lib/compress-image";
+import WhatsAppSettings from "@/components/whatsapp-settings";
 
 function darken(hex: string, amount: number) {
   const num = parseInt(hex.replace("#", ""), 16);
@@ -349,6 +350,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <WhatsAppSettings />
 
         <div className="flex items-center justify-end gap-3">
           <button onClick={handleSave} disabled={!name.trim() || saving}

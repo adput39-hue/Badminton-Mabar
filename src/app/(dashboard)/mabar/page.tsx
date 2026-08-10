@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
 import { useToast } from "@/components/toast";
-import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2, Shuffle } from "lucide-react";
+import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2, Shuffle, MessageCircle } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { buildPairingSuggestions, type PairingRecord, type PairingSuggestion } from "@/lib/pairing";
@@ -58,6 +58,33 @@ export default function MabarPage() {
   const [showReferensi, setShowReferensi] = useState(false);
   const [pairMode, setPairMode] = useState<"all" | string>("all");
   const [assignCourtFor, setAssignCourtFor] = useState<string | null>(null);
+  const [waSending, setWaSending] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  async function sendWhatsApp(type: "jadwal" | "reminder") {
+    if (waSending) return;
+    const target = type === "jadwal" ? "semua anggota" : "peserta jadwal";
+    const okText = type === "jadwal" ? "Sebar jadwal ke semua anggota?" : "Kirim reminder ke peserta jadwal?";
+    if (!window.confirm(okText)) return;
+    setWaSending(type);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, scheduleId: schedule?.id || null }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        toast("success", `Terkirim ${data.sent} (${target}), ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
+      } else {
+        toast("error", data.error || "Gagal mengirim WhatsApp");
+      }
+    } catch {
+      toast("error", "Gagal mengirim WhatsApp");
+    } finally {
+      setWaSending(null);
+    }
+  }
 
   function getGameMode(): string {
     if (!schedule?.notes) return "";
@@ -235,6 +262,16 @@ export default function MabarPage() {
                 <button onClick={() => setShowSearch(!showSearch)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><UserPlus className="h-3.5 w-3.5" /> Tambah</button>
                 <button onClick={() => setShowStats(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><BarChart3 className="h-3.5 w-3.5" /> Rotasi</button>
                 <button onClick={() => setShowReferensi(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><Shuffle className="h-3.5 w-3.5" /> Referensi</button>
+                {schedule && (
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={() => sendWhatsApp("jadwal")} disabled={waSending !== null || !schedule} className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-xs font-medium text-green-700 transition-all hover:bg-green-100 disabled:opacity-50">
+                      {waSending === "jadwal" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Sebar Jadwal
+                    </button>
+                    <button onClick={() => sendWhatsApp("reminder")} disabled={waSending !== null || !schedule} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 disabled:opacity-50">
+                      {waSending === "reminder" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Reminder
+                    </button>
+                  </div>
+                )}
                 {schedule?.status !== "completed" && <button onClick={handleSelesai} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)]"><Check className="h-3.5 w-3.5" /> Selesai</button>}
                 <a href="/riwayat" className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Riwayat</a>
               </div>

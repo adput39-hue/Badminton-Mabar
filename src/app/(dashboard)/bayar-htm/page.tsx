@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule, ApiAttendance, ApiMember, ApiKasMutasi, ApiMatch } from "@/lib/api-types";
-import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock, Loader2 } from "lucide-react";
+import { Wallet, Pencil, X, Check, Save, Search, DollarSign, Lock, Loader2, MessageCircle } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useToast } from "@/components/toast";
@@ -53,6 +53,7 @@ export default function BayarHtmPage() {
   const [search, setSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [savingScheduleId, setSavingScheduleId] = useState<string | null>(null);
+  const [waSending, setWaSending] = useState<string | null>(null);
 
   const internalMembers = useMemo(() => members.filter((m) => m.type === "1" || !m.type), [members]);
 
@@ -166,6 +167,30 @@ export default function BayarHtmPage() {
     setPaidState((prev) => ({ ...prev, [scheduleId]: getPaidMembers(s) }));
     setMemberSearch("");
     setExpandId(scheduleId);
+  }
+
+  async function sendUnpaidReminder(scheduleId: string) {
+    if (waSending) return;
+    if (!window.confirm("Kirim WhatsApp ke peserta yang belum bayar HTM?")) return;
+    const pbId = getClientPbId();
+    setWaSending(scheduleId);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-pb-id": pbId || "" },
+        body: JSON.stringify({ type: "bayar", scheduleId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        toast("success", `Terkirim ${data.sent} pengingat, ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
+      } else {
+        toast("error", data.error || "Gagal mengirim WhatsApp");
+      }
+    } catch {
+      toast("error", "Gagal mengirim WhatsApp");
+    } finally {
+      setWaSending(null);
+    }
   }
 
   const filtered = htmSchedules.filter((s) => {
@@ -299,6 +324,9 @@ export default function BayarHtmPage() {
                       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                         <p className="text-sm text-gray-500">{pesertaPaid.length} / {peserta.length} sudah bayar</p>
                         <div className="flex gap-2">
+                          <button onClick={() => sendUnpaidReminder(s.id)} disabled={waSending !== null} className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 transition-all hover:bg-green-100 disabled:opacity-50">
+                            {waSending === s.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Mengirim...</> : <><MessageCircle className="h-3.5 w-3.5" /> Kirim WA Belum Bayar</>}
+                          </button>
                           <button onClick={() => setExpandId(null)} disabled={savingScheduleId === s.id} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Batal</button>
                           <button onClick={() => savePaid(s.id)} disabled={savingScheduleId === s.id} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{savingScheduleId === s.id ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="h-3.5 w-3.5" /> Simpan</>}</button>
                         </div>
