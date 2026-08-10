@@ -5,6 +5,8 @@ export interface WhatsAppTemplate {
 }
 
 export interface WhatsAppConfig {
+  mode: "self" | "meta";
+  botToken: string;
   token: string;
   phoneNumberId: string;
   templates: {
@@ -14,8 +16,31 @@ export interface WhatsAppConfig {
   };
 }
 
+export type WABroadcastType = "jadwal" | "reminder" | "bayar" | "test";
+
+export interface WaJobItem {
+  memberId: string;
+  memberName: string;
+  phone: string;
+  text: string;
+  ok?: boolean;
+  reason?: string;
+}
+
+export interface WaJob {
+  id: string;
+  type: WABroadcastType;
+  scheduleId: string | null;
+  title: string;
+  status: "pending" | "sending" | "done";
+  at: string;
+  totals: { total: number; sent: number; failed: number; noPhone: number };
+  items: WaJobItem[];
+}
+
 export const WHATSAPP_CONFIG_KEY = "whatsapp_config";
 export const WHATSAPP_LOG_KEY = "whatsapp_logs";
+export const WHATSAPP_QUEUE_KEY = "whatsapp_queue";
 
 export const WA_VARIABLES = [
   { key: "{nama}", desc: "Nama anggota" },
@@ -31,6 +56,8 @@ export const WA_VARIABLES = [
 
 export function defaultWhatsAppConfig(): WhatsAppConfig {
   return {
+    mode: "self",
+    botToken: "",
     token: "",
     phoneNumberId: "",
     templates: {

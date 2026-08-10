@@ -14,7 +14,9 @@ export async function GET() {
   }
   const token = parsed.token || "";
   const masked = token ? (token.length > 8 ? token.slice(0, 4) + "••••••••" + token.slice(-4) : "••••••••") : "";
-  return NextResponse.json({ ...parsed, token: masked, hasToken: !!token });
+  const botToken = parsed.botToken || "";
+  const botMasked = botToken ? (botToken.length > 8 ? botToken.slice(0, 4) + "••••••••" + botToken.slice(-4) : "••••••••") : "";
+  return NextResponse.json({ ...parsed, token: masked, hasToken: !!token, botToken: botMasked, hasBotToken: !!botToken });
 }
 
 export async function PUT(request: Request) {
@@ -28,6 +30,8 @@ export async function PUT(request: Request) {
 
     if (typeof body.token === "string") parsed.token = body.token.trim();
     if (typeof body.phoneNumberId === "string") parsed.phoneNumberId = body.phoneNumberId.trim();
+    if (typeof body.mode === "string") parsed.mode = body.mode === "meta" ? "meta" : "self";
+    if (typeof body.botToken === "string") parsed.botToken = body.botToken.trim();
     if (body.templates && typeof body.templates === "object") {
       for (const key of ["jadwal", "reminder", "bayar"] as const) {
         const t = body.templates[key];

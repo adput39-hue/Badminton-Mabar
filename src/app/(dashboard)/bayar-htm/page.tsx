@@ -181,7 +181,9 @@ export default function BayarHtmPage() {
         body: JSON.stringify({ type: "bayar", scheduleId }),
       });
       const data = await res.json();
-      if (res.ok && data.ok) {
+      if (res.ok && data.queued) {
+        toast("success", `Masuk antrean: ${data.phoneTargets} penerima, ${data.noPhone} tanpa nomor`);
+      } else if (res.ok && data.ok) {
         toast("success", `Terkirim ${data.sent} pengingat, ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
       } else {
         toast("error", data.error || "Gagal mengirim WhatsApp");

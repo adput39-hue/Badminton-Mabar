@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
-import { MessageCircle, Save, Loader2, HelpCircle, ChevronDown, Play } from "lucide-react";
+import { MessageCircle, Save, Loader2, ChevronDown, Play, Smartphone, RefreshCw } from "lucide-react";
 
 interface WaTemplateForm {
   name: string;
   text: string;
   variables: string;
 }
+
+type WaMode = "self" | "meta";
 
 const TYPE_LABELS: Record<string, { label: string; desc: string }> = {
   jadwal: { label: "Jadwal Mabar", desc: "Dikirim ke semua anggota saat menyebar jadwal" },
@@ -21,6 +23,9 @@ export default function WhatsAppSettings() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [mode, setMode] = useState<WaMode>("self");
+  const [botToken, setBotToken] = useState("");
+  const [hasBotToken, setHasBotToken] = useState(false);
   const [token, setToken] = useState("");
   const [hasToken, setHasToken] = useState(false);
   const [phoneNumberId, setPhoneNumberId] = useState("");
@@ -29,7 +34,8 @@ export default function WhatsAppSettings() {
     reminder: { name: "", text: "", variables: "" },
     bayar: { name: "", text: "", variables: "" },
   });
-  const [openGuide, setOpenGuide] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState(0);
+  const [queueSummary, setQueueSummary] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -37,6 +43,9 @@ export default function WhatsAppSettings() {
         const res = await fetch("/api/whatsapp/config");
         const data = await res.json();
         if (data.hasToken !== undefined) {
+          setMode(data.mode === "meta" ? "meta" : "self");
+          setHasBotToken(Boolean(data.hasBotToken));
+          setBotToken(data.botToken || "");
           setHasToken(Boolean(data.hasToken));
           setToken(data.token || "");
           setPhoneNumberId(data.phoneNumberId || "");
@@ -67,6 +76,8 @@ export default function WhatsAppSettings() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode,
+          botToken: botToken.startsWith("••") ? undefined : botToken,
           token: token.startsWith("••") ? undefined : token,
           phoneNumberId,
           templates: Object.fromEntries(
@@ -80,6 +91,9 @@ export default function WhatsAppSettings() {
       if (res.ok) {
         const reload = await fetch("/api/whatsapp/config");
         const d = await reload.json();
+        setMode(d.mode === "meta" ? "meta" : "self");
+        setHasBotToken(Boolean(d.hasBotToken));
+        setBotToken(d.botToken || "");
         setHasToken(Boolean(d.hasToken));
         setToken(d.token || "");
         toast("success", "Konfigurasi WhatsApp disimpan");
@@ -116,21 +130,40 @@ export default function WhatsAppSettings() {
       .replace(/\{htmInsidentil\}/g, String(jadwal.htmInsidentil));
   }
 
-  async function testSend(key: string) {
-    setSavingKey(key);
+  async function checkQueue() {
+    const tk = botToken.startsWith("••") ? "" : botToken;
+    try {
+      const res = await fetch("/api/whatsapp/status", { headers: { "x-bot-token": tk } });
+      if (res.ok) {
+        const d = await res.json();
+        setQueueSummary(`Antrean: ${d.pending} menunggu · ${d.sending} diproses · ${d.done} selesai`);
+      } else {
+        setQueueSummary("Cek antrean gagal (token bot belum cocok)");
+      }
+    } catch {
+      setQueueSummary("Cek antrean gagal (server tidak merespons)");
+    }
+  }
+
+  async function sendTest() {
+    const tk = botToken.startsWith("••") ? "" : botToken;
     try {
       const res = await fetch("/api/whatsapp/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: key, test: true }),
+        headers: { "Content-Type": "application/json", "x-pb-id": "", "x-bot-token": tk },
+        body: JSON.stringify({ type: "test" }),
       });
-      const data = await res.json();
-      if (res.ok && data.ok) toast("success", "Pesan uji dikirim");
-      else toast("error", data.error || "Gagal kirim pesan uji");
+      const d = await res.json();
+      if (res.ok && d.queued) {
+        toast("success", `Pesan uji masuk antrean → ${d.phoneTargets} penerima. Bot akan kirim dalam beberapa detik.`);
+        setQueueSummary("Menunggu hasil kirim uji...");
+      } else if (res.ok && d.ok) {
+        toast("success", `Pesan uji terkirim ke ${d.sent} penerima`);
+      } else {
+        toast("error", d.error || "Gagal kirim uji");
+      }
     } catch {
-      toast("error", "Gagal kirim pesan uji");
-    } finally {
-      setSavingKey(null);
+      toast("error", "Gagal kirim uji");
     }
   }
 
@@ -145,39 +178,76 @@ export default function WhatsAppSettings() {
           </div>
           <div>
             <h2 className="text-base font-bold text-gray-900">WhatsApp Broadcast</h2>
-            <p className="text-xs text-gray-500">Kirim jadwal, reminder, & tagihan otomatis via Meta Cloud API</p>
+            <p className="text-xs text-gray-500">Kirim jadwal, reminder, & tagihan via bot WhatsApp HP</p>
           </div>
         </div>
-        <button onClick={() => setOpenGuide(!openGuide)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-          <HelpCircle className="h-3.5 w-3.5" /> Panduan <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openGuide ? "rotate-180" : ""}`} />
-        </button>
       </div>
 
-      {openGuide && (
-        <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
-          <p className="mb-2 font-bold">Cara setup Meta Cloud API (sekali saja):</p>
-          <ol className="list-decimal space-y-1 pl-5">
-            <li>Buka <b>developers.facebook.com</b> → buat App tipe <b>Business</b>.</li>
-            <li>Tambahkan produk <b>WhatsApp</b> → hubungkan nomor WhatsApp bisnis kamu.</li>
-            <li>Salin <b>Access Token</b> (dari pengaturan WhatsApp / System User) dan <b>Phone number ID</b>.</li>
-            <li>Di <b>Message Templates</b>, buat 3 template (jadwal, reminder, tagihan) — sudah atau belum disetujui, teks bebas tetap jadi cadangan.</li>
-            <li>Isi token + phone ID di bawah, lalu <b>Simpan</b>.</li>
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700">Cara Kirim</label>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <button onClick={() => setMode("self")} className={`rounded-xl border p-4 text-left transition-all ${mode === "self" ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-200 hover:bg-gray-50"}`}>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-[var(--color-primary)]" />
+              <span className="text-sm font-bold text-gray-900">Bot WhatsApp HP (self-hosted)</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">Gratis. Pakai HP Android + Termux + Baileys. Scan QR sekali.</p>
+          </button>
+          <button onClick={() => setMode("meta")} className={`rounded-xl border p-4 text-left transition-all ${mode === "meta" ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-200 hover:bg-gray-50"}`}>
+            <span className="text-sm font-bold text-gray-900">Meta Cloud API</span>
+            <p className="mt-1 text-xs text-gray-500">Resmi, butuh token Meta. Khusus yang sudah punya setup Meta.</p>
+          </button>
+        </div>
+      </div>
+
+      {mode === "self" ? (
+        <div className="mb-5 rounded-xl border border-green-100 bg-green-50 p-4">
+          <p className="mb-2 text-sm font-bold text-green-900">Setup bot HP (sekali saja):</p>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-green-900">
+            <li>Buat <b>Token Bot</b> di bawah → <b>Simpan</b>.</li>
+            <li>Di HP Android khusus, install <b>Termux</b> (Play Store).</li>
+            <li>Jalankan perintah instalasi bot yang saya sediakan di file <b>wa-bot/README-Termux.txt</b>.</li>
+            <li>Termux menampilkan <b>QR code</b> → scan pakai WhatsApp nomor khusus (Setelan → Perangkat tertaut).</li>
+            <li>HP terus nyala → bot otomatis mengirim pesan dari antrean.</li>
+          </ol>
+        </div>
+      ) : (
+        <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+          <p className="mb-2 text-sm font-bold text-blue-900">Setup Meta Cloud API (sekali saja):</p>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-blue-900">
+            <li>Buka business.facebook.com → daftar Meta Business → hubungkan WhatsApp Business number.</li>
+            <li>Buka developers.facebook.com → buat App Business → tambah produk WhatsApp.</li>
+            <li>Salin Access Token (mulai EAAG...) dan Phone number ID.</li>
+            <li>Isi kedua di bawah → Simpan.</li>
           </ol>
         </div>
       )}
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Access Token Meta</label>
-          <input value={token} onChange={(e) => setToken(e.target.value)} placeholder={hasToken ? "•••••• (token tersimpan)" : "EAAG..."}
-            className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 font-mono text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
-          {hasToken && <p className="mt-1 text-[10px] text-gray-400">Token tersimpan. Kosongkan & simpan untuk hapus.</p>}
+      {mode === "self" && (
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700">Token Bot</label>
+          <div className="mt-1.5 flex gap-2">
+            <input value={botToken} onChange={(e) => setBotToken(e.target.value)} placeholder={hasBotToken ? "•••••• (tersimpan)" : "Token rahasia untuk disambung ke bot HP"}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 font-mono text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+          </div>
+          {hasBotToken && <p className="mt-1 text-[10px] text-gray-400">Token tersimpan. Kosongkan &amp; simpan untuk buat ulang.</p>}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Phone Number ID</label>
-          <input value={phoneNumberId} onChange={(e) => setPhoneNumberId(e.target.value)} placeholder="123456789012345" className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 font-mono text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+      )}
+
+      {mode === "meta" && (
+        <div className="mb-5 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Access Token Meta</label>
+            <input value={token} onChange={(e) => setToken(e.target.value)} placeholder={hasToken ? "•••••• (token tersimpan)" : "EAAG..."}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 font-mono text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+            {hasToken && <p className="mt-1 text-[10px] text-gray-400">Token tersimpan. Kosongkan &amp; simpan untuk hapus.</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Phone Number ID</label>
+            <input value={phoneNumberId} onChange={(e) => setPhoneNumberId(e.target.value)} placeholder="123456789012345" className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 font-mono text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-5">
         {Object.entries(templates).map(([key, t]) => (
@@ -188,16 +258,16 @@ export default function WhatsAppSettings() {
             </div>
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-medium text-gray-500">Nama Template Meta</label>
-                <input value={t.name} onChange={(e) => setTpl(key, { name: e.target.value })} placeholder="mis. mabar_jadwal" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                <label className="block text-xs font-medium text-gray-500">Nama Template Meta {mode === "self" && "(opsional)"}</label>
+                <input value={t.name} onChange={(e) => setTpl(key, { name: e.target.value })} placeholder={mode === "self" ? "Bot pakai teks bebas, ini tidak dipakai" : "mis. mabar_jadwal"} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500">Variabel (urut, dipisah koma)</label>
-                <input value={t.variables} onChange={(e) => setTpl(key, { variables: e.target.value })} placeholder="nama,judul,tanggal" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
+                <label className="block text-xs font-medium text-gray-500">Kunci template (isian pesan)</label>
+                <p className="mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-400">{`{nama} {judul} {tanggal} {jam} {lokasi} {htm} {htmInsidentil} {namaPB} {kelas}`}</p>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500">Isi Pesan (teks bebas; {`{nama} {judul} {tanggal} {jam} {lokasi} {htm} {htmInsidentil} {namaPB} {kelas}`})</label>
+              <label className="block text-xs font-medium text-gray-500">Isi Pesan</label>
               <textarea value={t.text} onChange={(e) => setTpl(key, { text: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10" />
             </div>
             {t.text && (
@@ -209,8 +279,17 @@ export default function WhatsAppSettings() {
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-        <button onClick={saveConfig} disabled={saving || !token} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed">
+      <div className="mt-5 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={sendTest} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 transition-all hover:bg-green-100 disabled:opacity-50">
+            <Play className="h-3.5 w-3.5" /> Kirim Uji
+          </button>
+          <button onClick={checkQueue} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50">
+            <RefreshCw className="h-3.5 w-3.5" /> Cek Antrean
+          </button>
+          {queueSummary && <span className="text-xs text-gray-500">{queueSummary}</span>}
+        </div>
+        <button onClick={saveConfig} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="h-4 w-4" /> Simpan</>}
         </button>
       </div>

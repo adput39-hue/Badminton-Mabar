@@ -7,7 +7,10 @@ import {
   fillVariables,
   WHATSAPP_CONFIG_KEY,
   WHATSAPP_LOG_KEY,
+  WHATSAPP_QUEUE_KEY,
   type WhatsAppConfig,
+  type WaJobItem,
+  type WABroadcastType,
 } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +29,16 @@ function isInsidentil(member: { memberType?: string } | null | undefined): boole
   return member?.memberType === "insidentil";
 }
 
+interface Target {
+  member: { id: string; name: string; phone: string | null; class: string; memberType: string };
+  htmRate: number;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const pbId = request.headers.get("x-pb-id") || body.pbId;
-    const type = body.type as "jadwal" | "reminder" | "bayar" | "test";
+    const type = body.type as WABroadcastType;
     if (!["jadwal", "reminder", "bayar", "test"].includes(type)) {
       return NextResponse.json({ error: "type must be jadwal|reminder|bayar|test" }, { status: 400 });
     }
@@ -40,8 +48,11 @@ export async function POST(request: Request) {
     if (configRow?.value) {
       try { config = { ...defaultWhatsAppConfig(), ...JSON.parse(configRow.value) }; } catch {}
     }
-    if (!config.token || !config.phoneNumberId) {
+    if (config.mode === "meta" && (!config.token || !config.phoneNumberId)) {
       return NextResponse.json({ error: "WhatsApp belum dikonfigurasi di Pengaturan" }, { status: 400 });
+    }
+    if (config.mode === "self" && !config.botToken) {
+      return NextResponse.json({ error: "Buat dulu Token Bot di Pengaturan → WhatsApp, lalu scan QR di HP bot" }, { status: 400 });
     }
 
     const schedule = body.scheduleId
@@ -54,18 +65,18 @@ export async function POST(request: Request) {
     const pb = await prisma.pb.findFirst({ where: { id: pbId || schedule?.pbId } });
     const where = pbId ? { pbId } : {};
 
-    let targets: { member: { id: string; name: string; phone: string | null; class: string; memberType: string }; htmRate: number }[] = [];
+    let targets: Target[] = [];
 
     if (type === "test") {
-      const member = pbId ? await prisma.member.findFirst({ where: { pbId, phone: { not: null } } }) : null;
+      const fallbackMember = await prisma.member.findFirst({ where: { ...where, phone: { not: null }, isActive: true } as any });
       const testMember = {
         id: "test",
-        name: "Test",
-        phone: pb?.phone || member?.phone || null,
+        name: "Pesan Uji",
+        phone: pb?.phone || fallbackMember?.phone || null,
         class: "",
         memberType: "member",
       };
-      targets = [{ member: testMember as any, htmRate: 0 }];
+      targets = [{ member: testMember, htmRate: 0 }];
     } else if (type === "jadwal") {
       const members = await prisma.member.findMany({ where: { ...where, isActive: true } as any });
       targets = members.map((m) => ({ member: m, htmRate: 0 }));
@@ -92,10 +103,9 @@ export async function POST(request: Request) {
           }));
       }
     }
-    void 0;
 
     const template = config.templates[type === "test" ? "jadwal" : type];
-    const ctxBase = {
+    const ctx = {
       pb: pb ? { name: pb.name } : undefined,
       schedule: schedule
         ? {
@@ -120,73 +130,118 @@ export async function POST(request: Request) {
     };
 
     const noPhone: string[] = [];
-    const withPhone = targets.filter((t) => {
-      if (!formatPhoneNumber(t.member.phone)) {
+    const items: WaJobItem[] = [];
+    for (const t of targets) {
+      const phone = formatPhoneNumber(t.member.phone);
+      if (!phone) {
         noPhone.push(t.member.name);
-        return false;
+        continue;
       }
-      return true;
-    });
-
-    const maxConcurrent = 5;
-    const sendOne = async (t: { member: { id: string; phone: string | null; name: string; class: string } }, i: number) => {
       const text = fillVariables(template.text, {
         member: { name: t.member.name, class: t.member.class },
-        pb: ctxBase.pb,
-        schedule: ctxBase.schedule,
+        pb: ctx.pb,
+        schedule: ctx.schedule,
       });
-      const res = await sendWhatsAppTo({
-        to: t.member.phone!,
-        mode: "text",
+      items.push({
+        memberId: t.member.id,
+        memberName: t.member.name,
+        phone,
         text,
-        ctx: ctxBase,
-        token: config.token,
-        phoneNumberId: config.phoneNumberId,
       });
-      return { ...res, memberId: t.member.id, memberName: t.member.name, index: i };
-    };
-
-    const results: { memberId: string; memberName: string; phone: string; ok: boolean; reason?: string }[] = [];
-    for (let i = 0; i < withPhone.length; i += maxConcurrent) {
-      const chunk = withPhone.slice(i, i + maxConcurrent);
-      const chunkResults = await Promise.all(chunk.map((t, j) => sendOne(t, i + j)));
-      results.push(...chunkResults);
     }
 
-    const okCount = results.filter((r) => r.ok).length;
-    const failed = results.filter((r) => !r.ok);
+    if (config.mode === "meta") {
+      const maxConcurrent = 5;
+      const results: { memberName: string; phone: string; ok: boolean; reason?: string }[] = [];
+      for (let i = 0; i < items.length; i += maxConcurrent) {
+        const chunk = items.slice(i, i + maxConcurrent);
+        const chunkResults = await Promise.all(
+          chunk.map((it) =>
+            sendWhatsAppTo({
+              to: it.phone,
+              mode: "text",
+              text: it.text,
+              ctx,
+              token: config.token,
+              phoneNumberId: config.phoneNumberId,
+            }).then((r) => ({ memberName: it.memberName, ...r }))
+          )
+        );
+        results.push(...chunkResults);
+      }
+      await appendLog(pbId || schedule?.pbId || "default", {
+        type: type === "test" ? "jadwal" : type,
+        scheduleId: schedule?.id || null,
+        title: schedule ? (schedule.sparingOpponent ? `Sparing vs ${schedule.sparingOpponent}` : schedule.title) : "Semua anggota",
+        at: new Date().toISOString(),
+        mode: "meta",
+        total: targets.length,
+        noPhone: noPhone.length,
+        ok: results.filter((r) => r.ok).length,
+        failed: results.filter((r) => !r.ok).length,
+      });
+      return NextResponse.json({
+        ok: true,
+        mode: "meta",
+        total: targets.length,
+        sent: results.filter((r) => r.ok).length,
+        noPhone: noPhone.length,
+        failed: results.filter((r) => !r.ok).length,
+        failedDetails: results.filter((r) => !r.ok).slice(0, 20).map((f) => ({ name: f.memberName, reason: f.reason })),
+      });
+    }
 
-    const logRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_LOG_KEY } });
-    let logs: unknown[] = [];
-    if (logRow?.value) { try { logs = JSON.parse(logRow.value); } catch {} }
-    if (!Array.isArray(logs)) logs = [];
-    logs.push({
-      type,
+    // mode "self": simpan ke queue
+    const id = (config.mode === "self" ? "job_" : "job_") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const job = {
+      id,
+      type: type === "test" ? "jadwal" : type,
       scheduleId: schedule?.id || null,
       title: schedule ? (schedule.sparingOpponent ? `Sparing vs ${schedule.sparingOpponent}` : schedule.title) : "Semua anggota",
+      status: "pending",
       at: new Date().toISOString(),
-      total: targets.length,
-      noPhone: noPhone.length,
-      ok: okCount,
-      failed: failed.length,
-    });
-    logs = logs.slice(-100);
+      totals: { total: targets.length, sent: 0, failed: 0, noPhone: noPhone.length },
+      items,
+    };
+
+    const queueRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_QUEUE_KEY } });
+    let queue: unknown[] = [];
+    if (queueRow?.value) { try { queue = JSON.parse(queueRow.value); } catch {} }
+    if (!Array.isArray(queue)) queue = [];
+    queue.push(job);
+    queue = queue.slice(-200);
     await prisma.siteConfig.upsert({
-      where: { key: WHATSAPP_LOG_KEY },
-      update: { value: JSON.stringify(logs) },
-      create: { key: WHATSAPP_LOG_KEY, value: JSON.stringify(logs) },
+      where: { key: WHATSAPP_QUEUE_KEY },
+      update: { value: JSON.stringify(queue) },
+      create: { key: WHATSAPP_QUEUE_KEY, value: JSON.stringify(queue) },
     });
 
     return NextResponse.json({
       ok: true,
+      mode: "self",
+      queued: true,
+      jobId: id,
       total: targets.length,
-      sent: okCount,
       noPhone: noPhone.length,
-      failed: failed.length,
-      failedDetails: failed.slice(0, 20).map((f) => ({ name: f.memberName, reason: f.reason })),
+      phoneTargets: items.length,
     });
   } catch (error) {
     console.error("POST /api/whatsapp/send error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
+}
+
+async function appendLog(pbId: string, entry: Record<string, unknown>) {
+  const logRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_LOG_KEY } });
+  let logs: unknown[] = [];
+  if (logRow?.value) { try { logs = JSON.parse(logRow.value); } catch {} }
+  if (!Array.isArray(logs)) logs = [];
+  logs.push(entry);
+  logs = logs.slice(-100);
+  await prisma.siteConfig.upsert({
+    where: { key: WHATSAPP_LOG_KEY },
+    update: { value: JSON.stringify(logs) },
+    create: { key: WHATSAPP_LOG_KEY, value: JSON.stringify(logs) },
+  });
+  void pbId;
 }

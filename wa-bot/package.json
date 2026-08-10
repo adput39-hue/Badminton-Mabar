@@ -1,0 +1,16 @@
+{
+  "name": "wa-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WhatsApp bot sender untuk aplikasi Mabar PB (Baileys + Termux)",
+  "main": "wa-bot.js",
+  "scripts": {
+    "start": "node wa-bot.js"
+  },
+  "dependencies": {
+    "baileys": "^6.7.16",
+    "dotenv": "^17.4.2",
+    "pino": "^9.5.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

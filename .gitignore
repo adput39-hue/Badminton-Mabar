@@ -48,8 +48,14 @@ next-env.d.ts
 
 # local dev & backup artifacts (do not commit)
 dev-server.log
+dev-server.err.log
 supabase_backup.dump
 scripts/sync-db.ts
 scripts/supabase_data.json
 open-firewall-3002.bat
+
+# whatsapp bot (self-hosted, keep local)
+wa-bot/node_modules/
+wa-bot/.env
+wa-bot/session/
 

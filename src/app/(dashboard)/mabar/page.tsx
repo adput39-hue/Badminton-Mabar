@@ -74,7 +74,9 @@ export default function MabarPage() {
         body: JSON.stringify({ type, scheduleId: schedule?.id || null }),
       });
       const data = await res.json();
-      if (res.ok && data.ok) {
+      if (res.ok && data.queued) {
+        toast("success", `Masuk antrean: ${data.phoneTargets} penerima (${target}), ${data.noPhone} tanpa nomor`);
+      } else if (res.ok && data.ok) {
         toast("success", `Terkirim ${data.sent} (${target}), ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
       } else {
         toast("error", data.error || "Gagal mengirim WhatsApp");
