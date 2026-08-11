@@ -41,6 +41,8 @@ export interface WaJob {
 export const WHATSAPP_CONFIG_KEY = "whatsapp_config";
 export const WHATSAPP_LOG_KEY = "whatsapp_logs";
 export const WHATSAPP_QUEUE_KEY = "whatsapp_queue";
+export const WHATSAPP_BOT_STATE_KEY = "whatsapp_bot_state";
+export const WHATSAPP_BOT_CMD_KEY = "whatsapp_bot_cmd";
 
 export const WA_VARIABLES = [
   { key: "{nama}", desc: "Nama anggota" },

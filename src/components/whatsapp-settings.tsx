@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
-import { MessageCircle, Save, Loader2, ChevronDown, Play, Smartphone, RefreshCw } from "lucide-react";
+import { MessageCircle, Save, Loader2, ChevronDown, Play, Smartphone, RefreshCw, QrCode, LogOut } from "lucide-react";
 
 interface WaTemplateForm {
   name: string;
@@ -36,13 +36,21 @@ export default function WhatsAppSettings() {
   });
   const [refreshedAt, setRefreshedAt] = useState(0);
   const [queueSummary, setQueueSummary] = useState<string>("");
+  const [botStatus, setBotStatus] = useState<{ state: string; qr?: string; at?: string }>({ state: "offline" });
+  const [botLoading, setBotLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      try {
+        const res = await fetch("/api/whatsapp/bot");
+        const data = await res.json();
+        if (!cancelled && typeof data?.state === "string") setBotStatus(data);
+      } catch {}
       try {
         const res = await fetch("/api/whatsapp/config");
         const data = await res.json();
-        if (data.hasToken !== undefined) {
+        if (!cancelled && data.hasToken !== undefined) {
           setMode(data.mode === "meta" ? "meta" : "self");
           setHasBotToken(Boolean(data.hasBotToken));
           setBotToken(data.botToken || "");
@@ -62,6 +70,14 @@ export default function WhatsAppSettings() {
       } catch {}
       setLoaded(true);
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(refreshBotStatus, 5000);
+    return () => clearInterval(t);
   }, []);
 
   function setTpl(key: string, patch: Partial<WaTemplateForm>) {
@@ -128,6 +144,37 @@ export default function WhatsAppSettings() {
       .replace(/\{lokasi\}/g, jadwal.location)
       .replace(/\{htm\}/g, String(jadwal.htm))
       .replace(/\{htmInsidentil\}/g, String(jadwal.htmInsidentil));
+  }
+
+  async function refreshBotStatus() {
+    try {
+      const res = await fetch("/api/whatsapp/bot");
+      const data = await res.json();
+      if (typeof data?.state === "string") setBotStatus(data);
+    } catch {}
+  }
+
+  async function requestLogout() {
+    if (!window.confirm("Putuskan sesi WhatsApp bot? QR baru akan muncul untuk scan ulang.")) return;
+    if (botLoading) return;
+    setBotLoading(true);
+    try {
+      const res = await fetch("/api/whatsapp/bot", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cmd: "logout" }),
+      });
+      if (res.ok) {
+        toast("success", "Perintah ganti nomor dikirim. Tunggu bot memutus sesi & tampilkan QR baru.");
+        setTimeout(refreshBotStatus, 3000);
+      } else {
+        toast("error", "Gagal mengirim perintah ganti nomor");
+      }
+    } catch {
+      toast("error", "Gagal mengirim perintah ganti nomor");
+    } finally {
+      setBotLoading(false);
+    }
   }
 
   async function checkQueue() {
@@ -200,18 +247,19 @@ export default function WhatsAppSettings() {
         </div>
       </div>
 
-      {mode === "self" ? (
+      {mode === "self" && (
         <div className="mb-5 rounded-xl border border-green-100 bg-green-50 p-4">
-          <p className="mb-2 text-sm font-bold text-green-900">Setup bot HP (sekali saja):</p>
+          <p className="mb-2 text-sm font-bold text-green-900">Setup bot (sekali saja):</p>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-green-900">
             <li>Buat <b>Token Bot</b> di bawah → <b>Simpan</b>.</li>
-            <li>Di HP Android khusus, install <b>Termux</b> (Play Store).</li>
-            <li>Jalankan perintah instalasi bot yang saya sediakan di file <b>wa-bot/README-Termux.txt</b>.</li>
-            <li>Termux menampilkan <b>QR code</b> → scan pakai WhatsApp nomor khusus (Setelan → Perangkat tertaut).</li>
-            <li>HP terus nyala → bot otomatis mengirim pesan dari antrean.</li>
+            <li>Jalankan bot: <code className="font-mono">wa-bot\wa-bot.js</code> di PC yang nyala 24 jam (ada file <b>start-bot.bat</b>).</li>
+            <li>Bot mengirim <b>QR code</b> ke halaman ini → scan pakai WhatsApp nomor khusus di HP (Setelan → Perangkat tertaut).</li>
+            <li>Terhubung → bot otomatis mengirim pesan dari antrean.</li>
           </ol>
         </div>
-      ) : (
+      )}
+
+      {mode === "meta" && (
         <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
           <p className="mb-2 text-sm font-bold text-blue-900">Setup Meta Cloud API (sekali saja):</p>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-blue-900">
@@ -220,6 +268,52 @@ export default function WhatsAppSettings() {
             <li>Salin Access Token (mulai EAAG...) dan Phone number ID.</li>
             <li>Isi kedua di bawah → Simpan.</li>
           </ol>
+        </div>
+      )}
+
+      {mode === "self" && (
+        <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-[var(--color-primary)]" />
+              <span className="text-sm font-bold text-gray-900">Status Bot WhatsApp</span>
+            </div>
+            <button onClick={refreshBotStatus} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+              <RefreshCw className="h-3 w-3" /> Segarkan
+            </button>
+          </div>
+
+          {botStatus.state === "connected" && (
+            <div className="flex items-center gap-2 text-sm text-green-700">
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500"></span>
+              Bot terhubung — siap menerima antrean pesan.
+            </div>
+          )}
+
+          {botStatus.state === "qr" && (
+            <div className="flex flex-col items-center gap-3 py-2 sm:flex-row sm:items-start">
+              {botStatus.qr && <img src={botStatus.qr} alt="QR WhatsApp" className="h-48 w-48 rounded-xl border border-gray-200 bg-white object-contain p-2" />}
+              <div className="text-center sm:text-left">
+                <p className="text-sm font-semibold text-amber-700">Scan QR ini pakai WhatsApp nomor khusus</p>
+                <p className="mt-1 text-xs text-gray-500">Buka WhatsApp di HP → Setelan → Perangkat tertaut → Tautkan perangkat → arahkan kamera ke QR.</p>
+                <p className="mt-1 text-[11px] text-gray-400">QR berlaku singkat — jika kedaluwarsa, klik Segarkan.</p>
+              </div>
+            </div>
+          )}
+
+          {botStatus.state === "offline" && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="h-2.5 w-2.5 rounded-full bg-gray-300"></span>
+              Bot belum berjalan. Jalankan <code className="font-mono">wa-bot\start-bot.bat</code> di PC bot, lalu Segarkan.
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-3">
+            <p className="text-[11px] text-gray-400">{botStatus.at ? `Terakhir diperbarui: ${new Date(botStatus.at).toLocaleString("id-ID")}` : "Belum ada pembaruan bot"}</p>
+            <button onClick={requestLogout} disabled={botLoading} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50">
+              {botLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />} Ganti Nomor
+            </button>
+          </div>
         </div>
       )}
 
