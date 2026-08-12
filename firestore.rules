@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Skor live (public, dipakai layar publik skor)
+    match /live/{matchId} {
+      allow read, write: if true;
+    }
+
+    // Status bot WA - boleh dibaca dashboard (QR & status),
+    // TAPI hanya bot (admin SDK) yang boleh menulis.
+    match /wa/state {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // config, queue, cmd, logs - terkunci total untuk client.
+    // Hanya bot PC & server Vercel (lewat firebase-admin) yang memegang kunci.
+    match /wa/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

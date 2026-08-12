@@ -1,7 +1,7 @@
 // WhatsApp bot sender (self-hosted, Baileys) untuk aplikasi Mabar PB.
 // Menjalankan: node wa-bot.js
-// Dependensi: pkg install nodejs-lts  (di PC cukup download Node.js)
-// npm i baileys qrcode-terminal qrcode dotenv
+// Dependensi: nodejs, npm i baileys qrcode dotenv firebase-admin
+// Sinkronisasi via Firebase Realtime (Firestore) - tanpa polling ke server.
 
 const makeWASocket = require("baileys").default;
 const {
@@ -14,59 +14,91 @@ const QRCode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
 
+const admin = require("firebase-admin");
+
 try {
   require("dotenv").config();
 } catch {}
 
-const API_URL = process.env.API_URL || "https://badminton-mabar.vercel.app";
-const BOT_TOKEN = process.env.WA_BOT_TOKEN || "";
-const POLL_MS = Number(process.env.POLL_MS || 5000);
+let db = null;
+try {
+  const saEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (saEnv) {
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(saEnv)),
+    });
+  } else {
+    const saFile = process.env.FIREBASE_SERVICE_ACCOUNT_FILE || path.join(__dirname, "firebase-service-account.json");
+    if (fs.existsSync(saFile)) {
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(fs.readFileSync(saFile, "utf8"))),
+      });
+    }
+  }
+  if (admin.apps.length) db = admin.firestore();
+} catch (e) {
+  console.error("[WA-BOT] Gagal init Firebase:", e?.message || e);
+}
 
-if (!BOT_TOKEN) {
-  console.error("[WA-BOT] WA_BOT_TOKEN belum diisi. Edit file wa-bot/.env (atau export).");
+if (!db) {
+  console.error("[WA-BOT] Firebase belum dikonfigurasi. Letakkan firebase-service-account.json di folder ini (atau export FIREBASE_SERVICE_ACCOUNT).");
   process.exit(1);
 }
 
 const SESSION_DIR = path.join(__dirname, "session");
 
+const stateDoc = () => db.collection("wa").doc("state");
+const queueDoc = () => db.collection("wa").doc("queue");
+const cmdDoc = () => db.collection("wa").doc("cmd");
+
 let sock = null;
 let connected = false;
 
-async function postBot(payload) {
+async function setState(state, extra = {}) {
   try {
-    const res = await fetch(API_URL + "/api/whatsapp/bot", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + BOT_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok && res.status !== 401) {
-      console.error("[WA-BOT] Gagal kirim state bot, status:", res.status);
-    }
+    await stateDoc().set({ raw: JSON.stringify({ state, at: new Date().toISOString(), ...extra }) });
   } catch (e) {
-    console.error("[WA-BOT] Kirim state bot error:", e?.message || e);
+    console.error("[WA-BOT] Gagal set state:", e?.message || e);
   }
 }
 
-async function getCmd() {
-  try {
-    const res = await fetch(API_URL + "/api/whatsapp/bot/cmd", {
-      headers: { Authorization: "Bearer " + BOT_TOKEN },
-    });
-    if (!res.ok) {
-      if (res.status === 401) console.error("[WA-BOT] Token bot ditolak server!");
-      return null;
+let cmdUnwatch = null;
+let queueUnwatch = null;
+
+function watchComm() {
+  if (cmdUnwatch) cmdUnwatch();
+  if (queueUnwatch) queueUnwatch();
+
+  cmdUnwatch = cmdDoc().onSnapshot(async (snap) => {
+    const data = snap.exists ? snap.data() : null;
+    let cmd = null;
+    if (typeof data?.raw === "string") {
+      try { cmd = JSON.parse(data.raw).cmd || null; } catch {}
+    } else if (data?.cmd?.cmd) {
+      cmd = data.cmd.cmd;
     }
-    const data = await res.json();
-    return data?.cmd || null;
-  } catch (e) {
-    console.error("[WA-BOT] Ambil perintah error:", e?.message || e);
-    return null;
-  }
+    if (cmd === "logout") {
+      await cmdDoc().set({ raw: "" });
+      await handleLogout();
+    } else if (cmd === "refresh") {
+      await cmdDoc().set({ raw: "" });
+      console.log("[WA-BOT] Perintah refresh diterima. Membuat QR baru...");
+      try { await setState("offline"); } catch {}
+      try { if (sock) sock.end(); } catch {}
+      connected = false;
+      sock = null;
+      setTimeout(startBot, 1500);
+    }
+  });
+
+  queueUnwatch = queueDoc().onSnapshot(() => {
+    processQueue();
+  });
 }
 
 async function handleLogout() {
-  console.log("[WA-BOT] Perintah logout diterima. Memutus perangkat WA...");
-  try { await postBot({ state: "offline" }); } catch {}
+  console.log("[WA-BOT] Perintah ganti nomor diterima. Memutus perangkat WA...");
+  try { await setState("offline"); } catch {}
   try { if (sock) sock.end(); } catch {}
   await new Promise((r) => setTimeout(r, 1500));
   try { fs.rmSync(SESSION_DIR, { recursive: true, force: true }); } catch {}
@@ -76,88 +108,41 @@ async function handleLogout() {
   setTimeout(startBot, 1500);
 }
 
-async function startBot() {
-  let state;
-  try {
-    const st = await useMultiFileAuthState(SESSION_DIR);
-    state = st.state;
-  } catch (e) {
-    console.error("[WA-BOT] Gagal muat sesi:", e?.message || e);
-    setTimeout(startBot, 5000);
-    return;
-  }
+let queuing = false;
 
-  const { version } = await fetchLatestBaileysVersion();
-
-  sock = makeWASocket({
-    version,
-    auth: state,
-    logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
-    browser: ["mabar-bot", "Chrome", "1.0"],
-    printQRInTerminal: false,
-    markOnlineOnConnect: false,
-    syncFullHistory: false,
-  });
-
-  sock.ev.on("creds.update", async (update) => {
-    try { await state.saveCreds(); } catch {}
-  });
-
-  let qrTick = 0;
-  let lastQr = "";
-
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, qr } = update || {};
-    if (qr) {
-      lastQr = qr;
-      qrTick++;
-      try {
-        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
-        await postBot({ state: "qr", qr: dataUrl });
-      } catch (e) {
-        console.error("[WA-BOT] Gagal proses QR:", e?.message || e);
-      }
-      if (qrTick <= 2) {
-        console.log("[WA-BOT] QR baru tersedia — buka dashboard > Pengaturan > WhatsApp untuk scan.");
-      }
-      return;
-    }
-    if (connection === "open") {
-      connected = true;
-      console.log("[WA-BOT] Terhubung! Menunggu antrean pesan...");
-      try { await postBot({ state: "connected" }); } catch {}
-    } else if (connection === "close") {
-      connected = false;
-      const reason = lastDisconnect?.error?.output?.statusCode;
-      console.log("[WA-BOT] Koneksi tertutup status:", reason, "- mencoba ulang dalam 5s...");
-      try { await postBot({ state: "offline" }); } catch {}
-      if (reason === DisconnectReason.loggedOut) {
-        console.log("[WA-BOT] Logged out — menghapus sesi dan menampilkan QR baru.");
-        try { fs.rmSync(SESSION_DIR, { recursive: true, force: true }); } catch {}
-      }
-      setTimeout(startBot, 5000);
-    }
-  });
-
-  setInterval(pollQueue, POLL_MS);
-  setInterval(pollCmd, POLL_MS * 2);
-  pollQueue();
-  pollCmd();
-}
-
-async function pollQueue() {
+async function processQueue() {
   if (!connected || !sock || typeof sock.sendMessage !== "function") return;
+  if (queuing) return;
+
+  queuing = true;
   try {
-    const res = await fetch(API_URL + "/api/whatsapp/queue", {
-      headers: { Authorization: "Bearer " + BOT_TOKEN },
-    });
-    if (!res.ok) {
-      if (res.status === 401) console.error("[WA-BOT] Token bot ditolak server!");
-      return;
+    const snap = await queueDoc().get();
+    let jobs = [];
+    const data = snap.exists ? snap.data() : null;
+    if (typeof data?.raw === "string") {
+      try { jobs = JSON.parse(data.raw); } catch { jobs = []; }
+    } else if (Array.isArray(data?.queue)) {
+      jobs = data.queue;
     }
-    const data = await res.json();
-    const job = data.job;
-    if (!job) return;
+    if (!Array.isArray(jobs)) return;
+
+    const idx = jobs.findIndex((j) => j.status === "pending");
+    if (idx === -1) return;
+
+    // claim job atomik
+    const claim = await queueDoc().get();
+    let all = [];
+    const cdata = claim.exists ? claim.data() : null;
+    if (typeof cdata?.raw === "string") {
+      try { all = JSON.parse(cdata.raw); } catch { all = []; }
+    } else if (Array.isArray(cdata?.queue)) {
+      all = cdata.queue;
+    }
+    const ci = all.findIndex((j) => j.status === "pending");
+    if (ci === -1) return;
+    all[ci] = { ...all[ci], status: "sending" };
+    const job = all[ci];
+    await queueDoc().set({ raw: JSON.stringify(all) });
 
     console.log(`[WA-BOT] Ambil job ${job.id} (${job.type}) target ${job.items?.length || 0}`);
     const results = [];
@@ -177,24 +162,113 @@ async function pollQueue() {
       await new Promise((r) => setTimeout(r, 1200));
     }
 
-    await fetch(API_URL + "/api/whatsapp/queue", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + BOT_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId: job.id, results }),
-    });
+    // tulis hasil
+    const doneSnap = await queueDoc().get();
+    let doneAll = [];
+    const ddata = doneSnap.exists ? doneSnap.data() : null;
+    if (typeof ddata?.raw === "string") {
+      try { doneAll = JSON.parse(ddata.raw); } catch { doneAll = []; }
+    } else if (Array.isArray(ddata?.queue)) {
+      doneAll = ddata.queue;
+    }
+    const di = doneAll.findIndex((j) => j.id === job.id);
+    if (di !== -1) {
+      const okPhone = new Map(results.filter((r) => r.ok).map((r) => [String(r.phone), r.ok]));
+      let sent = 0, failed = 0;
+      doneAll[di].items = (doneAll[di].items || []).map((it) => {
+        const ok = okPhone.has(String(it.phone));
+        if (ok) sent++;
+        else failed++;
+        return { ...it, ok, reason: ok ? undefined : "tidak dikirim bot" };
+      });
+      doneAll[di].status = "done";
+      doneAll[di].finishedAt = new Date().toISOString();
+      doneAll[di].totals = { ...(doneAll[di].totals || {}), sent, failed };
+      await queueDoc().set({ raw: JSON.stringify(doneAll) });
+    }
     console.log(`[WA-BOT] Job ${job.id} selesai: ${results.filter((r) => r.ok).length}/${results.length}`);
   } catch (e) {
-    console.error("[WA-BOT] Poll error:", e?.message || e);
+    console.error("[WA-BOT] Proses queue error:", e?.message || e);
+  } finally {
+    queuing = false;
   }
 }
 
-async function pollCmd() {
+async function startBot() {
+  let state;
+  let saveCreds;
   try {
-    const cmd = await getCmd();
-    if (cmd === "logout") {
-      await handleLogout();
+    const st = await useMultiFileAuthState(SESSION_DIR);
+    state = st.state;
+    saveCreds = st.saveCreds;
+  } catch (e) {
+    console.error("[WA-BOT] Gagal muat sesi:", e?.message || e);
+    setTimeout(startBot, 5000);
+    return;
+  }
+
+  const { version } = await fetchLatestBaileysVersion();
+
+  sock = makeWASocket({
+    version,
+    auth: state,
+    logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
+    browser: ["mabar-bot", "Chrome", "1.0"],
+    printQRInTerminal: false,
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
+    connectTimeoutMs: 120000,
+    qrTimeout: 180000,
+    maxRetries: 20,
+  });
+
+  sock.ev.on("creds.update", async (update) => {
+    try {
+      await saveCreds();
+      console.log("[WA-BOT] creds.update disimpan. keys:", Object.keys(update).join(","), "| me:", update.me?.id || "-");
+    } catch (e) {
+      console.error("[WA-BOT] Gagal simpan creds:", e?.message || e);
     }
-  } catch {}
+  });
+
+  let qrTick = 0;
+  let lastQr = "";
+
+  sock.ev.on("connection.update", async (update) => {
+    const { connection, lastDisconnect, qr } = update || {};
+    if (qr) {
+      lastQr = qr;
+      qrTick++;
+      try {
+        const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 1 });
+        await setState("qr", { qr: dataUrl });
+      } catch (e) {
+        console.error("[WA-BOT] Gagal proses QR:", e?.message || e);
+      }
+      if (qrTick <= 2) {
+        console.log("[WA-BOT] QR baru tersedia — buka dashboard > Pengaturan > WhatsApp untuk scan.");
+      }
+      return;
+    }
+    if (connection === "open") {
+      connected = true;
+      console.log("[WA-BOT] Terhubung! Menunggu antrean pesan...");
+      try { await setState("connected"); } catch {}
+    } else if (connection === "close") {
+      connected = false;
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      const detail = lastDisconnect?.error?.message || "";
+      console.log("[WA-BOT] Koneksi tertutup status:", reason, "-", detail, "- mencoba ulang dalam 5s...");
+      try { await setState("offline"); } catch {}
+      if (reason === DisconnectReason.loggedOut) {
+        console.log("[WA-BOT] Logged out — menghapus sesi dan menampilkan QR baru.");
+        try { fs.rmSync(SESSION_DIR, { recursive: true, force: true }); } catch {}
+      }
+      setTimeout(startBot, 5000);
+    }
+  });
+
+  watchComm();
 }
 
 startBot();

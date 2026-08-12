@@ -5,13 +5,11 @@ import {
   sendWhatsAppTo,
   formatPhoneNumber,
   fillVariables,
-  WHATSAPP_CONFIG_KEY,
-  WHATSAPP_LOG_KEY,
-  WHATSAPP_QUEUE_KEY,
   type WhatsAppConfig,
   type WaJobItem,
   type WABroadcastType,
 } from "@/lib/whatsapp";
+import { getConfig, pushJob, appendLog } from "@/lib/wa-store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -43,11 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "type must be jadwal|reminder|bayar|test" }, { status: 400 });
     }
 
-    const configRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_CONFIG_KEY } });
-    let config: WhatsAppConfig = defaultWhatsAppConfig();
-    if (configRow?.value) {
-      try { config = { ...defaultWhatsAppConfig(), ...JSON.parse(configRow.value) }; } catch {}
-    }
+    const config: WhatsAppConfig = await getConfig();
     if (config.mode === "meta" && (!config.token || !config.phoneNumberId)) {
       return NextResponse.json({ error: "WhatsApp belum dikonfigurasi di Pengaturan" }, { status: 400 });
     }
@@ -63,7 +57,10 @@ export async function POST(request: Request) {
     }
 
     const pb = await prisma.pb.findFirst({ where: { id: pbId || schedule?.pbId } });
-    const where = pbId ? { pbId } : {};
+    const effectivePbId = pbId || schedule?.pbId || "";
+    const where = effectivePbId ? { pbId: effectivePbId } : {};
+
+    const inPb = (m: { pbId?: string | null }): boolean => !effectivePbId || m.pbId === effectivePbId;
 
     let targets: Target[] = [];
 
@@ -89,13 +86,16 @@ export async function POST(request: Request) {
       });
 
       if (type === "reminder") {
-        targets = attendances.map((a) => ({
-          member: a.member,
-          htmRate: isInsidentil(a.member) ? (schedule.htmInsidentil ?? schedule.htm ?? 0) : (schedule.htm ?? 0),
-        }));
+        targets = attendances
+          .filter((a) => inPb(a.member))
+          .map((a) => ({
+            member: a.member,
+            htmRate: isInsidentil(a.member) ? (schedule.htmInsidentil ?? schedule.htm ?? 0) : (schedule.htm ?? 0),
+          }));
       } else {
         const paidIds = getPaidMembers(schedule);
         targets = attendances
+          .filter((a) => inPb(a.member))
           .filter((a) => !paidIds.includes(a.memberId))
           .map((a) => ({
             member: a.member,
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
         );
         results.push(...chunkResults);
       }
-      await appendLog(pbId || schedule?.pbId || "default", {
+      await appendLog({
         type: type === "test" ? "jadwal" : type,
         scheduleId: schedule?.id || null,
         title: schedule ? (schedule.sparingOpponent ? `Sparing vs ${schedule.sparingOpponent}` : schedule.title) : "Semua anggota",
@@ -191,30 +191,20 @@ export async function POST(request: Request) {
       });
     }
 
-    // mode "self": simpan ke queue
-    const id = (config.mode === "self" ? "job_" : "job_") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    // mode "self": simpan ke queue Firestore
+    const id = "job_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const job = {
       id,
       type: type === "test" ? "jadwal" : type,
       scheduleId: schedule?.id || null,
       title: schedule ? (schedule.sparingOpponent ? `Sparing vs ${schedule.sparingOpponent}` : schedule.title) : "Semua anggota",
-      status: "pending",
+      status: "pending" as const,
       at: new Date().toISOString(),
       totals: { total: targets.length, sent: 0, failed: 0, noPhone: noPhone.length },
       items,
     };
 
-    const queueRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_QUEUE_KEY } });
-    let queue: unknown[] = [];
-    if (queueRow?.value) { try { queue = JSON.parse(queueRow.value); } catch {} }
-    if (!Array.isArray(queue)) queue = [];
-    queue.push(job);
-    queue = queue.slice(-200);
-    await prisma.siteConfig.upsert({
-      where: { key: WHATSAPP_QUEUE_KEY },
-      update: { value: JSON.stringify(queue) },
-      create: { key: WHATSAPP_QUEUE_KEY, value: JSON.stringify(queue) },
-    });
+    await pushJob(job);
 
     return NextResponse.json({
       ok: true,
@@ -229,19 +219,4 @@ export async function POST(request: Request) {
     console.error("POST /api/whatsapp/send error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
-}
-
-async function appendLog(pbId: string, entry: Record<string, unknown>) {
-  const logRow = await prisma.siteConfig.findUnique({ where: { key: WHATSAPP_LOG_KEY } });
-  let logs: unknown[] = [];
-  if (logRow?.value) { try { logs = JSON.parse(logRow.value); } catch {} }
-  if (!Array.isArray(logs)) logs = [];
-  logs.push(entry);
-  logs = logs.slice(-100);
-  await prisma.siteConfig.upsert({
-    where: { key: WHATSAPP_LOG_KEY },
-    update: { value: JSON.stringify(logs) },
-    create: { key: WHATSAPP_LOG_KEY, value: JSON.stringify(logs) },
-  });
-  void pbId;
 }

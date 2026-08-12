@@ -34,6 +34,7 @@ export interface WaJob {
   title: string;
   status: "pending" | "sending" | "done";
   at: string;
+  finishedAt?: string;
   totals: { total: number; sent: number; failed: number; noPhone: number };
   items: WaJobItem[];
 }

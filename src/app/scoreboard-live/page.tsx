@@ -569,10 +569,10 @@ export default function ScoreboardLivePage() {
                           return (
                             <div className="mt-2 sm:mt-3" style={{ display: "grid", gridTemplateColumns: `1fr repeat(${cols - 1}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
                               {/* Header */}
-                              <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
-                              <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
-                              {isMultiGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
-                              {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                              <div className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">PASANGAN</div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 1</div>
+                              {isMultiGame && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 2</div>}
+                              {hasG3 && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 3</div>}
                               <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
                               {/* Team 1 */}
                               <div className="flex items-center gap-1 sm:gap-1.5">
@@ -676,7 +676,7 @@ export default function ScoreboardLivePage() {
                   );
                 }
                 return (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                     {sorted.map((m) => {
                       const hasCourt = m.courtNumber != null;
                       const courtIdx = hasCourt ? (m.courtNumber as number) - 1 : 0;
@@ -697,51 +697,51 @@ export default function ScoreboardLivePage() {
                       const g2w = isTwoGame ? getGameWinner(t1g2, t2g2, target) : null;
                       const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
                       return (
-                        <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm sm:p-2.5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
+                        <div key={m.id} className={`relative rounded-xl border bg-white p-4 shadow-sm sm:p-5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
                           {/* Court label */}
                           <div className="mb-1.5 flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[9px] font-bold text-gray-700 sm:text-[10px]">
+                            <span className="flex items-center gap-1.5 text-sm font-bold text-gray-700 sm:text-base">
                               {hasCourt ? (
-                                <span className={`rounded px-1 py-0.5 text-[8px] font-black text-white sm:px-1.5 sm:text-[9px] ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
+                                <span className={`rounded px-1.5 py-0.5 text-xs font-black text-white sm:px-2 sm:text-sm ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
                               ) : (
-                                <span className="rounded bg-gray-100 px-1 py-0.5 text-[8px] font-black text-gray-400 sm:px-1.5 sm:text-[9px]">Belum</span>
+                                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-black text-gray-400 sm:px-2 sm:text-sm">Belum</span>
                               )}
                               {mIsLive ? <span className="text-green-600">● LIVE</span> : mIsCompleted ? (m.winnerTeam === null ? <span className="text-amber-500">✓ SERI</span> : <span className="text-green-600">✓</span>) : <span className="text-gray-400">⏳</span>}
                             </span>
-                            <span className="text-[8px] text-gray-400 sm:text-[9px]">R{m.round}</span>
+                            <span className="text-sm text-gray-400 sm:text-base">R{m.round}</span>
                             {mIsCompleted && (
                               <button onClick={() => setCardMatch(m)} title="Buat Match Card"
-                                className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1 py-0.5 text-[8px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[9px]">
+                                className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-sm">
                                 <ImageIcon className="h-2.5 w-2.5" /> Card
                               </button>
                             )}
                           </div>
                           {/* Grid table */}
                           <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
-                            <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
-                            <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
-                            {isTwoGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
-                            {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                            <div className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">PASANGAN</div>
+                            <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 1</div>
+                            {isTwoGame && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 2</div>}
+                            {hasG3 && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 3</div>}
                             <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
                             {/* Team 1 */}
                             <div className="flex items-center gap-1 sm:gap-1.5">
                               <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
                               <div className="min-w-0 flex-1">
-                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
-                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
+                                <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                                <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
                               </div>
                             </div>
                             <div className="flex items-center justify-center">
-                              <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
+                              <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
                             </div>
                             {isTwoGame && (
                               <div className="flex items-center justify-center">
-                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
+                                <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
                               </div>
                             )}
                             {hasG3 && (
                               <div className="flex items-center justify-center">
-                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
+                                <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
                               </div>
                             )}
                             <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
@@ -749,21 +749,21 @@ export default function ScoreboardLivePage() {
                             <div className="flex items-center gap-1 sm:gap-1.5">
                               <User size={14} className="shrink-0 text-blue-500" />
                               <div className="min-w-0 flex-1">
-                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
-                                <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
+                                <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                                <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
                               </div>
                             </div>
                             <div className="flex items-center justify-center">
-                              <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
+                              <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
                             </div>
                             {isTwoGame && (
                               <div className="flex items-center justify-center">
-                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
+                                <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
                               </div>
                             )}
                             {hasG3 && (
                               <div className="flex items-center justify-center">
-                                <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
+                                <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
                               </div>
                             )}
                           </div>
@@ -944,10 +944,10 @@ export default function ScoreboardLivePage() {
                           return (
                             <div className="mt-2 sm:mt-3" style={{ display: "grid", gridTemplateColumns: `1fr repeat(${cols - 1}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
                               {/* Header */}
-                              <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
-                              <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
-                              {isMultiGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
-                              {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                              <div className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">PASANGAN</div>
+                              <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 1</div>
+                              {isMultiGame && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 2</div>}
+                              {hasG3 && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 3</div>}
                               <hr className="border-gray-200" style={{ gridColumn: `1 / span ${cols}` }} />
                               {/* Team 1 */}
                               <div className="flex items-center gap-1 sm:gap-1.5">
@@ -1032,7 +1032,7 @@ export default function ScoreboardLivePage() {
           {/* Hasil Pertandingan */}
           <h2 className="mb-2 text-[10px] font-semibold tracking-wide text-gray-700 uppercase sm:text-xs">Hasil Pertandingan</h2>
           {roundMatches.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {roundMatches
                 .sort((a, b) => {
                   if (a.status !== "completed" && b.status === "completed") return -1;
@@ -1060,51 +1060,51 @@ export default function ScoreboardLivePage() {
                   const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
 
                   return (
-                    <div key={m.id} className={`relative rounded-xl border bg-white p-2 shadow-sm sm:p-2.5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
+                    <div key={m.id} className={`relative rounded-xl border bg-white p-4 shadow-sm sm:p-5 ${hasCourt ? (color.border || "border-gray-200") : "border-gray-200"}`}>
                       {/* Court label */}
                       <div className="mb-1.5 flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-[9px] font-bold text-gray-700 sm:text-[10px]">
+                        <span className="flex items-center gap-1.5 text-sm font-bold text-gray-700 sm:text-base">
                           {hasCourt ? (
-                            <span className={`rounded px-1 py-0.5 text-[8px] font-black text-white sm:px-1.5 sm:text-[9px] ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
+                            <span className={`rounded px-1.5 py-0.5 text-xs font-black text-white sm:px-2 sm:text-sm ${color.bg}`}>{courts[courtIdx]?.name || courtIdx + 1}</span>
                           ) : (
-                            <span className="rounded bg-gray-100 px-1 py-0.5 text-[8px] font-black text-gray-400 sm:px-1.5 sm:text-[9px]">Belum</span>
+                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-black text-gray-400 sm:px-2 sm:text-sm">Belum</span>
                           )}
                           {mIsLive ? <span className="text-green-600">● LIVE</span> : mIsCompleted ? (m.winnerTeam === null ? <span className="text-amber-500">✓ SERI</span> : <span className="text-green-600">✓</span>) : <span className="text-gray-400">⏳</span>}
                         </span>
-                        <span className="text-[8px] text-gray-400 sm:text-[9px]">R{m.round}</span>
+                        <span className="text-sm text-gray-400 sm:text-base">R{m.round}</span>
                         {mIsCompleted && (
                           <button onClick={() => setCardMatch(m)} title="Buat Match Card"
-                            className="inline-flex items-center gap-0.5 rounded border border-gray-200 px-1 py-0.5 text-[8px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[9px]">
+                            className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-sm">
                             <ImageIcon className="h-2.5 w-2.5" /> Card
                           </button>
                         )}
                       </div>
                       {/* Grid table */}
                       <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
-                        <div className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">PASANGAN</div>
-                        <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 1</div>
-                        {isTwoGame && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 2</div>}
-                        {hasG3 && <div className="text-center text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-[10px]">GAME 3</div>}
+                        <div className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">PASANGAN</div>
+                        <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 1</div>
+                        {isTwoGame && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 2</div>}
+                        {hasG3 && <div className="text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-gray-400 sm:text-sm">GAME 3</div>}
                         <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
                         {/* Team 1 */}
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
                           <div className="min-w-0 flex-1">
-                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
-                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
+                            <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                            <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-center">
-                          <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
+                          <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1s}</span>
                         </div>
                         {isTwoGame && (
                           <div className="flex items-center justify-center">
-                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
+                            <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g2}</span>
                           </div>
                         )}
                         {hasG3 && (
                           <div className="flex items-center justify-center">
-                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
+                            <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t1g3}</span>
                           </div>
                         )}
                         <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
@@ -1112,21 +1112,21 @@ export default function ScoreboardLivePage() {
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <User size={14} className="shrink-0 text-blue-500" />
                           <div className="min-w-0 flex-1">
-                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
-                            <p className={`truncate text-[10px] sm:text-[11px] ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
+                            <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                            <p className={`truncate text-sm sm:text-base ${mIsCompleted ? (m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === null ? "text-gray-700" : "text-gray-400") : "font-medium text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-center">
-                          <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
+                          <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2s}</span>
                         </div>
                         {isTwoGame && (
                           <div className="flex items-center justify-center">
-                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
+                            <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g2}</span>
                           </div>
                         )}
                         {hasG3 && (
                           <div className="flex items-center justify-center">
-                            <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
+                            <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${mIsCompleted ? (g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400") : "border-gray-200 bg-white text-gray-700"}`}>{t2g3}</span>
                           </div>
                         )}
                       </div>

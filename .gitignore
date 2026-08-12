@@ -58,4 +58,16 @@ open-firewall-3002.bat
 wa-bot/node_modules/
 wa-bot/.env
 wa-bot/session/
+wa-bot/firebase-service-account.json
+wa-bot/bot.log
+wa-bot/bot.err.log
+wa-bot/qr.png
+
+# firebase service account (keep local, jangan pernah commit)
+firebase-service-account.json
+badminton-mabar-19b0e-firebase-adminsdk-fbsvc-dacac7b014.json
+*-firebase-adminsdk-*.json
+
+# paket bot (mengandung service account - hanya untuk dibagikan manual, jangan commit)
+wa-bot-setup.zip
 

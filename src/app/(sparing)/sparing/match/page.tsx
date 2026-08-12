@@ -10,6 +10,7 @@ import { Swords, Plus, X, ChevronLeft, Play, Trophy, Clock, Radio, Timer, Star, 
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { MatchCardModal } from "@/components/match-card-modal";
+import { toDateOnly, todayDateOnly } from "@/lib/utils";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -1125,8 +1126,8 @@ function SelectionView({ schedules, tournaments, matches, tournamentSchedIds, sp
   }, [schedules, tournaments, tournamentSchedIds, matches]);
 
   const [filter, setFilter] = useState<"today" | "all">("today");
-  const todayStr = new Date().toISOString().split("T")[0];
-  const isToday = (s: ApiSchedule) => s.date.split("T")[0] === todayStr;
+  const todayStr = todayDateOnly();
+  const isToday = (s: ApiSchedule) => toDateOnly(s.date) === todayStr;
   const visibleSparings = filter === "all" ? sparings : sparings.filter(isToday);
   const visibleMabar = filter === "all" ? mabarSchedules : mabarSchedules.filter(isToday);
   const visibleTournamentCards =

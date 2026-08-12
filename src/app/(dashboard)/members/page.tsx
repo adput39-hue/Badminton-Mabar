@@ -5,7 +5,7 @@ import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiMember as Member, ApiAttendance, ApiMatch, ApiMatchHistory } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, Search, UserCheck, UserX, Camera, MapPin, Venus, Mars, FileSpreadsheet, Upload } from "lucide-react";
-import { toTitleCase } from "@/lib/utils";
+import { toTitleCase, todayDateOnly } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { compressImage } from "@/lib/compress-image";
 import { getClientPbId } from "@/lib/tenant";
@@ -186,7 +186,7 @@ export default function MembersPage() {
       const payload: Record<string, unknown> = { name: form.name.trim(), phone: form.phone || null, address: form.address || null, class: form.class, gender: form.gender || null, memberType: form.memberType || "member" };
       if (form.photo !== "__keep__") payload.photo = form.photo || null;
       if (editId) await update(editId, payload);
-      else await add({ ...payload, type: "1", joinedAt: new Date().toISOString().split("T")[0] });
+      else await add({ ...payload, type: "1", joinedAt: todayDateOnly() });
       toast("success", editId ? "Anggota berhasil diperbarui" : "Anggota berhasil ditambahkan");
       setShowForm(false);
     } catch (err) {

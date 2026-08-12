@@ -6,6 +6,7 @@ import type { ApiKasMutasi, ApiKasBiaya, ApiSchedule } from "@/lib/api-types";
 import { Plus, Pencil, Trash2, X, ArrowUpRight, ArrowDownRight, Search, Wallet, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { useToast } from "@/components/toast";
+import { todayDateOnly } from "@/lib/utils";
 
 export default function KasMutasiPage() {
   const { items: mutasis, add, update, remove, loaded: mutasisLoaded } = useApi<ApiKasMutasi>("kas-mutasi");
@@ -16,7 +17,7 @@ export default function KasMutasiPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0], scheduleId: "" });
+  const [form, setForm] = useState({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: todayDateOnly(), scheduleId: "" });
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
@@ -37,7 +38,7 @@ export default function KasMutasiPage() {
 
   function openAdd() {
     setEditId(null);
-    setForm({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: new Date().toISOString().split("T")[0], scheduleId: "" });
+    setForm({ type: "masuk", biayaId: "", description: "", amount: "", tanggal: todayDateOnly(), scheduleId: "" });
     setShowForm(true);
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, CalendarDays, UserCheck, Search } from "lucide-react";
 import type { ApiSchedule, ApiMember, ApiAttendance } from "@/lib/api-types";
+import { toDateOnly, todayDateOnly } from "@/lib/utils";
 
 export default function AbsenPage() {
   const [pbId, setPbId] = useState("");
@@ -27,7 +28,7 @@ export default function AbsenPage() {
     setReading(false);
   }, []);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayDateOnly();
 
   useEffect(() => {
     if (!pbId) return;
@@ -57,7 +58,7 @@ export default function AbsenPage() {
         setSchedules(scheds);
         setMembers(mems);
         setAttendances(atts);
-        const todayScheds = scheds.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled");
+        const todayScheds = scheds.filter((s) => toDateOnly(s.date) === today && s.status !== "cancelled");
         if (todayScheds.length === 1) setSelSched(todayScheds[0].id);
       } catch {
         if (!cancelled) setError("Gagal memuat data");
@@ -69,7 +70,7 @@ export default function AbsenPage() {
   }, [pbId, today]);
 
   const todaySchedules = useMemo(
-    () => schedules.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled"),
+    () => schedules.filter((s) => toDateOnly(s.date) === today && s.status !== "cancelled"),
     [schedules, today]
   );
 

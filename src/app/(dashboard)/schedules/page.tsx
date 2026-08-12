@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { useApi } from "@/lib/api-store";
 import type { ApiSchedule as Schedule, ApiAttendance as Attendance, ApiMember as Member, ApiMatch } from "@/lib/api-types";
-import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign, Camera } from "lucide-react";
-import { toTitleCase } from "@/lib/utils";
+import { Plus, X, Calendar, MapPin, Users, Clock, CheckCircle2, Circle, XCircle, UserPlus, Grid3X3, DollarSign, Camera, MessageCircle, Loader2 } from "lucide-react";
+import { toTitleCase, toDateOnly, todayDateOnly } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { PhotoboxModal } from "@/components/photobox-modal";
 
@@ -46,8 +46,37 @@ const [showTambahLap, setShowTambahLap] = useState(false);
   const [form, setForm] = useState({ title: "", date: "", location: "", max_participants: "", htm: "", htmInsidentil: "", cockPrice: "", notes: "" });
   const [courtsList, setCourtsList] = useState<{name: string; startTime: string; endTime: string}[]>([]);
   const [courtInput, setCourtInput] = useState({ name: "", startTime: "", endTime: "" });
-  const [saving, setSaving] = useState(false);
+const [saving, setSaving] = useState(false);
+  const [waSending, setWaSending] = useState<string | null>(null);
   const { toast } = useToast();
+
+  async function sendWhatsApp(type: "jadwal" | "reminder", scheduleId: string) {
+    if (waSending) return;
+    const key = type + ":" + scheduleId;
+    const target = type === "jadwal" ? "semua anggota" : "peserta jadwal";
+    const okText = type === "jadwal" ? "Sebar jadwal ke semua anggota?" : "Kirim reminder ke peserta jadwal?";
+    if (!window.confirm(okText)) return;
+    setWaSending(key);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, scheduleId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.queued) {
+        toast("success", `Masuk antrean: ${data.phoneTargets} penerima (${target}), ${data.noPhone} tanpa nomor`);
+      } else if (res.ok && data.ok) {
+        toast("success", `Terkirim ${data.sent} (${target}), ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
+      } else {
+        toast("error", data.error || "Gagal mengirim WhatsApp");
+      }
+    } catch {
+      toast("error", "Gagal mengirim WhatsApp");
+    } finally {
+      setWaSending(null);
+    }
+  }
 
 const existingLocations = [...new Set(schedules.map((s) => s.location).filter(Boolean))] as string[];
   const usedSchedules = new Set(attendances.filter((a) => a.status !== "undangan").map((a) => a.scheduleId));
@@ -60,7 +89,7 @@ function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "
     const htmIns = s.htmInsidentil ? String(s.htmInsidentil).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : "";
     let notesVal = s.notes || "";
     try { const parsed = JSON.parse(notesVal); const { gameMode, paidMembers, ...rest } = parsed; notesVal = Object.keys(rest).length ? JSON.stringify(rest) : ""; } catch {}
-    setForm({ title: s.title, date: s.date.split("T")[0], location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, htmInsidentil: htmIns, cockPrice: s.cockPrice ? String(s.cockPrice) : "", notes: notesVal });
+    setForm({ title: s.title, date: toDateOnly(s.date), location: s.location || "", max_participants: String(s.maxParticipants || ""), htm: htmVal, htmInsidentil: htmIns, cockPrice: s.cockPrice ? String(s.cockPrice) : "", notes: notesVal });
     try { setCourtsList(s.courts ? JSON.parse(s.courts) : []); } catch { setCourtsList([]); }
     setCourtInput({ name: "", startTime: "", endTime: "" });
     setShowForm(true);
@@ -116,9 +145,9 @@ function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "
     else await addAtt({ scheduleId, memberId, status, confirmedAt: new Date().toISOString() });
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = schedules.filter((s) => new Date(s.date).toISOString().split("T")[0] >= today && s.status !== "cancelled");
-  const past = schedules.filter((s) => new Date(s.date).toISOString().split("T")[0] < today || s.status === "completed" || s.status === "cancelled");
+const today = todayDateOnly();
+  const upcoming = schedules.filter((s) => toDateOnly(s.date) >= today && s.status !== "cancelled");
+  const past = schedules.filter((s) => toDateOnly(s.date) < today || s.status === "completed" || s.status === "cancelled");
 
   if (!schedulesLoaded || !membersLoaded || !attendancesLoaded || !matchesLoaded) return <LoadingSpinner />;
 
@@ -147,7 +176,10 @@ function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "
               onPilihPeserta={() => setShowPeserta(s.id)}
               onAttend={() => setShowAtt(s.id)}
               onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} hasMatches={matches.some((m) => m.scheduleId === s.id)}
-              onPhotobox={() => setPhotoboxFor(s)} />
+              onPhotobox={() => setPhotoboxFor(s)}
+              waSending={waSending}
+              onSendJadwal={() => sendWhatsApp("jadwal", s.id)}
+              onSendReminder={() => sendWhatsApp("reminder", s.id)} />
           ))}
           {past.length > 0 && <h2 className="pt-4 text-sm font-semibold text-gray-400 uppercase tracking-wider">Riwayat</h2>}
           {past.map((s) => (
@@ -157,7 +189,10 @@ function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "
               onPilihPeserta={() => setShowPeserta(s.id)}
               onAttend={() => setShowAtt(s.id)}
               onEdit={() => openEdit(s)} isUsed={usedSchedules.has(s.id)} hasMatches={matches.some((m) => m.scheduleId === s.id)}
-              onPhotobox={() => setPhotoboxFor(s)} />
+              onPhotobox={() => setPhotoboxFor(s)}
+              waSending={waSending}
+              onSendJadwal={() => sendWhatsApp("jadwal", s.id)}
+              onSendReminder={() => sendWhatsApp("reminder", s.id)} />
           ))}
         </div>
       )}
@@ -307,12 +342,13 @@ function openAdd() { setEditId(null); setForm({ title: "", date: "", location: "
   );
 }
 
-function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, onPilihPeserta, onAttend, onEdit, isUsed, hasMatches, onPhotobox }: {
+function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, onPilihPeserta, onAttend, onEdit, isUsed, hasMatches, onPhotobox, waSending, onSendJadwal, onSendReminder }: {
   schedule: Schedule; onStatus: (id: string, s: Schedule["status"]) => void; onDelete: (id: string) => void;
   pesertaCount: number; hadirCount: number; onPilihPeserta: () => void; onAttend: () => void; onEdit: () => void; isUsed: boolean; hasMatches: boolean; onPhotobox: () => void;
+  waSending: string | null; onSendJadwal: () => void; onSendReminder: () => void;
 }) {
-  const d = new Date(schedule.date).toISOString().split("T")[0];
-  const today = new Date().toISOString().split("T")[0];
+const d = toDateOnly(schedule.date);
+  const today = todayDateOnly();
   const isUpcoming = d >= today;
   const badge = getDateBadge(schedule.date);
   const progress = Math.round((hadirCount / schedule.maxParticipants) * 100);
@@ -354,6 +390,12 @@ function ScheduleCard({ schedule, onStatus, onDelete, pesertaCount, hadirCount, 
           {schedule.status !== "cancelled" && <button onClick={onEdit} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Edit</button>}
           <button onClick={onPilihPeserta} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"><UserPlus className="h-3.5 w-3.5" />Pilih Peserta</button>
           <button onClick={onAttend} className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm">Absen</button>
+          <button onClick={onSendJadwal} disabled={waSending !== null} className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-xs font-medium text-green-700 transition-all hover:bg-green-100 disabled:opacity-50">
+            {waSending === "jadwal:" + schedule.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Sebar Jadwal
+          </button>
+          <button onClick={onSendReminder} disabled={waSending !== null} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm disabled:opacity-50">
+            {waSending === "reminder:" + schedule.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Reminder
+          </button>
           <button onClick={onPhotobox} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-sm"><Camera className="h-3.5 w-3.5" />Photobox</button>
           {isUpcoming && schedule.status === "planned" && !hasMatches && <>
             <button onClick={() => onStatus(schedule.id, "ongoing")} className="rounded-xl bg-[var(--color-primary-light)] px-4 py-2 text-xs font-medium text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary-lighter)] hover:shadow-sm">Mulai</button>

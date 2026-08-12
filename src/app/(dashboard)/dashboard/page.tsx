@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Calendar, Swords, Wallet, TrendingUp, Clock, MapPin, ArrowRight, PlusCircle, CalendarPlus, Trophy, CreditCard, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Users, Calendar, Swords, Wallet, TrendingUp, Clock, MapPin, ArrowRight, PlusCircle, CalendarPlus, Trophy, CreditCard, CheckCircle2, XCircle, AlertCircle, BarChart3 } from "lucide-react";
 import { getClientPbId } from "@/lib/tenant";
+import { getGrantedNavItems } from "@/lib/nav-items";
+import { toDateOnly } from "@/lib/utils";
 
 interface DashboardData {
   totalMembers: number; activeMembers: number; thisMonthSchedules: number;
@@ -78,7 +80,7 @@ export default function DashboardPage() {
       .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .forEach((s: any) => {
         if (seen.has(s.id)) return;
-        const key = `${new Date(s.date).toISOString().slice(0, 10)}|${(s.title || "").toLowerCase().trim()}|${(s.sparingOpponent || "").toLowerCase().trim()}`;
+        const key = `${toDateOnly(s.date)}|${(s.title || "").toLowerCase().trim()}|${(s.sparingOpponent || "").toLowerCase().trim()}`;
         if (seen.has(key)) return;
         seen.add(s.id);
         seen.add(key);
@@ -105,13 +107,70 @@ export default function DashboardPage() {
   const nextDate = nextSchedule ? getDateBadge(nextSchedule.date) : null;
 
   if (user && !hasDashboardAccess) {
+    const menuItems = getGrantedNavItems(user);
     return (
-      <div className="mx-auto flex max-w-2xl items-center justify-center py-20">
-        <div className="text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-4xl">🏸</div>
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">Selamat Datang, {user.fullName}!</h1>
-          <p className="mt-2 text-sm text-gray-500">Silakan gunakan menu di sidebar untuk memulai.</p>
+      <div className="mx-auto max-w-4xl py-4 px-4 sm:px-6">
+        {/* Hero Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-6 sm:p-8">
+          <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
+          <div className="relative flex items-end justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white/80">Selamat Datang,</p>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-bold text-white">{user.fullName}!</h1>
+              <p className="mt-2 text-sm text-white/70">Siapkan pilihan menu untuk memulai.</p>
+            </div>
+            <div className="hidden sm:flex items-center justify-center">
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="opacity-90">
+                <ellipse cx="85" cy="50" rx="30" ry="22" fill="white" fillOpacity="0.15" />
+                <ellipse cx="85" cy="50" rx="26" ry="18" fill="white" fillOpacity="0.1" />
+                <path d="M40 80 L85 50" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                <circle cx="40" cy="80" r="6" fill="white" fillOpacity="0.3" />
+                <circle cx="90" cy="45" r="8" fill="white" fillOpacity="0.4" />
+                <circle cx="90" cy="45" r="4" fill="white" fillOpacity="0.6" />
+              </svg>
+            </div>
+          </div>
         </div>
+
+        {/* Menu Utama */}
+        {menuItems.length === 0 ? (
+          <p className="mt-8 text-center text-sm text-gray-400">Belum ada menu yang diberikan untuk akun Anda.</p>
+        ) : (
+          <>
+            <h2 className="mt-8 mb-4 text-lg font-bold text-gray-900">Menu Utama</h2>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} href={item.href} className="group">
+                    <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.color}`}>
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-gray-900 leading-tight">{item.label}</p>
+                      {item.desc && <p className="mt-0.5 text-[11px] text-gray-500 leading-tight line-clamp-2">{item.desc}</p>}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Promo Card */}
+            <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600">
+                  <BarChart3 className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">Pantau permainan secara real-time</p>
+                  <p className="text-xs text-gray-500">Lihat skor langsung dan statistik pertandingan</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Swords, Plus, X, Trash2, Pencil, ExternalLink, XCircle, Check } from "l
 import { useToast } from "@/components/toast";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { compressImage } from "@/lib/compress-image";
+import { todayDateOnly } from "@/lib/utils";
 
 function getOpponentMemberIds(schedule: ApiSchedule): string[] {
   if (!schedule.notes) return [];
@@ -49,7 +50,7 @@ export default function SparingPage() {
   }, []);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
+  const [formDate, setFormDate] = useState(todayDateOnly());
   const [formOpponent, setFormOpponent] = useState("");
   const [formLogo, setFormLogo] = useState("");
   const [opponentPlayers, setOpponentPlayers] = useState<{ name: string; class: string }[]>([]);

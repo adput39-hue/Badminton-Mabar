@@ -6,6 +6,7 @@ import type { ApiMatch, ApiSchedule, ApiMember } from "@/lib/api-types";
 import { Clock, Radio, Timer, Star } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { toDateOnly, todayDateOnly } from "@/lib/utils";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -20,8 +21,8 @@ export default function PapanLapanganPage() {
   const { items: members, loaded: membersLoaded } = useApi<ApiMember>("members");
   const { items: matches, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
 
-  const today = new Date().toISOString().split("T")[0];
-  const todaySchedules = schedules.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled");
+  const today = todayDateOnly();
+  const todaySchedules = schedules.filter((s) => toDateOnly(s.date) === today && s.status !== "cancelled");
   const selId = todaySchedules[0]?.id || "";
   const schedule = schedules.find((s) => s.id === selId);
   const noSchedule = todaySchedules.length === 0;
@@ -64,8 +65,8 @@ export default function PapanLapanganPage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2">
             {courts.map((court, ci) => {
-              const cMatches = scheduleMatches.filter((m) => m.courtNumber === ci + 1);
-              const cDone = cMatches.filter((m) => m.status === "completed").length;
+              const cMatches = scheduleMatches.filter((m) => m.courtNumber === ci + 1 && m.status === "scheduled");
+              const cDone = scheduleMatches.filter((m) => m.courtNumber === ci + 1 && m.status === "completed").length;
               const color = courtColors[ci % courtColors.length];
               const hasLive = cMatches.some((m) => (m.scoreTeam1 || 0) + (m.scoreTeam2 || 0) > 0);
               return (
@@ -98,37 +99,36 @@ export default function PapanLapanganPage() {
                       )}
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
                     {cMatches.length === 0 ? (
                       <p className="py-2 text-center text-sm text-gray-400">Lapangan kosong</p>
                     ) : (
-                      cMatches.map((m) => {
-                        const isDone = m.status === "completed";
-                        return (
-                          <div key={m.id} className="rounded-lg border border-gray-100 p-3">
+                      [...cMatches]
+                        .sort((a, b) => a.round - b.round)
+                        .map((m, mi) => (
+                          <div key={m.id} className={`rounded-lg p-3 ${mi === 0 ? "border-2 border-[var(--color-primary)] bg-[var(--color-primary-light)]/40" : "border border-gray-100"}`}>
                             <div className="mb-2 flex items-center justify-between">
                               <span className="text-xs text-gray-400">R{m.round}</span>
-                              {isDone ? (
-                                <span className="text-xs font-bold text-[var(--color-primary)]">{m.winnerTeam !== null ? `${m.scoreTeam1}-${m.scoreTeam2}` : "SERI"}</span>
+                              {mi === 0 ? (
+                                <span className="text-[10px] font-bold text-[var(--color-primary)]">MAIN</span>
                               ) : (
                                 <span className="text-[10px] font-semibold text-gray-400">SIAP</span>
                               )}
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-center text-sm">
-                              <div className={`rounded-lg border-2 p-2 ${isDone && m.winnerTeam === 1 ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-100"}`}>
+                              <div className="rounded-lg border-2 border-gray-100 p-2">
                                 <p className="font-medium">{getName(m.team1Player1Id)}</p>
                                 <p className="text-xs text-gray-400">+</p>
                                 <p className="font-medium">{getName(m.team1Player2Id)}</p>
                               </div>
-                              <div className={`rounded-lg border-2 p-2 ${isDone && m.winnerTeam === 2 ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]" : "border-gray-100"}`}>
+                              <div className="rounded-lg border-2 border-gray-100 p-2">
                                 <p className="font-medium">{getName(m.team2Player1Id)}</p>
                                 <p className="text-xs text-gray-400">+</p>
                                 <p className="font-medium">{getName(m.team2Player2Id)}</p>
                               </div>
                             </div>
                           </div>
-                        );
-                      })
+                        ))
                     )}
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">

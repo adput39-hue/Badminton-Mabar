@@ -3,37 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
-import {
-  Home, Users, Heart, Swords, Calendar, Wallet, BarChart3, FileText, Settings, Menu, X, Search, Bell, Trophy, ChevronLeft, ChevronRight, Monitor, Shield, UserCog, DollarSign, ArrowUpRight, Tag, BookOpen, TrendingUp, Target, Grid3X3, QrCode,
-} from "lucide-react";
-
-const allNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Home, menuKey: "dashboard" },
-  { href: "/members", label: "Anggota", icon: Users, menuKey: "members" },
-  { href: "/schedules", label: "Jadwal", icon: Calendar, menuKey: "schedules" },
-  { href: "/mabar", label: "Mabar", icon: Heart, menuKey: "mabar" },
-  { href: "/qr-absen", label: "QR Absen", icon: QrCode, menuKey: "qr-absen" },
-  { href: "/papan-lapangan", label: "Papan Lapangan", icon: Grid3X3, menuKey: "papan-lapangan" },
-  { href: "/sparing", label: "Sparing", icon: Swords, menuKey: "sparing" },
-  { href: "/league", label: "League", icon: Trophy, menuKey: "turnamen" },
-  { href: "/riwayat", label: "Riwayat", icon: Trophy, menuKey: "riwayat" },
-  { href: "/sparing/match", label: "Match", icon: Swords, menuKey: "sparing" },
-  { href: "/scoreboard", label: "Scoreboard", icon: Monitor, menuKey: "scoreboard" },
-  { href: "/scoreboard-live", label: "Live Score", icon: Trophy, menuKey: "live-score" },
-  { href: "/laporan-cock", label: "Lap. Pemakaian Cock", icon: Target, menuKey: "laporan-cock" },
-  { href: "/bayar-htm", label: "Bayar HTM", icon: DollarSign, menuKey: "htm" },
-  { href: "/master-biaya", label: "Master Biaya", icon: Tag, menuKey: "master-biaya" },
-  { href: "/kas-mutasi", label: "Mutasi Kas", icon: ArrowUpRight, menuKey: "kas-mutasi" },
-  { href: "/kas", label: "Kas PB", icon: Wallet, menuKey: "finances" },
-  { href: "/hutang", label: "Kartu Hutang", icon: BookOpen, menuKey: "hutang" },
-  { href: "/laba-rugi", label: "Laba Rugi", icon: TrendingUp, menuKey: "laba-rugi" },
-  { href: "/laporan", label: "Laporan", icon: FileText, menuKey: "reports" },
-  { href: "/statistik", label: "Statistik", icon: BarChart3, menuKey: "stats" },
-  { href: "/users", label: "Master User", icon: Shield, menuKey: "users" },
-  { href: "/user-levels", label: "Level Manager", icon: UserCog, menuKey: "user-levels" },
-  { href: "/settings", label: "Pengaturan", icon: Settings, menuKey: "settings" },
-];
+import { LogOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { getGrantedNavItems } from "@/lib/nav-items";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,13 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch {}
   }, []);
 
-  const grantedMenus = user?.level?.menus;
-  const navItems = user?.role === "superadmin"
-    ? allNavItems
-    : grantedMenus
-      ? allNavItems.filter((item) => grantedMenus.includes(item.menuKey))
-      : allNavItems;
-
+  const navItems = getGrantedNavItems(user);
   function logout() {
     localStorage.removeItem("user");
     router.replace("/auth/login");
@@ -63,9 +28,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-bg)]">
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-black opacity-40 lg:hidden" onClick={() => setMobileOpen(false)} />}
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-black opacity-40 2xl:hidden" onClick={() => setMobileOpen(false)} />}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 lg:static ${mobileOpen ? "max-lg:[transform:translateX(0%)]" : "max-lg:[transform:translateX(-100%)]"} ${collapsed ? "w-16" : "w-60"}`}>
+      {/* Floating hamburger for mobile/tablet */}
+      <button onClick={() => setMobileOpen(true)} className="fixed top-4 left-4 z-30 rounded-xl bg-white p-2.5 shadow-lg border border-gray-200 2xl:hidden">
+        <Menu className="h-5 w-5 text-gray-700" />
+      </button>
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-200 bg-white transition-all duration-300 2xl:static ${mobileOpen ? "max-2xl:[transform:translateX(0%)]" : "max-2xl:[transform:translateX(-100%)]"} ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 min-h-[68px]">
           <div className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl text-xl shrink-0 ${user?.pb?.logoUrl ? "" : "bg-[var(--color-primary)]"}`}>{user?.pb?.logoUrl ? <img src={user.pb.logoUrl} alt="Logo" className="h-full w-full object-cover" /> : <span></span>}</div>
           {!collapsed && (
@@ -74,8 +44,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-xs text-[var(--color-primary)] font-medium">Main Bareng</p>
             </div>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="ml-auto rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hidden lg:block">{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>
-          <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 lg:hidden"><X className="h-5 w-5" /></button>
+          <button onClick={() => setCollapsed(!collapsed)} className="ml-auto rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hidden 2xl:block">{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button>
+          <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 2xl:hidden"><X className="h-5 w-5" /></button>
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
@@ -99,35 +69,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
+
+        {/* User info + Logout at bottom */}
+        <div className="border-t border-gray-100 px-3 py-3">
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 px-2 py-2 mb-1">
+              <div className="h-8 w-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-bold shrink-0">{user ? user.fullName.charAt(0).toUpperCase() : 'A'}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-900 truncate">{user?.fullName || 'Admin'}</p>
+                <p className="text-[10px] text-gray-500 truncate">{user?.role || 'Admin PB'}</p>
+              </div>
+            </div>
+          )}
+          <button onClick={logout} className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-all w-full ${collapsed ? "justify-center px-0" : ""}`}>
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Keluar</span>}
+          </button>
+        </div>
       </aside>
 
       <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-          <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"><Menu className="h-5 w-5" /></button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">Dashboard <span className="text-xl">👋</span></h1>
-            <p className="text-xs text-gray-500">Selamat datang kembali{user ? `, ${user.fullName}` : ''}</p>
-          </div>
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input placeholder="Cari anggota, jadwal, match..." className="w-64 rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white" />
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-1.5">
-            <div className="h-7 w-7 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-bold">{user ? user.fullName.charAt(0).toUpperCase() : 'A'}</div>
-            <div className="hidden sm:block">
-              <p className="text-xs font-semibold text-gray-900">{user?.fullName || 'Admin'}</p>
-              <p className="text-[10px] text-gray-500">Admin PB</p>
-            </div>
-          </div>
-          <button onClick={logout} className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors" title="Keluar">
-            <LogOut className="h-4 w-4" />
-          </button>
-        </header>
-
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pt-16 2xl:pt-4">{children}</main>
       </div>
     </div>
   );
 }
-
-

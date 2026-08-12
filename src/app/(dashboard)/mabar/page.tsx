@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/lib/api-store";
 import type { ApiMatch, ApiSchedule, ApiMember, ApiAttendance, ApiMatchHistory } from "@/lib/api-types";
 import { useToast } from "@/components/toast";
-import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2, Shuffle, MessageCircle } from "lucide-react";
+import { Swords, UserPlus, Trophy, Medal, Users, Check, XIcon, Plus, ListChecks, Play, BarChart3, Pencil, Clock, Radio, Timer, Star, Loader2, Shuffle } from "lucide-react";
 import CourtIcon from "@/components/court-icon";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { buildPairingSuggestions, type PairingRecord, type PairingSuggestion } from "@/lib/pairing";
+import { toDateOnly, todayDateOnly } from "@/lib/utils";
 
 const courtColors = [
   { bg: "bg-green-500", border: "border-green-500", text: "text-green-600", badge: "bg-green-100 text-green-700", badgeIcon: "text-green-500", liveBadge: "bg-green-500 text-white" },
@@ -24,8 +25,8 @@ export default function MabarPage() {
   const { items: matches, add: addMatch, update: updateMatch, remove: removeMatch, loaded: matchesLoaded } = useApi<ApiMatch>("matches");
   const { items: history, add: addHistory, loaded: historyLoaded } = useApi<ApiMatchHistory>("match-history");
 
-  const today = new Date().toISOString().split("T")[0];
-  const todaySchedules = schedules.filter((s) => s.date.split("T")[0] === today && s.status !== "cancelled");
+  const today = todayDateOnly();
+  const todaySchedules = schedules.filter((s) => toDateOnly(s.date) === today && s.status !== "cancelled");
   const selId = todaySchedules[0]?.id || "";
   const schedule = schedules.find((s) => s.id === selId);
   const noSchedule = todaySchedules.length === 0;
@@ -58,35 +59,7 @@ export default function MabarPage() {
   const [showReferensi, setShowReferensi] = useState(false);
   const [pairMode, setPairMode] = useState<"all" | string>("all");
   const [assignCourtFor, setAssignCourtFor] = useState<string | null>(null);
-  const [waSending, setWaSending] = useState<string | null>(null);
   const { toast } = useToast();
-
-  async function sendWhatsApp(type: "jadwal" | "reminder") {
-    if (waSending) return;
-    const target = type === "jadwal" ? "semua anggota" : "peserta jadwal";
-    const okText = type === "jadwal" ? "Sebar jadwal ke semua anggota?" : "Kirim reminder ke peserta jadwal?";
-    if (!window.confirm(okText)) return;
-    setWaSending(type);
-    try {
-      const res = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, scheduleId: schedule?.id || null }),
-      });
-      const data = await res.json();
-      if (res.ok && data.queued) {
-        toast("success", `Masuk antrean: ${data.phoneTargets} penerima (${target}), ${data.noPhone} tanpa nomor`);
-      } else if (res.ok && data.ok) {
-        toast("success", `Terkirim ${data.sent} (${target}), ${data.noPhone} tanpa nomor, ${data.failed} gagal`);
-      } else {
-        toast("error", data.error || "Gagal mengirim WhatsApp");
-      }
-    } catch {
-      toast("error", "Gagal mengirim WhatsApp");
-    } finally {
-      setWaSending(null);
-    }
-  }
 
   function getGameMode(): string {
     if (!schedule?.notes) return "";
@@ -264,16 +237,6 @@ export default function MabarPage() {
                 <button onClick={() => setShowSearch(!showSearch)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><UserPlus className="h-3.5 w-3.5" /> Tambah</button>
                 <button onClick={() => setShowStats(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><BarChart3 className="h-3.5 w-3.5" /> Rotasi</button>
                 <button onClick={() => setShowReferensi(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50"><Shuffle className="h-3.5 w-3.5" /> Referensi</button>
-                {schedule && (
-                  <div className="flex flex-col gap-1.5">
-                    <button onClick={() => sendWhatsApp("jadwal")} disabled={waSending !== null || !schedule} className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-xs font-medium text-green-700 transition-all hover:bg-green-100 disabled:opacity-50">
-                      {waSending === "jadwal" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Sebar Jadwal
-                    </button>
-                    <button onClick={() => sendWhatsApp("reminder")} disabled={waSending !== null || !schedule} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 disabled:opacity-50">
-                      {waSending === "reminder" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />} Reminder
-                    </button>
-                  </div>
-                )}
                 {schedule?.status !== "completed" && <button onClick={handleSelesai} className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-primary-hover)]"><Check className="h-3.5 w-3.5" /> Selesai</button>}
                 <a href="/riwayat" className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50">Riwayat</a>
               </div>
@@ -377,13 +340,17 @@ export default function MabarPage() {
                         )}
                       </div>
                     </div>
-                    <div className="mt-4 space-y-2">
-                      {cMatches.length === 0 ? (
-                        <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
-                      ) : (
-                        cMatches.map((m) => <MatchCard key={m.id} match={m} getName={getName} onScore={(s1, s2, cc, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, cc, s1g2, s2g2, s1g3, s2g3)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} onEdit={() => { setEditMatch(m); setShowCreate(true); }} />)
-                      )}
-                    </div>
+                    <div className="mt-4 max-h-[240px] space-y-2 overflow-y-auto pr-1">
+                  {cMatches.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-2 text-center">Lapangan kosong</p>
+                  ) : (
+                    [...cMatches]
+                      .sort((a, b) => a.round - b.round)
+                      .map((m, mi) => (
+                        <MatchCard key={m.id} match={m} getName={getName} isActive={mi === 0} onScore={(s1, s2, cc, s1g2, s2g2, s1g3, s2g3) => handleScore(m.id, s1, s2, cc, s1g2, s2g2, s1g3, s2g3)} onFinish={() => handleFinish(m.id)} onDelete={() => removeMatch(m.id)} onEdit={() => { setEditMatch(m); setShowCreate(true); }} />
+                      ))
+                  )}
+                </div>
                     <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
                       <div className={`flex items-center gap-2 text-sm font-medium ${hasLive ? color.text : "text-gray-500"}`}>
                         <Swords className={`h-4 w-4 ${hasLive ? "" : "text-gray-400"}`} />
@@ -447,8 +414,8 @@ export default function MabarPage() {
   );
 }
 
-function MatchCard({ match, getName, onScore, onDelete, onFinish, onEdit }: {
-  match: ApiMatch; getName: (id: string) => string; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void; onFinish: () => void; onEdit: () => void;
+function MatchCard({ match, getName, isActive, onScore, onDelete, onFinish, onEdit }: {
+  match: ApiMatch; getName: (id: string) => string; isActive?: boolean; onScore: (s1: number, s2: number, cockCount: number, s1g2?: number, s2g2?: number, s1g3?: number, s2g3?: number) => void; onDelete: () => void; onFinish: () => void; onEdit: () => void;
 }) {
   const [s1, setS1] = useState(match.scoreTeam1 !== null ? String(match.scoreTeam1) : "");
   const [s2, setS2] = useState(match.scoreTeam2 !== null ? String(match.scoreTeam2) : "");
@@ -470,11 +437,14 @@ function MatchCard({ match, getName, onScore, onDelete, onFinish, onEdit }: {
   const hasG3 = (match.scoreTeam1Game3 || 0) > 0 || (match.scoreTeam2Game3 || 0) > 0;
 
   return (
-    <div className="rounded-lg border border-gray-100 p-3">
+    <div className={`rounded-lg p-3 ${isActive ? "border-2 border-[var(--color-primary)] bg-[var(--color-primary-light)]/40" : "border border-gray-100"}`}>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-gray-400">R{match.round}</span>
           <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">{modeLabel[gameMode]}</span>
+          {isActive && match.status === "scheduled" && (
+            <span className="rounded bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-bold text-white">MAIN</span>
+          )}
         </div>
         {match.status === "scheduled" && (
           <div className="flex items-center gap-1">
@@ -728,31 +698,28 @@ function PlayerSelect({ players, selectedId, onSelect, placeholder, playerMatchC
   return (
     <div className="relative">
       <button type="button" onClick={() => { setOpen(!open); setQuery(""); }}
-        className="w-full overflow-hidden rounded-lg border border-gray-200 px-3 py-2 text-sm text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
-        {selected ? <span className="truncate block">{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
+        className="w-full overflow-hidden rounded-lg border border-gray-200 px-4 py-3 text-base text-left focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10">
+        {selected ? <span className="truncate block font-medium">{selected.name}</span> : <span className="text-gray-400">{placeholder}</span>}
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 z-20 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus placeholder="Ketik untuk cari..."
-              className="w-full rounded-t-xl border-b border-gray-200 px-3 py-2 text-sm focus:outline-none" />
-            <div className="max-h-48 overflow-y-auto">
-              {filtered.map((p) => {
-                const count = playerMatchCounts.get(p.id) || 0;
-                return (
-                  <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); setQuery(""); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-primary-light)]">
-                    <span className="flex-1 truncate text-left">{p.name}</span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${classBadgeStyle[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span>
-                    <span className="w-8 shrink-0 text-right text-xs text-gray-400">({count})</span>
-                  </button>
-                );
-              })}
-              {filtered.length === 0 && <p className="px-3 py-3 text-center text-xs text-gray-400">Tidak ditemukan</p>}
-            </div>
+        <div className="mt-1 rounded-xl border border-gray-200 bg-white shadow-lg">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus placeholder="Ketik untuk cari..."
+            className="w-full rounded-t-xl border-b border-gray-200 px-4 py-2.5 text-base focus:outline-none" />
+          <div className="max-h-44 overflow-y-auto">
+            {filtered.map((p) => {
+              const count = playerMatchCounts.get(p.id) || 0;
+              return (
+                <button key={p.id} type="button" onClick={() => { onSelect(p.id); setOpen(false); setQuery(""); }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-base transition-colors hover:bg-[var(--color-primary-light)]">
+                  <span className="flex-1 truncate text-left font-medium">{p.name}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${classBadgeStyle[p.class] || "bg-gray-100 text-gray-600"}`}>{p.class}</span>
+                  <span className="w-8 shrink-0 text-right text-sm text-gray-400">({count})</span>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && <p className="px-4 py-3 text-center text-xs text-gray-400">Tidak ditemukan</p>}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -805,8 +772,8 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-lg self-center rounded-2xl bg-white shadow-2xl my-auto">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">{editMatch ? "Edit Pertandingan" : "Draft Pertandingan"}</h2>
           <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"><XIcon className="h-5 w-5" /></button>
@@ -840,7 +807,7 @@ function CreateMatchForm({ hadir, pairMode, onPairMode, classes, editMatch, game
             ))}
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-2 pb-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Batal</button>
             <button type="submit" disabled={!team1[0] || !team1[1] || !team2[0] || !team2[1]} className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-hover)] disabled:opacity-50">{editMatch ? "Simpan" : "Buat Draft"}</button>
           </div>

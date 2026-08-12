@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toDateOnly, todayDateOnly } from "@/lib/utils";
 
 export async function GET(request: Request) {
   try {
@@ -16,10 +17,10 @@ export async function GET(request: Request) {
     });
     const allMutasis = await prisma.kasMutasi.findMany({ where: { ...where, void: 0 } });
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayDateOnly();
     const monthStart = new Date();
     monthStart.setDate(1);
-    const monthStartStr = monthStart.toISOString().split("T")[0];
+    const monthStartStr = toDateOnly(monthStart);
 
     const memberMap = new Map(members.map((m) => [m.id, m]));
 
@@ -40,11 +41,11 @@ export async function GET(request: Request) {
       totalMembers: members.length,
       activeMembers: members.filter((m) => m.isActive).length,
       thisMonthSchedules: schedules.filter(
-        (s) => s.date.toISOString().split("T")[0] >= monthStartStr && s.status !== "cancelled"
+        (s) => toDateOnly(s.date) >= monthStartStr && s.status !== "cancelled"
       ).length,
       completedMatches: matches.filter((m) => m.status === "completed").length,
       upcomingSchedules: schedules
-        .filter((s) => s.date.toISOString().split("T")[0] >= today && s.status === "planned")
+        .filter((s) => toDateOnly(s.date) >= today && s.status === "planned")
         .sort((a, b) => a.date.getTime() - b.date.getTime())
         .slice(0, 5)
         .map((s) => ({ id: s.id, title: s.title, date: s.date, startTime: s.startTime })),

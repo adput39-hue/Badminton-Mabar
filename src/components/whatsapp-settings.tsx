@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/toast";
+import { listenBotState, isFirebaseConfigured as firebaseConfigured } from "@/lib/firebase";
 import { MessageCircle, Save, Loader2, ChevronDown, Play, Smartphone, RefreshCw, QrCode, LogOut } from "lucide-react";
 
 interface WaTemplateForm {
@@ -42,11 +43,19 @@ export default function WhatsAppSettings() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch("/api/whatsapp/bot");
-        const data = await res.json();
-        if (!cancelled && typeof data?.state === "string") setBotStatus(data);
-      } catch {}
+      if (firebaseConfigured()) {
+        const { readBotState } = await import("@/lib/firebase");
+        const st = await readBotState();
+        if (!cancelled && st && typeof st.state === "string") {
+          setBotStatus(st as { state: string; qr?: string; at?: string });
+        }
+      } else {
+        try {
+          const res = await fetch("/api/whatsapp/bot");
+          const data = await res.json();
+          if (!cancelled && typeof data?.state === "string") setBotStatus(data);
+        } catch {}
+      }
       try {
         const res = await fetch("/api/whatsapp/config");
         const data = await res.json();
@@ -76,8 +85,26 @@ export default function WhatsAppSettings() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    if (firebaseConfigured()) {
+      const unsub = listenBotState((state) => {
+        if (cancelled) return;
+        if (state && typeof state.state === "string") {
+          setBotStatus({ state: state.state, qr: state.qr, at: state.at });
+        } else {
+          setBotStatus({ state: "offline" });
+        }
+      });
+      return () => {
+        cancelled = true;
+        if (unsub) unsub();
+      };
+    }
     const t = setInterval(refreshBotStatus, 5000);
-    return () => clearInterval(t);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
   }, []);
 
   function setTpl(key: string, patch: Partial<WaTemplateForm>) {
@@ -146,7 +173,29 @@ export default function WhatsAppSettings() {
       .replace(/\{htmInsidentil\}/g, String(jadwal.htmInsidentil));
   }
 
-  async function refreshBotStatus() {
+  async function refreshBotStatus(force = false) {
+    if (botLoading) return;
+    if (force) {
+      setBotLoading(true);
+      try {
+        const res = await fetch("/api/whatsapp/bot", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cmd: "refresh" }),
+        });
+        if (res.ok) {
+          toast("success", "Bot diminta membuat QR baru. Tunggu beberapa detik...");
+          setTimeout(refreshBotStatus, 2500);
+        } else {
+          toast("error", "Gagal meminta QR baru");
+        }
+      } catch {
+        toast("error", "Gagal meminta QR baru");
+      } finally {
+        setBotLoading(false);
+      }
+      return;
+    }
     try {
       const res = await fetch("/api/whatsapp/bot");
       const data = await res.json();
@@ -278,8 +327,8 @@ export default function WhatsAppSettings() {
               <QrCode className="h-4 w-4 text-[var(--color-primary)]" />
               <span className="text-sm font-bold text-gray-900">Status Bot WhatsApp</span>
             </div>
-            <button onClick={refreshBotStatus} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-              <RefreshCw className="h-3 w-3" /> Segarkan
+            <button onClick={() => refreshBotStatus(true)} disabled={botLoading} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+              {botLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Segarkan QR
             </button>
           </div>
 

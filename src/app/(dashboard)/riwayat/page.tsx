@@ -122,11 +122,11 @@ export default function RiwayatPage() {
             const g3w = hasG3 ? getGameWinner(t1g3, t2g3, target) : null;
 
             return (
-              <div key={m.id} className="relative rounded-xl border border-gray-200 bg-white p-3 shadow-sm ring-1 ring-gray-50 transition-all hover:shadow-md sm:p-3">
+              <div key={m.id} className="relative rounded-xl border border-gray-200 bg-white p-4 shadow-sm ring-1 ring-gray-50 transition-all hover:shadow-md sm:p-5">
                 {/* Court label + date */}
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-700 sm:text-xs">
-                    <span className={`flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-black text-white sm:text-[10px] ${color.bg}`}>{m.courtNumber || "-"}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-gray-700 sm:text-base">
+                    <span className={`flex items-center justify-center rounded px-1.5 py-0.5 text-xs font-black text-white sm:text-sm ${color.bg}`}>{m.courtNumber || "-"}</span>
                     {m.winnerTeam === 1 || m.winnerTeam === 2 ? (
                       <span className="text-green-600">✓</span>
                     ) : m.status === "completed" ? (
@@ -135,7 +135,7 @@ export default function RiwayatPage() {
                       <span className="text-gray-400">⏳</span>
                     )}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] text-gray-400 sm:text-[11px]">
+                  <span className="flex items-center gap-1 text-sm text-gray-400 sm:text-base">
                     <Calendar className="h-3 w-3" />
                     {s ? formatDate(s.date) : ""}
                   </span>
@@ -143,30 +143,30 @@ export default function RiwayatPage() {
 
                 {/* Score chart */}
                 <div style={{ display: "grid", gridTemplateColumns: `1fr repeat(${gameCols}, min-content)`, gap: "0.25rem 0.25rem", alignItems: "center" }}>
-                  <div className="text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">PASANGAN</div>
-                  <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G1</div>
-                  {hasG2 && <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G2</div>}
-                  {hasG3 && <div className="text-center text-[9px] font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-[10px]">G3</div>}
+                  <div className="text-xs font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-sm">PASANGAN</div>
+                  <div className="text-center text-xs font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-sm">G1</div>
+                  {hasG2 && <div className="text-center text-xs font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-sm">G2</div>}
+                  {hasG3 && <div className="text-center text-xs font-semibold tracking-wider whitespace-nowrap text-gray-400 uppercase sm:text-sm">G3</div>}
                   <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
                   {/* Team 1 */}
                   <div className="flex items-center gap-1 sm:gap-1.5">
                     <ShuttlecockIcon size={14} className="shrink-0 text-green-500" />
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
-                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
+                      <p className={`truncate text-sm sm:text-base ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player1Id)}</p>
+                      <p className={`truncate text-sm sm:text-base ${m.winnerTeam === 1 ? "font-bold text-gray-900" : m.winnerTeam === 2 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team1Player2Id)}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-center">
-                    <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1s}</span>
+                    <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g1w === 1 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1s}</span>
                   </div>
                   {hasG2 && (
                     <div className="flex items-center justify-center">
-                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g2}</span>
+                      <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g2w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g2}</span>
                     </div>
                   )}
                   {hasG3 && (
                     <div className="flex items-center justify-center">
-                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g3}</span>
+                      <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g3w === 1 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t1g3}</span>
                     </div>
                   )}
                   <hr className="border-gray-200" style={{ gridColumn: `1 / span ${gameCols + 1}` }} />
@@ -174,32 +174,32 @@ export default function RiwayatPage() {
                   <div className="flex items-center gap-1 sm:gap-1.5">
                     <User size={14} className="shrink-0 text-blue-500" />
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
-                      <p className={`truncate text-[10px] sm:text-[11px] ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
+                      <p className={`truncate text-sm sm:text-base ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player1Id)}</p>
+                      <p className={`truncate text-sm sm:text-base ${m.winnerTeam === 2 ? "font-bold text-gray-900" : m.winnerTeam === 1 ? "text-gray-400" : "text-gray-700"}`}>{getName(m.team2Player2Id)}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-center">
-                    <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2s}</span>
+                    <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g1w === 2 ? "border-green-300 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2s}</span>
                   </div>
                   {hasG2 && (
                     <div className="flex items-center justify-center">
-                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g2}</span>
+                      <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g2w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g2}</span>
                     </div>
                   )}
                   {hasG3 && (
                     <div className="flex items-center justify-center">
-                      <span className={`inline-flex h-6 w-8 items-center justify-center rounded-md border text-[11px] font-bold sm:h-8 sm:w-10 sm:text-xs ${g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g3}</span>
+                      <span className={`inline-flex h-9 w-12 items-center justify-center rounded-md border text-base font-bold sm:h-11 sm:w-14 sm:text-lg ${g3w === 2 ? "border-green-200 bg-green-50/50 text-green-600" : "border-gray-200 bg-gray-50 text-gray-400"}`}>{t2g3}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Round & mode */}
                 <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <p className="text-center text-[9px] text-gray-400 sm:text-[10px]">
+                  <p className="text-center text-xs text-gray-400 sm:text-sm">
                     R{m.round} · {s?.sparingOpponent ? `${pbName || "PB"} vs ${s.sparingOpponent}` : s?.title || ""}
                   </p>
                   <button onClick={() => setCardMatch(m)} title="Buat Match Card"
-                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-[9px] font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-[10px]">
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:text-sm">
                     <ImageIcon className="h-3 w-3" /> Card
                   </button>
                 </div>

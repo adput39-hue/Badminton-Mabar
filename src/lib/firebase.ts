@@ -70,3 +70,44 @@ export function listenAllLiveScores(callback: (scores: Record<string, Record<str
     },
   );
 }
+
+export interface ClientBotState {
+  state?: string;
+  qr?: string;
+  at?: string;
+}
+
+function parseBotState(data: Record<string, unknown> | undefined): ClientBotState | null {
+  if (!data) return null;
+  if (typeof data.raw === "string") {
+    try {
+      const parsed = JSON.parse(data.raw);
+      if (parsed && typeof parsed.state === "string") return parsed;
+    } catch {}
+  }
+  return null;
+}
+
+export async function readBotState(): Promise<ClientBotState | null> {
+  if (!isFirebaseConfigured()) return null;
+  const a = getApp();
+  if (!a) return null;
+  const db = getFirestore(a);
+  const snap = await getDoc(doc(db, "wa", "state"));
+  return snap.exists() ? parseBotState(snap.data()) : null;
+}
+
+export function listenBotState(callback: (state: ClientBotState | null) => void, onError?: (error: Error) => void): Unsubscribe | null {
+  if (!isFirebaseConfigured()) return null;
+  const a = getApp();
+  if (!a) return null;
+  const db = getFirestore(a);
+  const docRef = doc(db, "wa", "state");
+  return onSnapshot(docRef,
+    (snap) => callback(snap.exists() ? parseBotState(snap.data()) : null),
+    (error) => {
+      console.error("Firebase bot-state listener error:", error);
+      if (onError) onError(error);
+    },
+  );
+}
